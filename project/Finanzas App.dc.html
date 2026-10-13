@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-270bb39e-9f22-4323-84aa-42d92a865a66/styles.css">
+<script src="_ds/nocturne-270bb39e-9f22-4323-84aa-42d92a865a66/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+body{margin:0;background:var(--color-bg);font-family:var(--font-body);color:var(--color-text);-webkit-font-smoothing:antialiased}
+a{color:var(--color-accent-300)}a:hover{color:var(--color-accent-200)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+input::placeholder{color:var(--color-neutral-600)}
+*::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width:410px;height:864px;border-radius:56px;padding:10px;box-sizing:border-box;background:#2a2c35;box-shadow:0 0 0 1px var(--color-neutral-700), 0 40px 80px rgba(0,0,0,.6)">
+<div style="position:relative;width:100%;height:100%;border-radius:46px;overflow:hidden;background:radial-gradient(420px 260px at 15% -60px, var(--color-accent-900), transparent 70%), var(--color-bg);display:flex;flex-direction:column">
+
+<div style="height:50px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:6px 30px 0 36px;font-size:15px;font-weight:600;position:relative;z-index:5">
+<span>9:41</span>
+<div style="position:absolute;left:50%;top:11px;transform:translateX(-50%);width:120px;height:34px;border-radius:20px;background:#08090d"></div>
+<div style="display:flex;gap:5px;font-size:16px"><i class="ph-fill ph-cell-signal-full"></i><i class="ph ph-wifi-high"></i><i class="ph-fill ph-battery-full"></i></div>
+</div>
+
+<sc-if value="{{ isOnb }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:12px 24px 34px">
+<div style="display:flex;gap:6px;margin-bottom:26px">
+<sc-for list="{{ onbDots }}" as="d" hint-placeholder-count="4"><div style="height:3px;flex:1;border-radius:2px;background:{{ d.bg }}"></div></sc-for>
+</div>
+
+<sc-if value="{{ onb0 }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;display:flex;flex-direction:column;animation:rise .4s ease">
+<div style="width:52px;height:52px;border-radius:14px;border:1px solid var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--color-accent-300);box-shadow:0 0 30px var(--color-accent-800)"><i class="ph ph-folders"></i></div>
+<h1 style="font-size:34px;line-height:1.1;font-weight:500;letter-spacing:-0.02em;margin:28px 0 12px;text-wrap:pretty">Cada dólar, en su carpeta.</h1>
+<p style="font-size:16px;line-height:1.5;color:var(--color-neutral-400);margin:0;text-wrap:pretty">Calculamos tu plan óptimo con tus datos, repartimos tu ingreso en carpetas y reconocemos cada gasto. Tu asesor lo ajusta contigo.</p>
+<div style="margin-top:32px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;gap:12px;align-items:center;font-size:14px;color:var(--color-neutral-300)"><i class="ph ph-chart-pie-slice" style="font-size:20px;color:var(--color-accent-300)"></i>Plan base cero calculado para ti</div>
+<div style="display:flex;gap:12px;align-items:center;font-size:14px;color:var(--color-neutral-300)"><i class="ph ph-apple-logo" style="font-size:20px;color:var(--color-accent-300)"></i>Apple Pay, tarjetas, bancos y efectivo</div>
+<div style="display:flex;gap:12px;align-items:center;font-size:14px;color:var(--color-neutral-300)"><i class="ph ph-sparkle" style="font-size:20px;color:var(--color-accent-300)"></i>Asesor personal con IA</div>
+</div>
+<div style="flex:1"></div>
+<button class="btn btn-primary btn-block" style="height:52px;font-size:16px;border-radius:14px" onClick="{{ nextOnb }}">Crear mi plan</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ onb1 }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;animation:rise .4s ease">
+<div style="font-size:12px;color:var(--color-accent-300);letter-spacing:.06em;text-transform:uppercase">Paso 1 de 3</div>
+<h2 style="font-size:26px;font-weight:500;margin:8px 0 24px;letter-spacing:-0.01em">¿Cuánto recibes al mes?</h2>
+<div style="display:flex;align-items:baseline;gap:8px;border-bottom:1px solid var(--color-accent);padding-bottom:8px">
+<span style="font-size:34px;color:var(--color-neutral-500)">$</span>
+<input type="text" inputmode="numeric" value="{{ incomeInput }}" onChange="{{ onIncome }}" style="flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--color-text);font:500 40px var(--font-heading);font-variant-numeric:tabular-nums;letter-spacing:-0.02em"></input>
+<span style="font-size:14px;color:var(--color-neutral-500)">USD neto</span>
+</div>
+<div style="font-size:15px;color:var(--color-neutral-300);margin:32px 0 12px">¿Qué aplica a ti?</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ prioList }}" as="p" hint-placeholder-count="4">
+<button onClick="{{ p.toggle }}" style="height:40px;padding:0 14px;border-radius:20px;font:500 14px var(--font-body);cursor:pointer;display:flex;align-items:center;gap:6px;background:{{ p.bg }};color:{{ p.fg }};border:1px solid {{ p.border }}"><i class="{{ p.icon }}"></i>{{ p.label }}</button>
+</sc-for>
+</div>
+<div style="flex:1;min-height:24px"></div>
+<button class="btn btn-primary btn-block" style="height:52px;font-size:16px;border-radius:14px" onClick="{{ nextOnb }}">Calcular plan óptimo</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ onb2 }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ analyzing }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--color-accent-300)">
+{{ spinner }}
+<div style="font-size:15px;color:var(--color-neutral-300)">Calculando tu plan óptimo…</div>
+</div>
+</sc-if>
+<sc-if value="{{ planReady }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;animation:rise .4s ease">
+<div style="font-size:12px;color:var(--color-accent-300);letter-spacing:.06em;text-transform:uppercase">Paso 2 de 3 · Tu plan</div>
+<h2 style="font-size:24px;font-weight:500;margin:8px 0 16px;letter-spacing:-0.01em;text-wrap:pretty">{{ incomeL }} repartidos en {{ folderCount }} carpetas</h2>
+<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px;margin-bottom:8px">
+<sc-for list="{{ groupRows }}" as="g" hint-placeholder-count="4"><div style="width:{{ g.w }};background:{{ g.color }}"></div></sc-for>
+</div>
+<div style="flex:1;min-height:0;overflow:auto">
+<sc-for list="{{ groupRows }}" as="g" hint-placeholder-count="4">
+<div style="padding:9px 0">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><div style="width:8px;height:8px;border-radius:2px;background:{{ g.color }}"></div><span style="font-size:14px;font-weight:500;flex:1">{{ g.label }}</span><span style="font-size:13px;color:var(--color-neutral-400)">{{ g.pctL }}</span><span style="font-size:14px;font-variant-numeric:tabular-nums;width:64px;text-align:right">{{ g.amtL }}</span></div>
+<div style="font-size:12.5px;color:var(--color-neutral-500);padding-left:16px;line-height:1.5">{{ g.names }}</div>
+</div>
+</sc-for>
+<div style="margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--color-accent-800)">
+<div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;margin-bottom:8px"><i class="ph ph-sparkle" style="color:var(--color-accent-300)"></i>Por qué este plan</div>
+<sc-for list="{{ basis }}" as="b" hint-placeholder-count="4">
+<div style="font-size:12.5px;line-height:1.45;color:var(--color-neutral-300);padding:4px 0">{{ b }}</div>
+</sc-for>
+</div>
+</div>
+<button class="btn btn-primary btn-block" style="height:52px;font-size:16px;border-radius:14px;margin-top:14px" onClick="{{ nextOnb }}">Crear mis carpetas</button>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ onb3 }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;animation:rise .4s ease">
+<div style="font-size:12px;color:var(--color-accent-300);letter-spacing:.06em;text-transform:uppercase">Paso 3 de 3</div>
+<h2 style="font-size:26px;font-weight:500;margin:8px 0 6px;letter-spacing:-0.01em">Conecta cómo pagas</h2>
+<p style="font-size:14px;color:var(--color-neutral-400);margin:0 0 16px;line-height:1.5">Solo lectura. Cada gasto llega a la carpeta correcta en tiempo real.</p>
+<div style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ sourceList }}" as="s" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--color-surface)">
+<div style="width:36px;height:36px;border-radius:10px;background:var(--color-neutral-900);display:flex;align-items:center;justify-content:center;font-size:19px"><i class="{{ s.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ s.name }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ s.sub }}</div></div>
+<button onClick="{{ s.toggle }}" style="height:32px;min-width:96px;padding:0 12px;border-radius:16px;font:500 13px var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;background:{{ s.btnBg }};color:{{ s.btnFg }};border:1px solid {{ s.btnBorder }}"><i class="{{ s.btnIcon }}"></i>{{ s.btnLabel }}</button>
+</div>
+</sc-for>
+</div>
+<button class="btn btn-primary btn-block" style="height:52px;font-size:16px;border-radius:14px;margin-top:14px" onClick="{{ finishOnb }}">Ir a mis finanzas</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+<div ref="{{ scrollRef }}" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;position:relative">
+
+<sc-if value="{{ tabHome }}" hint-placeholder-val="{{ true }}">
+<div style="padding:8px 20px 24px;display:flex;flex-direction:column;gap:18px;animation:rise .35s ease">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div><div style="font-size:13px;color:var(--color-neutral-500)">Lunes 12 de octubre</div><div style="font-size:20px;font-weight:500;margin-top:2px">Hola, Ana</div></div>
+<div style="display:flex;gap:8px">
+<button class="btn btn-icon btn-ghost" onClick="{{ openConnect }}" style="width:40px;height:40px;border-radius:12px;font-size:19px"><i class="ph ph-plugs-connected"></i></button>
+<button class="btn btn-icon btn-primary" onClick="{{ openAdd }}" style="width:40px;height:40px;border-radius:12px;font-size:19px"><i class="ph ph-plus"></i></button>
+</div>
+</div>
+
+<sc-if value="{{ dirCarpetas }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:18px">
+<div>
+<div style="font-size:13px;color:var(--color-neutral-400)">Puedes gastar hoy</div>
+<div style="font-size:52px;font-weight:500;letter-spacing:-0.03em;line-height:1.05;margin-top:4px;font-variant-numeric:tabular-nums">{{ dailyL }}</div>
+<div style="font-size:13px;color:var(--color-neutral-500);margin-top:6px">{{ flexLeftL }} libres en tus carpetas de gasto · {{ daysLeft }} días para cerrar octubre</div>
+</div>
+<div style="padding:14px;border-radius:14px;background:var(--color-surface);box-shadow:var(--shadow-sm)">
+<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:10px"><span style="color:var(--color-neutral-400)">Octubre · ingreso {{ incomeL }}</span><span style="color:var(--color-accent-300)">39% del mes</span></div>
+<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;background:var(--color-neutral-900)">
+<div style="width:{{ barSpentW }};background:var(--color-neutral-300)"></div>
+<div style="width:{{ barSavedW }};background:var(--color-accent)"></div>
+</div>
+<div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--color-neutral-400)">
+<span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:2px;background:var(--color-neutral-300)"></span>Gastado {{ spentL }}</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:2px;background:var(--color-accent)"></span>Apartado {{ savedL }}</span>
+</div>
+</div>
+<sc-if value="{{ hasHot }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ askHot }}" style="cursor:pointer;padding:14px;border-radius:14px;border:1px solid var(--color-accent-700);background:linear-gradient(160deg, var(--color-accent-900), transparent);display:flex;gap:12px">
+<i class="ph ph-sparkle" style="font-size:20px;color:var(--color-accent-300);margin-top:1px"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500;margin-bottom:4px">{{ hotTitle }}</div><div style="font-size:13px;line-height:1.45;color:var(--color-neutral-300)">Pídele a tu asesor un ajuste que no toque tu ahorro.</div><div style="font-size:13px;color:var(--color-accent-300);margin-top:8px;display:flex;align-items:center;gap:4px">Pedir propuesta <i class="ph ph-arrow-right"></i></div></div>
+</div>
+</sc-if>
+<div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span style="font-size:16px;font-weight:500">Carpetas de gasto</span><button onClick="{{ goFolders }}" style="background:none;border:0;color:var(--color-accent-300);font:500 13px var(--font-body);cursor:pointer">Ver las {{ folderCount }}</button></div>
+<sc-for list="{{ peekFolders }}" as="f" hint-placeholder-count="4">
+<div onClick="{{ f.open }}" style="cursor:pointer;padding:10px 0">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:10px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--color-neutral-300)"><i class="{{ f.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ f.name }}</div><div style="font-size:12px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">{{ f.ofL }}</div></div>
+<div style="text-align:right"><div style="font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;color:{{ f.leftColor }}">{{ f.leftL }}</div><div style="font-size:11.5px;color:var(--color-neutral-500)">{{ f.leftLabel }}</div></div>
+</div>
+<div style="height:3px;border-radius:2px;background:var(--color-neutral-900);margin:8px 0 0 48px;overflow:hidden"><div style="height:100%;width:{{ f.barW }};background:{{ f.barColor }}"></div></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ dirAsesor }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="padding:16px;border-radius:16px;border:1px solid var(--color-accent-700);background:linear-gradient(165deg, var(--color-accent-900), var(--color-surface) 75%)">
+<div style="font-size:12px;color:var(--color-accent-300);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px"><i class="ph ph-sparkle"></i>Tu asesor · hoy</div>
+<div style="font-size:23px;font-weight:500;line-height:1.22;margin-top:10px;letter-spacing:-0.01em;text-wrap:pretty">{{ briefTitle }}</div>
+<div style="font-size:14px;color:var(--color-neutral-300);line-height:1.5;margin-top:8px;text-wrap:pretty">{{ briefBody }}</div>
+<button class="btn btn-primary" onClick="{{ goAdvisor }}" style="margin-top:14px;height:40px;border-radius:11px;gap:6px"><i class="ph ph-chat-circle"></i>Hablar con mi asesor</button>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div style="padding:12px 14px;border-radius:14px;background:var(--color-surface)"><div style="font-size:12px;color:var(--color-neutral-400)">Puedes gastar hoy</div><div style="font-size:26px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums">{{ dailyL }}</div></div>
+<div style="padding:12px 14px;border-radius:14px;background:var(--color-surface)"><div style="font-size:12px;color:var(--color-neutral-400)">Apartado este mes</div><div style="font-size:26px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums;color:var(--color-accent-300)">{{ savedL }}</div></div>
+</div>
+<div>
+<div style="font-size:16px;font-weight:500;margin-bottom:8px">Para hoy</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ actions }}" as="a" hint-placeholder-count="3">
+<div onClick="{{ a.go }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:var(--color-surface)">
+<div style="width:36px;height:36px;border-radius:10px;border:1px solid var(--color-accent-800);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--color-accent-300)"><i class="{{ a.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ a.title }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ a.sub }}</div></div>
+<i class="ph ph-caret-right" style="color:var(--color-neutral-600)"></i>
+</div>
+</sc-for>
+</div>
+</div>
+<div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><span style="font-size:16px;font-weight:500">Tu plan de octubre</span><button onClick="{{ goFolders }}" style="background:none;border:0;color:var(--color-accent-300);font:500 13px var(--font-body);cursor:pointer">Carpetas</button></div>
+<div style="display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ groupRows }}" as="g" hint-placeholder-count="4">
+<div>
+<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--color-neutral-300)">{{ g.label }}</span><span style="font-variant-numeric:tabular-nums;color:var(--color-neutral-400)">{{ g.usedL }} / {{ g.amtL }}</span></div>
+<div style="height:5px;border-radius:3px;background:var(--color-neutral-900);overflow:hidden"><div style="height:100%;width:{{ g.usedW }};background:{{ g.color }}"></div></div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</sc-if>
+
+<div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span style="font-size:16px;font-weight:500">Últimos movimientos</span><span style="font-size:12px;color:var(--color-neutral-500);display:flex;align-items:center;gap:4px"><i class="ph-fill ph-circle" style="font-size:7px;color:var(--color-accent)"></i>{{ liveLabel }}</span></div>
+<sc-for list="{{ recentTx }}" as="t" hint-placeholder-count="5">
+<div onClick="{{ t.open }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:10px 0">
+<div style="width:38px;height:38px;border-radius:11px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--color-neutral-300)"><i class="{{ t.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ t.name }}</div><div style="font-size:12px;color:var(--color-neutral-500);display:flex;align-items:center;gap:4px"><i class="{{ t.srcIcon }}"></i>{{ t.sub }}</div></div>
+<div style="text-align:right"><div style="font-size:14px;font-variant-numeric:tabular-nums">{{ t.amtL }}</div><div style="font-size:11.5px;color:{{ t.tagColor }}">{{ t.folderName }}</div></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ tabFolders }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ noFolderOpen }}" hint-placeholder-val="{{ true }}">
+<div style="padding:8px 20px 28px;animation:rise .35s ease">
+<div style="font-size:26px;font-weight:500;letter-spacing:-0.01em">Carpetas</div>
+<div style="font-size:13px;color:var(--color-neutral-500);margin-top:2px">{{ incomeL }} asignados · $0 sin destino</div>
+<sc-for list="{{ folderGroups }}" as="grp" hint-placeholder-count="4">
+<div style="margin-top:22px">
+<div style="display:flex;justify-content:space-between;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--color-neutral-500);margin-bottom:2px"><span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:2px;background:{{ grp.color }}"></span>{{ grp.label }}</span><span style="font-variant-numeric:tabular-nums">{{ grp.amtL }}</span></div>
+<sc-for list="{{ grp.items }}" as="f" hint-placeholder-count="3">
+<div onClick="{{ f.open }}" style="cursor:pointer;padding:10px 0;border-bottom:1px solid var(--color-divider)">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:10px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--color-neutral-300)"><i class="{{ f.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ f.name }}</div><div style="font-size:12px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">{{ f.ofL }}</div></div>
+<div style="text-align:right"><div style="font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;color:{{ f.leftColor }}">{{ f.leftL }}</div><div style="font-size:11.5px;color:var(--color-neutral-500)">{{ f.leftLabel }}</div></div>
+</div>
+<div style="height:3px;border-radius:2px;background:var(--color-neutral-900);margin:8px 0 0 48px;overflow:hidden"><div style="height:100%;width:{{ f.barW }};background:{{ f.barColor }}"></div></div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ folderOpen }}" hint-placeholder-val="{{ false }}">
+<div style="padding:4px 20px 28px;animation:rise .3s ease">
+<button onClick="{{ closeFolder }}" style="background:none;border:0;color:var(--color-accent-300);font:500 15px var(--font-body);cursor:pointer;display:flex;align-items:center;gap:4px;padding:6px 0;margin-left:-4px"><i class="ph ph-caret-left"></i>Carpetas</button>
+<div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+<div style="width:40px;height:40px;border-radius:11px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--color-neutral-300)"><i class="{{ fo.icon }}"></i></div>
+<div><div style="font-size:20px;font-weight:500">{{ fo.name }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ fo.groupLabel }}</div></div>
+</div>
+<div style="font-size:44px;font-weight:500;letter-spacing:-0.02em;margin-top:18px;font-variant-numeric:tabular-nums;color:{{ fo.leftColor }}">{{ fo.leftL }}</div>
+<div style="font-size:13px;color:var(--color-neutral-400)">{{ fo.leftLabel }} · {{ fo.ofL }}</div>
+<div style="height:6px;border-radius:3px;background:var(--color-neutral-900);margin:14px 0 6px;overflow:hidden"><div style="height:100%;width:{{ fo.barW }};background:{{ fo.barColor }}"></div></div>
+<div style="font-size:12px;color:var(--color-neutral-500)">{{ fo.pace }}</div>
+<div style="margin-top:16px;padding:12px 14px;border-radius:14px;border:1px solid var(--color-accent-800);display:flex;gap:10px;font-size:13px;line-height:1.45;color:var(--color-neutral-300)"><i class="ph ph-sparkle" style="font-size:17px;color:var(--color-accent-300);margin-top:1px"></i><span>{{ fo.tip }}</span></div>
+<div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:14px;background:var(--color-surface)">
+<span style="font-size:14px">Presupuesto</span>
+<div style="display:flex;align-items:center;gap:10px">
+<button class="btn btn-icon btn-secondary" onClick="{{ budgetMinus }}" style="width:34px;height:34px;border-radius:10px"><i class="ph ph-minus"></i></button>
+<span style="font-size:15px;font-weight:500;min-width:64px;text-align:center;font-variant-numeric:tabular-nums">{{ fo.budgetL }}</span>
+<button class="btn btn-icon btn-secondary" onClick="{{ budgetPlus }}" style="width:34px;height:34px;border-radius:10px"><i class="ph ph-plus"></i></button>
+</div>
+</div>
+<div style="font-size:12px;color:var(--color-neutral-500);margin-top:6px;padding-left:2px">{{ adjustNote }}</div>
+<div style="font-size:16px;font-weight:500;margin:22px 0 4px">Movimientos</div>
+<sc-for list="{{ fo.tx }}" as="t" hint-placeholder-count="3">
+<div onClick="{{ t.open }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:10px 0">
+<div style="width:38px;height:38px;border-radius:11px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--color-neutral-300)"><i class="{{ t.srcIcon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ t.name }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ t.sub }}</div></div>
+<div style="font-size:14px;font-variant-numeric:tabular-nums">{{ t.amtL }}</div>
+</div>
+</sc-for>
+<sc-if value="{{ fo.noTx }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--color-neutral-500);padding:8px 0">{{ fo.emptyNote }}</div></sc-if>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ tabGoals }}" hint-placeholder-val="{{ false }}">
+<div style="padding:8px 20px 28px;display:flex;flex-direction:column;gap:12px;animation:rise .35s ease">
+<div><div style="font-size:26px;font-weight:500;letter-spacing:-0.01em">Metas</div><div style="font-size:13px;color:var(--color-neutral-500);margin-top:2px">Lo que tu plan construye cada mes</div></div>
+<sc-for list="{{ goals }}" as="g" hint-placeholder-count="4">
+<div style="padding:14px;border-radius:14px;background:var(--color-surface)">
+<div style="display:flex;align-items:center;gap:10px">
+<i class="{{ g.icon }}" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1;font-size:15px;font-weight:500">{{ g.name }}</div>
+<span style="font-size:12px;color:var(--color-neutral-400)">{{ g.monthlyL }}</span>
+</div>
+<div style="display:flex;align-items:baseline;gap:6px;margin-top:12px"><span style="font-size:26px;font-weight:500;font-variant-numeric:tabular-nums">{{ g.savedL }}</span><span style="font-size:13px;color:var(--color-neutral-500)">{{ g.targetL }}</span></div>
+<div style="height:6px;border-radius:3px;background:var(--color-neutral-900);margin:10px 0 8px;overflow:hidden"><div style="height:100%;width:{{ g.w }};background:var(--color-accent)"></div></div>
+<div style="font-size:12.5px;color:var(--color-neutral-400);line-height:1.45">{{ g.foot }}</div>
+<sc-if value="{{ g.needsPlan }}" hint-placeholder-val="{{ false }}">
+<button class="btn btn-primary" onClick="{{ g.ask }}" style="margin-top:12px;height:38px;border-radius:10px;gap:6px"><i class="ph ph-sparkle"></i>Pedir plan al asesor</button>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ tabAdvisor }}" hint-placeholder-val="{{ false }}">
+<div style="padding:4px 20px 12px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:12px;padding:4px 0 6px">
+<div style="width:40px;height:40px;border-radius:12px;border:1px solid var(--color-accent);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300);font-size:20px;box-shadow:0 0 20px var(--color-accent-800)"><i class="ph ph-sparkle"></i></div>
+<div><div style="font-size:17px;font-weight:500">Tu asesor</div><div style="font-size:12px;color:var(--color-neutral-500)">Conoce tus {{ folderCount }} carpetas y tus metas</div></div>
+</div>
+<sc-for list="{{ messages }}" as="m" hint-placeholder-count="2">
+<div style="display:flex;justify-content:{{ m.justify }};animation:rise .3s ease">
+<sc-if value="{{ m.isText }}" hint-placeholder-val="{{ true }}">
+<div style="max-width:86%;padding:10px 13px;border-radius:{{ m.radius }};font-size:14px;line-height:1.5;white-space:pre-wrap;background:{{ m.bg }};border:1px solid {{ m.border }}">{{ m.text }}</div>
+</sc-if>
+<sc-if value="{{ m.isPlan }}" hint-placeholder-val="{{ false }}">
+<div style="width:100%;padding:14px;border-radius:14px;border:1px solid var(--color-accent-700);background:linear-gradient(170deg, var(--color-accent-900), var(--color-surface))">
+<div style="font-size:12px;color:var(--color-accent-300);letter-spacing:.06em;text-transform:uppercase">Propuesta de ajuste</div>
+<div style="font-size:14px;line-height:1.45;margin:6px 0 10px">{{ m.resumen }}</div>
+<sc-for list="{{ m.moves }}" as="mv" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:7px 0;border-top:1px solid var(--color-divider)"><span style="color:var(--color-neutral-300)">{{ mv.fromName }}</span><i class="ph ph-arrow-right" style="color:var(--color-neutral-500)"></i><span style="flex:1">{{ mv.toName }}</span><span style="font-variant-numeric:tabular-nums;color:var(--color-accent-300)">{{ mv.amtL }}</span></div>
+</sc-for>
+<button class="btn btn-primary btn-block" onClick="{{ m.apply }}" disabled="{{ m.applied }}" style="height:42px;border-radius:11px;margin-top:10px">{{ m.btn }}</button>
+</div>
+</sc-if>
+</div>
+</sc-for>
+<sc-if value="{{ thinking }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--color-neutral-500)">{{ spinnerSm }}Revisando tus carpetas…</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+
+<sc-if value="{{ tabAdvisor }}" hint-placeholder-val="{{ false }}">
+<div style="padding:8px 16px 10px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--color-divider)">
+<div style="display:flex;gap:6px;overflow-x:auto">
+<sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="3">
+<button onClick="{{ s.ask }}" style="flex-shrink:0;height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--color-neutral-800);background:transparent;color:var(--color-neutral-300);font:500 12.5px var(--font-body);cursor:pointer">{{ s.label }}</button>
+</sc-for>
+</div>
+<div style="display:flex;gap:8px;align-items:center">
+<input type="text" placeholder="Pregúntale a tu asesor…" value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onDraftKey }}" class="input" style="flex:1;min-width:0;height:42px;border-radius:21px;padding:0 16px;font-size:14px"></input>
+<button class="btn btn-icon btn-primary" onClick="{{ sendDraft }}" style="width:42px;height:42px;border-radius:21px;font-size:18px"><i class="ph ph-paper-plane-right"></i></button>
+</div>
+</div>
+</sc-if>
+
+<div style="height:82px;flex-shrink:0;display:flex;padding:8px 8px 0;border-top:1px solid var(--color-divider)">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+<button onClick="{{ t.go }}" style="flex:1;background:none;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:4px;font:500 10.5px var(--font-body);color:{{ t.color }}">
+<i class="{{ t.icon }}" style="font-size:24px"></i>{{ t.label }}
+</button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasSheet }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(8,9,14,.6);z-index:20"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:21;max-height:84%;overflow:auto;border-radius:22px 22px 0 0;background:var(--color-surface);box-shadow:var(--shadow-lg);padding:10px 20px 34px;animation:rise .25s ease">
+<div style="width:36px;height:5px;border-radius:3px;background:var(--color-neutral-700);margin:0 auto 14px"></div>
+
+<sc-if value="{{ sheetRecat }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:12px;color:var(--color-neutral-500)">{{ rc.sub }}</div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 8px"><span style="font-size:20px;font-weight:500">{{ rc.name }}</span><span style="font-size:20px;font-variant-numeric:tabular-nums">{{ rc.amtL }}</span></div>
+<div style="font-size:13px;color:var(--color-neutral-400);line-height:1.45;margin-bottom:14px;display:flex;gap:8px"><i class="ph ph-sparkle" style="color:var(--color-accent-300);font-size:16px"></i><span>{{ rc.why }}</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<sc-for list="{{ rcOptions }}" as="o" hint-placeholder-count="8">
+<button onClick="{{ o.pick }}" style="height:44px;border-radius:11px;display:flex;align-items:center;gap:8px;padding:0 12px;font:500 13px var(--font-body);cursor:pointer;text-align:left;color:var(--color-text);background:{{ o.bg }};border:1px solid {{ o.border }}"><i class="{{ o.icon }}" style="font-size:16px"></i>{{ o.name }}</button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetConnect }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:20px;font-weight:500">Fuentes conectadas</div>
+<div style="font-size:13px;color:var(--color-neutral-400);margin:4px 0 14px;line-height:1.45">Solo lectura y cifrado. Tus otras tarjetas en Apple Pay se leen a través de su banco.</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ sourceList }}" as="s" hint-placeholder-count="5">
+<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--color-bg)">
+<div style="width:36px;height:36px;border-radius:10px;background:var(--color-neutral-900);display:flex;align-items:center;justify-content:center;font-size:19px"><i class="{{ s.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ s.name }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ s.sub }}</div></div>
+<button onClick="{{ s.toggle }}" style="height:32px;min-width:96px;padding:0 12px;border-radius:16px;font:500 13px var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;background:{{ s.btnBg }};color:{{ s.btnFg }};border:1px solid {{ s.btnBorder }}"><i class="{{ s.btnIcon }}"></i>{{ s.btnLabel }}</button>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetAdd }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:20px;font-weight:500;margin-bottom:14px">Registrar gasto</div>
+<div style="display:flex;align-items:baseline;gap:6px;border-bottom:1px solid var(--color-accent);padding-bottom:6px">
+<span style="font-size:28px;color:var(--color-neutral-500)">$</span>
+<input type="text" inputmode="decimal" placeholder="0" value="{{ addAmt }}" onChange="{{ onAddAmt }}" style="flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--color-text);font:500 34px var(--font-heading);font-variant-numeric:tabular-nums"></input>
+</div>
+<input type="text" class="input" placeholder="¿Dónde? ej. Starbucks, Uber, CVS" value="{{ addName }}" onChange="{{ onAddName }}" style="width:100%;box-sizing:border-box;height:44px;margin-top:14px;border-radius:11px;font-size:14px"></input>
+<div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;border-radius:12px;background:var(--color-bg)">
+<i class="{{ guess.icon }}" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:12px;color:var(--color-neutral-500)">Carpeta detectada</div><div style="font-size:14px;font-weight:500">{{ guess.name }}</div></div>
+<span style="font-size:12px;color:var(--color-neutral-400)">{{ guess.conf }}</span>
+</div>
+<div style="display:flex;gap:8px;margin-top:12px">
+<button class="btn btn-secondary" onClick="{{ scanTicket }}" style="flex:1;height:46px;border-radius:12px;gap:6px"><i class="ph ph-scan"></i>Escanear ticket</button>
+<button class="btn btn-primary" onClick="{{ saveAdd }}" style="flex:1;height:46px;border-radius:12px">Guardar</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:20px;right:20px;top:58px;z-index:30;padding:12px 14px;border-radius:12px;background:var(--color-neutral-900);box-shadow:var(--shadow-md);font-size:13px;display:flex;gap:8px;align-items:center;animation:rise .25s ease"><i class="ph-fill ph-check-circle" style="color:var(--color-accent-300);font-size:17px"></i>{{ toast }}</div>
+</sc-if>
+
+<div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--color-neutral-300);z-index:40;pointer-events:none"></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:410,&quot;height&quot;:864},&quot;direction&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;carpetas&quot;,&quot;asesor&quot;],&quot;default&quot;:&quot;carpetas&quot;,&quot;tsType&quot;:&quot;'carpetas'|'asesor'&quot;},&quot;start&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;app&quot;,&quot;onboarding&quot;],&quot;default&quot;:&quot;app&quot;,&quot;tsType&quot;:&quot;'app'|'onboarding'&quot;}}">
+const F = [
+  {id:'vivienda',name:'Renta',icon:'house',grp:'nec',base:850},
+  {id:'super',name:'Súper',icon:'shopping-cart',grp:'nec',base:300},
+  {id:'transporte',name:'Transporte',icon:'car',grp:'nec',base:200},
+  {id:'servicios',name:'Servicios',icon:'lightning',grp:'nec',base:120},
+  {id:'salud',name:'Salud',icon:'first-aid',grp:'nec',base:80},
+  {id:'restaurantes',name:'Restaurantes',icon:'fork-knife',grp:'des',base:150},
+  {id:'ocio',name:'Ocio',icon:'ticket',grp:'des',base:100},
+  {id:'suscripciones',name:'Suscripciones',icon:'television-simple',grp:'des',base:40},
+  {id:'libre',name:'Libre',icon:'sparkle',grp:'des',base:100},
+  {id:'emergencia',name:'Fondo de emergencia',icon:'lifebuoy',grp:'aho',base:260},
+  {id:'retiro',name:'Retiro (IRA)',icon:'trend-up',grp:'aho',base:150},
+  {id:'japon',name:'Viaje a Japón',icon:'airplane-tilt',grp:'aho',base:0},
+  {id:'tarjeta',name:'Pago Amex',icon:'credit-card',grp:'deu',base:250},
+];
+const FM = Object.fromEntries(F.map(f => [f.id, f]));
+const G = [
+  {id:'nec',label:'Necesidades',color:'var(--color-neutral-300)'},
+  {id:'des',label:'Deseos',color:'var(--color-neutral-600)'},
+  {id:'aho',label:'Ahorro y metas',color:'var(--color-accent)'},
+  {id:'deu',label:'Deuda',color:'var(--color-accent-700)'},
+];
+const GM = Object.fromEntries(G.map(g => [g.id, g]));
+const SPENT0 = {vivienda:850,super:90,transporte:11,servicios:0,salud:0,restaurantes:99,ocio:0,suscripciones:21,libre:18};
+const SRC = {
+  wallet:{name:'Apple Pay y Wallet',sub:'Apple Card, Apple Cash y Ahorros',icon:'ph ph-apple-logo',short:'Apple Pay'},
+  chase:{name:'Chase',sub:'Débito ··4821 · Visa ··1007',icon:'ph ph-bank',short:'Chase'},
+  amex:{name:'American Express',sub:'Gold ··3005',icon:'ph ph-credit-card',short:'Amex'},
+  venmo:{name:'Venmo',sub:'Pagos entre amigos',icon:'ph ph-arrows-left-right',short:'Venmo'},
+  cash:{name:'Efectivo',sub:'Registro manual y tickets',icon:'ph ph-money',short:'Efectivo'},
+};
+const TX0 = [
+  {id:'t1',name:"Trader Joe's",amt:46.2,f:'super',src:'wallet',when:'Hoy · 1:12 p.m.',why:"Trader Joe's es supermercado (98%)."},
+  {id:'t2',name:'Uber',amt:14.8,f:'transporte',src:'chase',when:'Hoy · 9:03 a.m.',why:'Viaje en Uber, no Uber Eats (96%).'},
+  {id:'t3',name:'Target',amt:27.3,f:null,src:'wallet',when:'Ayer',why:'Target vende de todo y tus compras ahí varían. ¿A qué carpeta va?'},
+  {id:'t4',name:'Chipotle',amt:12.45,f:'restaurantes',src:'wallet',when:'Ayer',why:'Restaurante de comida rápida (99%).'},
+  {id:'t5',name:'Spotify',amt:11.99,f:'suscripciones',src:'wallet',when:'Ayer',why:'Cargo recurrente mensual detectado.'},
+  {id:'t6',name:'Shell',amt:38,f:'transporte',src:'chase',when:'Sáb 10',why:'Gasolinera (99%).'},
+  {id:'t7',name:'Venmo · Laura',amt:40,f:null,src:'chase',when:'Vie 9',why:'Transferencia a una persona. No sé qué pagaste.'},
+  {id:'t8',name:'Con Edison',amt:96,f:'servicios',src:'chase',when:'Vie 9',why:'Recibo de luz, cargo recurrente.'},
+  {id:'t9',name:'Sweetgreen',amt:16.5,f:'restaurantes',src:'amex',when:'Jue 8',why:'Restaurante (99%).'},
+  {id:'t10',name:'AMC Theatres',amt:22,f:'ocio',src:'amex',when:'Jue 8',why:'Cine (97%).'},
+  {id:'t11',name:'Whole Foods',amt:45.8,f:'super',src:'amex',when:'Mié 7',why:'Supermercado (98%).'},
+];
+const KW = [[/uber|lyft|shell|chevron|exxon|metro|gas/i,'transporte'],[/trader|whole|costco|kroger|walmart|safeway|aldi/i,'super'],[/starbucks|chipotle|sweetgreen|pizza|mcdonald|cafe|café|restaurant|taco|sushi/i,'restaurantes'],[/netflix|spotify|hulu|disney|hbo|youtube|icloud/i,'suscripciones'],[/cvs|walgreens|doctor|pharm|farmacia|dental/i,'salud'],[/amc|cine|concert|ticket|museum|bar\b/i,'ocio'],[/con ed|verizon|at&t|t-mobile|comcast|water/i,'servicios']];
+const MON = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DAYS_LEFT = 20, MONTH_PCT = 0.39;
+const fmt = n => { const neg = n < 0; n = Math.abs(n); const s = n.toLocaleString('en-US', {minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2}); return (neg ? '−$' : '$') + s; };
+const fmt0 = n => (n < 0 ? '−$' : '$') + Math.round(Math.abs(n)).toLocaleString('en-US');
+const monthAt = n => { const i = 9 + n; return MON[i % 12] + ' ' + (2026 + Math.floor(i / 12)); };
+const pct = (a, b) => b > 0 ? Math.max(0, Math.min(100, a / b * 100)) + '%' : '0%';
+
+function buildBudgets(inc, pr) {
+  const k = inc / 2600, b = {};
+  F.forEach(f => b[f.id] = Math.round(f.base * k / 5) * 5);
+  if (!pr.deuda) { b.emergencia += b.tarjeta; b.tarjeta = 0; }
+  if (!pr.retiro) { b.emergencia += b.retiro; b.retiro = 0; }
+  if (pr.viaje) { const m = Math.min(b.libre, Math.round(inc * 0.02 / 5) * 5); b.japon += m; b.libre -= m; }
+  const s = Object.values(b).reduce((a, c) => a + c, 0);
+  b.libre += inc - s;
+  return b;
+}
+const PRIO = [
+  {id:'deuda',label:'Tengo deuda de tarjeta',icon:'ph ph-credit-card'},
+  {id:'emergencia',label:'Quiero un fondo de emergencia',icon:'ph ph-lifebuoy'},
+  {id:'retiro',label:'Ahorrar para el retiro',icon:'ph ph-trend-up'},
+  {id:'viaje',label:'Viajar',icon:'ph ph-airplane-tilt'},
+];
+const SUG = ['Optimiza mi plan este mes','¿Cómo salgo más rápido de la tarjeta?','¿Puedo ir a Japón en 2027?','¿Cuánto necesito de emergencia?'];
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    const onb = (p.start ?? 'app') === 'onboarding';
+    const prios = {deuda:true, emergencia:true, retiro:true, viaje:false};
+    this.state = {
+      phase: onb ? 'onb' : 'app', step: 0, income: '2600', prios, analyzing: false,
+      budgets: buildBudgets(2600, prios), txs: TX0.map(t => ({...t})),
+      sources: onb ? {wallet:false,chase:false,amex:false,venmo:false,cash:false} : {wallet:true,chase:true,amex:true,venmo:false,cash:true},
+      connecting: null, tab: 'home', folderId: null, sheet: null, rcId: null,
+      addAmt: '', addName: '', toast: '', adjustNote: '', draft: '', thinking: false,
+      messages: [{role:'assistant', text:'Hola Ana. Revisé tus carpetas: vas bien en Súper y Transporte, pero Restaurantes ya va en 85% y apenas llevamos 39% del mes. ¿Lo ajustamos o prefieres hablar de tu tarjeta?'}],
+    };
+    this.scrollRef = React.createRef();
+  }
+  componentDidUpdate(pp, ps) {
+    const el = this.scrollRef.current; if (!el) return;
+    if (ps.tab !== this.state.tab || ps.folderId !== this.state.folderId) el.scrollTop = 0;
+    if (this.state.tab === 'advisor' && (ps.messages.length !== this.state.messages.length || ps.thinking !== this.state.thinking || ps.tab !== 'advisor')) setTimeout(() => { el.scrollTop = el.scrollHeight; }, 30);
+  }
+  componentWillUnmount() { clearTimeout(this._t); }
+  flash(msg) { clearTimeout(this._t); this.setState({toast: msg}); this._t = setTimeout(() => this.setState({toast: ''}), 2600); }
+  inc() { return Math.max(0, parseFloat(String(this.state.income).replace(/[^0-9.]/g, '')) || 0); }
+  spentOf(id) { return (SPENT0[id] || 0) + this.state.txs.filter(t => t.f === id).reduce((a, t) => a + t.amt, 0); }
+  fv(f) {
+    const b = this.state.budgets[f.id] || 0, flow = f.grp === 'nec' || f.grp === 'des';
+    const open = () => this.setState({tab:'folders', folderId:f.id, adjustNote:''});
+    if (flow) {
+      const sp = this.spentOf(f.id), left = b - sp, r = b ? sp / b : 0;
+      return {id:f.id, name:f.name, icon:'ph ph-' + f.icon, grp:f.grp, budget:b, spent:sp, left, r, open, flow,
+        leftL: fmt(Math.round(left * 100) / 100), leftLabel: left < 0 ? 'excedido' : 'disponible',
+        leftColor: left < 0 ? 'var(--color-accent-300)' : 'var(--color-text)',
+        ofL: fmt(Math.round(sp * 100) / 100) + ' de ' + fmt0(b), barW: pct(sp, b),
+        barColor: r > MONTH_PCT + 0.3 ? 'var(--color-accent-400)' : 'var(--color-neutral-300)'};
+    }
+    return {id:f.id, name:f.name, icon:'ph ph-' + f.icon, grp:f.grp, budget:b, spent:b, left:0, r:1, open, flow,
+      leftL: fmt0(b), leftLabel: b ? 'apartado' : 'sin aporte', leftColor: b ? 'var(--color-accent-300)' : 'var(--color-neutral-500)',
+      ofL: b ? (f.grp === 'deu' ? 'Pagado el 1 oct' : 'Transferido el 1 oct') : 'Sin aporte este mes', barW: b ? '100%' : '0%',
+      barColor: f.grp === 'deu' ? 'var(--color-accent-700)' : 'var(--color-accent)'};
+  }
+  goalsData() {
+    const b = this.state.budgets;
+    const ess = F.filter(f => f.grp === 'nec').reduce((a, f) => a + b[f.id], 0);
+    const efT = ess * 3, efS = 1820;
+    const efM = b.emergencia ? Math.ceil((efT - efS) / b.emergencia) : null;
+    const B = 2150, apr = 0.219, r = apr / 12, P = b.tarjeta;
+    let dn = null, di = 0;
+    if (P > B * r) { dn = Math.ceil(-Math.log(1 - r * B / P) / Math.log(1 + r)); di = Math.max(0, dn * P - B); }
+    const ret = b.retiro ? Math.ceil((1800 - 900) / b.retiro) : null;
+    const jp = b.japon ? Math.ceil((3000 - 640) / b.japon) : null;
+    return [
+      {id:'emergencia', name:'Fondo de emergencia', icon:'ph ph-lifebuoy', saved:efS, target:efT, monthly:b.emergencia,
+        foot: 'Colchón de $1,000 completado. Siguiente: 3 meses de gastos esenciales.' + (efM ? ' Lo alcanzas en ' + monthAt(efM) + '.' : '')},
+      {id:'tarjeta', name:'Amex en cero', icon:'ph ph-credit-card', saved:3400 - B, target:3400, monthly:P, debt:true,
+        foot: dn ? 'Debes ' + fmt0(B) + ' al 21.9% APR. Método avalancha: libre en ' + monthAt(dn) + ', ~' + fmt0(di) + ' de intereses.' : 'Debes ' + fmt0(B) + '. Sin aporte, los intereses crecen cada mes.'},
+      {id:'retiro', name:'Retiro (IRA) 2026', icon:'ph ph-trend-up', saved:900, target:1800, monthly:b.retiro,
+        foot: ret ? 'A este ritmo llegas en ' + monthAt(ret) + '.' : 'Sin aporte mensual.'},
+      {id:'japon', name:'Viaje a Japón', icon:'ph ph-airplane-tilt', saved:640, target:3000, monthly:b.japon,
+        foot: jp ? 'Listo en ' + monthAt(jp) + '.' : 'Sin aporte mensual: a este ritmo no llegas.'},
+    ];
+  }
+  sys() {
+    const s = this.state, b = s.budgets;
+    const folders = F.map(f => { const v = this.fv(f); return `${f.id} (${f.name}, ${GM[f.grp].label}): presupuesto $${b[f.id]}` + (v.flow ? `, gastado $${v.spent.toFixed(2)}` : ''); }).join('\n');
+    const goals = this.goalsData().map(g => `${g.name}: $${g.saved} de $${g.target}, aporte $${g.monthly}/mes`).join('\n');
+    return `Eres el asesor financiero personal dentro de una app de presupuesto por carpetas. Usuaria: Ana, vive en EE.UU., ingreso neto $${this.inc()}/mes. Hoy es 12 de octubre de 2026 (39% del mes transcurrido, quedan ${DAYS_LEFT} días).
+Responde SIEMPRE en español, cálido y directo, máximo 80 palabras, texto plano sin markdown, sin asteriscos ni viñetas. Usa los números reales de abajo.
+Principios: presupuesto base cero (todo dólar tiene carpeta; mover dinero entre carpetas mantiene el total). Deuda: método avalancha, primero la de mayor APR (APR promedio de tarjetas en EE.UU. ronda 21%). Fondo de emergencia: 3–6 meses de gastos esenciales, tras un colchón inicial de $1,000. 50/30/20 solo como referencia. Nunca sugieras recortar el fondo de emergencia ni el pago de deuda para cubrir deseos.
+Si propones mover dinero entre carpetas, llama a la herramienta proponer_ajuste (la usuaria verá un botón Aplicar) y luego explica en 1–2 frases.
+Carpetas:
+${folders}
+Metas:
+${goals}
+Deuda: Amex $2,150 al 21.9% APR.
+Movimientos sin categorizar: ${s.txs.filter(t => !t.f).map(t => t.name + ' $' + t.amt).join(', ') || 'ninguno'}.`;
+  }
+  addPlan(inp) {
+    const b = this.state.budgets;
+    const moves = (inp.movimientos || []).filter(m => FM[m.de] && FM[m.a] && m.de !== m.a && m.monto > 0).map(m => ({de:m.de, a:m.a, monto:Math.min(Math.round(m.monto), b[m.de])})).filter(m => m.monto > 0);
+    if (!moves.length) return 'No se pudo mostrar: movimientos inválidos.';
+    this.setState(s => ({messages:[...s.messages, {kind:'plan', id:'p' + Date.now(), resumen:inp.resumen || '', moves, applied:false}]}));
+    return 'Propuesta mostrada a la usuaria con botón Aplicar.';
+  }
+  applyPlan(id) {
+    const m = this.state.messages.find(x => x.id === id); if (!m || m.applied) return;
+    const b = {...this.state.budgets};
+    m.moves.forEach(mv => { const a = Math.min(mv.monto, b[mv.de]); b[mv.de] -= a; b[mv.a] += a; });
+    this.setState(s => ({budgets:b, messages:s.messages.map(x => x.id === id ? {...x, applied:true} : x)}));
+    this.flash('Plan actualizado · sigue en base cero');
+  }
+  async ask(text) {
+    text = (text || '').trim(); if (!text || this.state.thinking) return;
+    const msgs = [...this.state.messages, {role:'user', text}];
+    this.setState({messages:msgs, draft:'', thinking:true, tab:'advisor', folderId:null, sheet:null});
+    const hist = [];
+    msgs.filter(m => m.text).forEach(m => { const last = hist[hist.length - 1]; if (last && last.role === m.role) last.content += '\n' + m.text; else hist.push({role:m.role, content:m.text}); });
+    while (hist.length && hist[0].role !== 'user') hist.shift();
+    const ids = F.map(f => f.id);
+    try {
+      const out = await window.claude.complete({
+        system: this.sys(), messages: hist, max_tokens: 700,
+        tools: [{name:'proponer_ajuste', description:'Muestra a la usuaria una propuesta para mover dinero entre carpetas de este mes, con botón Aplicar.',
+          input_schema:{type:'object', properties:{resumen:{type:'string', description:'Una frase: qué logra el ajuste'}, movimientos:{type:'array', items:{type:'object', properties:{de:{type:'string', enum:ids}, a:{type:'string', enum:ids}, monto:{type:'number'}}, required:['de','a','monto']}}}, required:['resumen','movimientos']},
+          run: async inp => this.addPlan(inp)}],
+      });
+      const t = (out || '').replace(/\*\*/g, '').trim() || 'Listo, revisa la propuesta.';
+      this.setState(s => ({messages:[...s.messages, {role:'assistant', text:t}], thinking:false}));
+    } catch (e) {
+      this.setState(s => ({messages:[...s.messages, {role:'assistant', text:'No pude conectarme en este momento. Intenta de nuevo.'}], thinking:false}));
+    }
+  }
+  toggleSource(id) {
+    if (this.state.connecting) return;
+    if (this.state.sources[id]) { this.setState(s => ({sources:{...s.sources, [id]:false}})); return; }
+    this.setState({connecting:id});
+    setTimeout(() => { this.setState(s => ({connecting:null, sources:{...s.sources, [id]:true}})); this.flash(SRC[id].name + ' conectado'); }, 1100);
+  }
+  guess() {
+    const n = this.state.addName;
+    if (!n.trim()) return {id:null, name:'Escribe dónde compraste', icon:'ph ph-question', conf:''};
+    const hit = KW.find(([re]) => re.test(n));
+    const id = hit ? hit[1] : 'libre';
+    return {id, name:FM[id].name, icon:'ph ph-' + FM[id].icon, conf: hit ? 'Alta confianza' : 'Sugerencia'};
+  }
+  renderVals() {
+    const s = this.state, dir = this.props.direction ?? 'carpetas';
+    const income = s.phase === 'onb' ? this.inc() : Object.values(s.budgets).reduce((a, c) => a + c, 0);
+    const views = F.map(f => this.fv(f));
+    const VM = Object.fromEntries(views.map(v => [v.id, v]));
+    const flex = views.filter(v => ['super','transporte','restaurantes','ocio','libre'].includes(v.id));
+    const flexLeft = flex.reduce((a, v) => a + Math.max(0, v.left), 0);
+    const spent = views.filter(v => v.flow).reduce((a, v) => a + v.spent, 0);
+    const saved = views.filter(v => !v.flow).reduce((a, v) => a + v.budget, 0);
+    const hot = views.filter(v => v.flow && v.id !== 'vivienda' && v.r > MONTH_PCT + 0.3).sort((a, b) => b.r - a.r)[0];
+    const review = s.txs.filter(t => !t.f);
+    const openRecat = id => this.setState({sheet:'recat', rcId:id});
+    const txView = t => {
+      const f = t.f && FM[t.f];
+      return {name:t.name, amtL:'−' + fmt(t.amt), sub:SRC[t.src].short + ' · ' + t.when, srcIcon:SRC[t.src].icon,
+        icon: f ? 'ph ph-' + f.icon : 'ph ph-question', folderName: f ? f.name : 'Por revisar',
+        tagColor: f ? 'var(--color-neutral-500)' : 'var(--color-accent-300)', open:() => openRecat(t.id)};
+    };
+    const groupRows = G.map(g => {
+      const items = views.filter(v => v.grp === g.id), amt = items.reduce((a, v) => a + v.budget, 0), used = items.reduce((a, v) => a + Math.min(v.spent, v.budget), 0);
+      return {label:g.label, color:g.color, amtL:fmt0(amt), pctL: income ? Math.round(amt / income * 100) + '%' : '0%', w: pct(amt, income),
+        usedL: fmt0(used), usedW: pct(used, amt), names: items.filter(v => v.budget > 0).map(v => v.name + ' ' + fmt0(v.budget)).join(' · '),
+        items: items.filter(v => v.budget > 0 || v.id === 'japon')};
+    });
+    const b = s.budgets, ess = F.filter(f => f.grp === 'nec').reduce((a, f) => a + b[f.id], 0);
+    const savePct = income ? Math.round((b.emergencia + b.retiro + b.japon + b.tarjeta) / income * 100) : 0;
+    const basis = [
+      `Renta = ${income ? Math.round(b.vivienda / income * 100) : 0}% de tu ingreso; el hogar promedio en EE.UU. destina 33% a vivienda (BLS, 2024).`,
+      b.tarjeta ? `Tu Amex (21.9% APR) recibe ${fmt0(b.tarjeta)}/mes: la deuda más cara va primero (método avalancha).` : 'Sin deuda de tarjeta: todo lo de deuda pasa a tu fondo de emergencia.',
+      `Fondo de emergencia hacia 3 meses de gastos esenciales (${fmt0(ess * 3)}), después de un colchón de $1,000.`,
+      `${savePct}% a ahorro y deuda: por encima del 20% de referencia de la regla 50/30/20.`,
+    ];
+    const fo0 = s.folderId ? VM[s.folderId] : null;
+    let fo = {tx:[]};
+    if (fo0) {
+      const ftx = s.txs.filter(t => t.f === fo0.id).map(txView);
+      const tips = {
+        restaurantes:'68% de tus gastos aquí son de viernes a domingo. Un tope de $25 por salida te deja terminar el mes en verde.',
+        super:'Vas a buen ritmo. Comprar en Trader Joe’s en vez de Whole Foods te ahorró ~$18 este mes.',
+        transporte:'Gasolina subió 6% vs septiembre. Uber 2 veces por semana cuesta lo mismo que tu tanque.',
+        suscripciones:'Spotify y Netflix suman $33. No has usado Netflix en 41 días: cancelarlo libera $15.49/mes.',
+        emergencia:'Este dinero vive en tu cuenta de Ahorros con Apple al 3.9%. No lo toques salvo emergencias reales.',
+        tarjeta:'Pagar $250 en vez del mínimo ($65) te ahorra cientos de dólares en intereses.',
+        japon:'Sin aporte todavía. Pídele a tu asesor que arme un plan con lo que sobra en Libre y Ocio.',
+        libre:'Libre es tu colchón de gasto sin culpa. Lo que liberas en otras carpetas llega aquí.',
+      };
+      fo = {...fo0, groupLabel: GM[fo0.grp].label, budgetL: fmt0(fo0.budget), tx: ftx, noTx: ftx.length === 0,
+        emptyNote: fo0.flow ? 'Aún no hay movimientos este mes.' : 'Transferencia automática el día 1 de cada mes.',
+        pace: fo0.flow ? `Llevas ${Math.round(fo0.r * 100)}% gastado con 39% del mes recorrido.` : 'Se aparta al recibir tu sueldo, antes de gastar.',
+        tip: tips[fo0.id] || 'Va de acuerdo al plan. Te aviso si cambia el ritmo.'};
+    }
+    const adjust = d => {
+      const id = s.folderId; if (!id || id === 'libre') { this.setState({adjustNote:'Libre recibe lo que liberas en otras carpetas.'}); return; }
+      const bb = {...s.budgets};
+      if (d > 0 && bb.libre < 10) { this.setState({adjustNote:'Libre está en $0. Mueve dinero desde otra carpeta.'}); return; }
+      if (d < 0 && bb[id] < 10) return;
+      bb[id] += d; bb.libre -= d;
+      this.setState({budgets:bb, adjustNote: d > 0 ? `+$10 tomados de Libre (queda ${fmt0(bb.libre)}) · sigue en base cero` : `$10 regresaron a Libre (${fmt0(bb.libre)}) · sigue en base cero`});
+    };
+    const goals = this.goalsData().map(g => ({...g, savedL:fmt0(g.saved), targetL:'de ' + fmt0(g.target), w:pct(g.saved, g.target),
+      monthlyL: g.monthly ? '+' + fmt0(g.monthly) + '/mes' : 'sin aporte', needsPlan: !g.monthly,
+      ask: () => this.ask(g.id === 'japon' ? 'Quiero ir a Japón en 2027 y necesito $3,000 (llevo $640). ¿De dónde saco el aporte mensual?' : `Mi meta ${g.name} no tiene aporte. ¿Cómo la activo?`)}));
+    const hotPct = hot ? Math.round(hot.r * 100) : 0;
+    const askHot = () => hot && this.ask(`${hot.name} va al ${hotPct}% y apenas llevo 39% del mes. Propón un ajuste sin tocar mi ahorro.`);
+    const actions = [];
+    if (review.length) actions.push({icon:'ph ph-tag', title:`${review.length} ${review.length === 1 ? 'movimiento' : 'movimientos'} por categorizar`, sub:review.map(t => t.name).join(', '), go:() => openRecat(review[0].id)});
+    if (hot) actions.push({icon:hot.icon, title:`${hot.name} al ${hotPct}%`, sub:'Pide un ajuste sin tocar tu ahorro', go:askHot});
+    if (!b.japon) actions.push({icon:'ph ph-airplane-tilt', title:'Japón no tiene aporte', sub:'Arma un plan para llegar en 2027', go:goals[3].ask});
+    const rcTx = s.rcId && s.txs.find(t => t.id === s.rcId);
+    const rc = rcTx ? {name:rcTx.name, amtL:'−' + fmt(rcTx.amt), sub:SRC[rcTx.src].short + ' · ' + rcTx.when, why:rcTx.why} : {};
+    const rcOptions = F.filter(f => f.grp === 'nec' || f.grp === 'des').map(f => {
+      const on = rcTx && rcTx.f === f.id;
+      return {name:f.name, icon:'ph ph-' + f.icon, bg: on ? 'var(--color-accent-900)' : 'var(--color-bg)', border: on ? 'var(--color-accent)' : 'var(--color-neutral-800)',
+        pick:() => { this.setState(st => ({txs:st.txs.map(t => t.id === s.rcId ? {...t, f:f.id, why:`Lo moviste a ${f.name}. Aprendido para la próxima.`} : t), sheet:null})); this.flash(`${rcTx.name} → ${f.name}. Lo recordaré.`); }};
+    });
+    const g = this.guess();
+    const tabsDef = [
+      {id:'home', label: dir === 'asesor' ? 'Hoy' : 'Inicio', icon: dir === 'asesor' ? 'sun' : 'house'},
+      {id:'folders', label:'Carpetas', icon:'folders'},
+      {id:'goals', label:'Metas', icon:'target'},
+      {id:'advisor', label:'Asesor', icon:'sparkle'},
+    ];
+    const msgs = s.messages.map(m => m.kind === 'plan' ? {
+      isPlan:true, isText:false, justify:'flex-start', resumen:m.resumen, applied:m.applied, btn: m.applied ? 'Aplicado' : 'Aplicar a mis carpetas',
+      apply:() => this.applyPlan(m.id), moves:m.moves.map(mv => ({fromName:FM[mv.de].name, toName:FM[mv.a].name, amtL:fmt0(mv.monto)}))
+    } : {isText:true, isPlan:false, text:m.text, justify: m.role === 'user' ? 'flex-end' : 'flex-start',
+      bg: m.role === 'user' ? 'var(--color-accent-900)' : 'var(--color-surface)', border: m.role === 'user' ? 'var(--color-accent-700)' : 'transparent',
+      radius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px'});
+    const nConn = Object.values(s.sources).filter(Boolean).length;
+    return {
+      isOnb: s.phase === 'onb', isApp: s.phase === 'app',
+      onb0: s.step === 0, onb1: s.step === 1, onb2: s.step === 2, onb3: s.step === 3,
+      onbDots: [0,1,2,3].map(i => ({bg: i <= s.step ? 'var(--color-accent)' : 'var(--color-neutral-800)'})),
+      incomeInput: s.income, onIncome: e => this.setState({income: e.target.value.replace(/[^0-9]/g, '')}),
+      prioList: PRIO.map(p => { const on = s.prios[p.id]; return {...p, bg: on ? 'var(--color-accent-900)' : 'transparent', fg: on ? 'var(--color-accent-200)' : 'var(--color-neutral-300)', border: on ? 'var(--color-accent-700)' : 'var(--color-neutral-800)', toggle:() => this.setState(st => ({prios:{...st.prios, [p.id]:!st.prios[p.id]}}))}; }),
+      nextOnb: () => {
+        if (s.step === 1) {
+          if (this.inc() < 500) { this.flash('Escribe tu ingreso mensual neto'); return; }
+          this.setState({step:2, analyzing:true, budgets:buildBudgets(this.inc(), s.prios)});
+          setTimeout(() => this.setState({analyzing:false}), 1600);
+        } else this.setState({step: s.step + 1});
+      },
+      finishOnb: () => { this.setState({phase:'app', tab:'home'}); this.flash(nConn ? `${nConn} ${nConn === 1 ? 'fuente conectada' : 'fuentes conectadas'} · plan activo` : 'Plan activo · conecta tus tarjetas cuando quieras'); },
+      analyzing: s.analyzing, planReady: !s.analyzing,
+      spinner: React.createElement('i', {className:'ph ph-circle-notch', style:{fontSize:34, display:'inline-block', animation:'spin 1s linear infinite'}}),
+      spinnerSm: React.createElement('i', {className:'ph ph-circle-notch', style:{fontSize:16, display:'inline-block', animation:'spin 1s linear infinite', color:'var(--color-accent-300)'}}),
+      incomeL: fmt0(income), folderCount: F.filter(f => b[f.id] > 0).length, groupRows, basis,
+      sourceList: Object.entries(SRC).map(([id, x]) => {
+        const on = s.sources[id], busy = s.connecting === id;
+        return {...x, toggle:() => this.toggleSource(id),
+          btnBg: on ? 'var(--color-accent-900)' : 'transparent', btnFg: on ? 'var(--color-accent-200)' : 'var(--color-text)',
+          btnBorder: on ? 'var(--color-accent-700)' : busy ? 'var(--color-accent)' : 'var(--color-neutral-700)',
+          btnIcon: on ? 'ph ph-check' : busy ? 'ph ph-circle-notch' : 'ph ph-plus', btnLabel: on ? 'Conectado' : busy ? 'Conectando' : 'Conectar'};
+      }),
+      dirCarpetas: dir !== 'asesor', dirAsesor: dir === 'asesor',
+      tabHome: s.tab === 'home', tabFolders: s.tab === 'folders', tabGoals: s.tab === 'goals', tabAdvisor: s.tab === 'advisor',
+      dailyL: fmt(Math.round(flexLeft / DAYS_LEFT * 100) / 100), flexLeftL: fmt0(flexLeft), daysLeft: DAYS_LEFT,
+      barSpentW: pct(spent, income), barSavedW: pct(saved, income), spentL: fmt0(spent), savedL: fmt0(saved),
+      hasHot: !!hot, hotTitle: hot ? `${hot.name} va al ${hotPct}% con 39% del mes` : '', askHot,
+      peekFolders: flex.slice().sort((a, b2) => b2.r - a.r).slice(0, 4),
+      briefTitle: hot ? `Vas bien, Ana. Solo ${hot.name} pide atención.` : 'Vas impecable este mes, Ana.',
+      briefBody: `Llevas ${fmt0(spent - (VM.vivienda ? VM.vivienda.spent : 0))} gastado fuera de la renta y ya apartaste ${fmt0(saved)} para tus metas. ` + (hot ? `${hot.name} va al ${hotPct}% con 39% del mes recorrido.` : 'Todas tus carpetas van a ritmo.'),
+      actions, liveLabel: nConn ? `${nConn} fuentes en vivo` : 'Sin fuentes',
+      recentTx: s.txs.slice(0, dir === 'asesor' ? 3 : 5).map(txView),
+      goFolders: () => this.setState({tab:'folders', folderId:null}), goAdvisor: () => this.setState({tab:'advisor'}),
+      openConnect: () => this.setState({sheet:'connect'}), openAdd: () => this.setState({sheet:'add', addAmt:'', addName:''}),
+      folderGroups: groupRows, noFolderOpen: !fo0, folderOpen: !!fo0, fo,
+      closeFolder: () => this.setState({folderId:null}), budgetPlus: () => adjust(10), budgetMinus: () => adjust(-10), adjustNote: s.adjustNote || 'Al ajustar, la diferencia sale de Libre o vuelve a Libre.',
+      goals, messages: msgs, thinking: s.thinking,
+      suggestions: SUG.map(l => ({label:l, ask:() => this.ask(l)})),
+      draft: s.draft, onDraft: e => this.setState({draft:e.target.value}),
+      onDraftKey: e => { if (e.key === 'Enter') this.ask(s.draft); }, sendDraft: () => this.ask(s.draft),
+      tabs: tabsDef.map(t => ({label:t.label, icon:(s.tab === t.id ? 'ph-fill ph-' : 'ph ph-') + t.icon, color: s.tab === t.id ? 'var(--color-accent-300)' : 'var(--color-neutral-500)', go:() => this.setState({tab:t.id, folderId:null})})),
+      hasSheet: !!s.sheet, sheetRecat: s.sheet === 'recat', sheetConnect: s.sheet === 'connect', sheetAdd: s.sheet === 'add',
+      closeSheet: () => this.setState({sheet:null}), rc, rcOptions,
+      addAmt: s.addAmt, addName: s.addName, guess: g,
+      onAddAmt: e => this.setState({addAmt:e.target.value.replace(/[^0-9.]/g, '')}), onAddName: e => this.setState({addName:e.target.value}),
+      scanTicket: () => { this.setState({addAmt:'23.40', addName:'CVS Pharmacy'}); this.flash('Ticket leído: CVS Pharmacy · $23.40'); },
+      saveAdd: () => {
+        const amt = parseFloat(s.addAmt); if (!amt || !s.addName.trim()) { this.flash('Falta el monto o el lugar'); return; }
+        const t = {id:'m' + Date.now(), name:s.addName.trim(), amt, f:g.id || 'libre', src:'cash', when:'Hoy · ahora', why:'Registrado a mano. Puedes cambiar la carpeta.'};
+        this.setState(st => ({txs:[t, ...st.txs], sheet:null})); this.flash(`${fmt(amt)} → ${FM[t.f].name}`);
+      },
+      hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

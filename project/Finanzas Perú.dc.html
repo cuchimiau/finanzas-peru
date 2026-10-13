@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/nocturne-270bb39e-9f22-4323-84aa-42d92a865a66/styles.css">
+<script src="_ds/nocturne-270bb39e-9f22-4323-84aa-42d92a865a66/_ds_bundle.js"></script>
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+body{margin:0;background:var(--color-bg);font-family:var(--font-body);color:var(--color-text);-webkit-font-smoothing:antialiased}
+a{color:var(--color-accent-300)}a:hover{color:var(--color-accent-200)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+input::placeholder{color:var(--color-neutral-600)}
+*::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 16px;box-sizing:border-box;background:radial-gradient(900px 500px at 50% -10%, var(--color-accent-900), transparent 60%), var(--color-bg)">
+<div style="width:410px;height:864px;flex-shrink:0;border-radius:56px;padding:10px;box-sizing:border-box;background:#2a2c35;box-shadow:0 0 0 1px var(--color-neutral-700), 0 40px 80px rgba(0,0,0,.6)">
+<div style="position:relative;width:100%;height:100%;border-radius:46px;overflow:hidden;background:radial-gradient(420px 260px at 15% -60px, var(--color-accent-900), transparent 70%), var(--color-bg);display:flex;flex-direction:column">
+
+<div style="height:50px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:6px 30px 0 36px;font-size:15px;font-weight:600;position:relative;z-index:5">
+<span>9:41</span>
+<div style="position:absolute;left:50%;top:11px;transform:translateX(-50%);width:120px;height:34px;border-radius:20px;background:#08090d"></div>
+<div style="display:flex;gap:5px;font-size:16px"><i class="ph-fill ph-cell-signal-full"></i><i class="ph ph-wifi-high"></i><i class="ph-fill ph-battery-full"></i></div>
+</div>
+
+<sc-if value="{{ isOnb }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:12px 24px 34px">
+<div style="display:flex;gap:6px;margin-bottom:26px">
+<sc-for list="{{ onbDots }}" as="d" hint-placeholder-count="4"><div style="height:3px;flex:1;border-radius:2px;background:{{ d.bg }}"></div></sc-for>
+</div>
+
+<sc-if value="{{ onb0 }}" hint-placeholder-val="{{ true }}">
+<div style="flex:1;display:flex;flex-direction:column;animation:rise .4s ease">
+<div style="width:52px;height:52px;border-radius:14px;border:1px solid var(--color-accent);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--color-accent-300);box-shadow:0 0 30px var(--color-accent-800)"><i class="ph ph-folders"></i></div>
+<h1 style="font-size:34px;line-height:1.1;font-weight:500;letter-spacing:-0.02em;margin:28px 0 12px;text-wrap:pretty">Cada sol, en su carpeta.</h1>
+<p style="font-size:16px;line-height:1.5;color:var(--color-neutral-400);margin:0;text-wrap:pretty">Calculamos tu plan óptimo con tus datos, repartimos tu sueldo en carpetas y registramos cada pago que haces con tu iPhone. Tu asesor lo ajusta contigo.</p>
+<div style="margin-top:32px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;gap:12px;align-items:center;font-size:14px;color:var(--color-neutral-300)"><i class="ph ph-chart-pie-slice" style="font-size:20px;color:var(--color-accent-300)"></i>Plan base cero, con gratificación y CTS</div>
+<div style="display:flex;gap:12px;align-items:center;font-size:14px;color:var(--color-neutral-300)"><i class="ph ph-apple-logo" style="font-size:20px;color:var(--color-accent-300)"></i>Apple Pay con tus tarjetas BCP, BBVA, Interbank…</div>
+<div style="display:flex;gap:12px;align-items:center;font-size:14px;color:var(--color-neutral-300)"><i class="ph ph-sparkle" style="font-size:20px;color:var(--color-accent-300)"></i>Asesor personal con IA</div>
+</div>
+<div style="flex:1"></div>
+<button class="btn btn-primary btn-block" style="height:52px;font-size:16px;border-radius:14px" onClick="{{ nextOnb }}">Crear mi plan</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ onb1 }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;animation:rise .4s ease">
+<div style="font-size:12px;color:var(--color-accent-300);letter-spacing:.06em;text-transform:uppercase">Paso 1 de 3</div>
+<h2 style="font-size:26px;font-weight:500;margin:8px 0 24px;letter-spacing:-0.01em">¿Cuánto te depositan al mes?</h2>
+<div style="display:flex;align-items:baseline;gap:8px;border-bottom:1px solid var(--color-accent);padding-bottom:8px">
+<span style="font-size:30px;color:var(--color-neutral-500)">S/</span>
+<input type="text" inputmode="numeric" value="{{ incomeInput }}" onChange="{{ onIncome }}" style="flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--color-text);font:500 40px var(--font-heading);font-variant-numeric:tabular-nums;letter-spacing:-0.02em"></input>
+<span style="font-size:13px;color:var(--color-neutral-500)">neto</span>
+</div>
+<div style="font-size:12.5px;color:var(--color-neutral-500);margin-top:8px">Después de AFP u ONP y renta de 5ta. Gratificación y CTS se planifican aparte.</div>
+<div style="font-size:15px;color:var(--color-neutral-300);margin:28px 0 12px">¿Qué aplica a ti?</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ prioList }}" as="p" hint-placeholder-count="4">
+<button onClick="{{ p.toggle }}" style="height:40px;padding:0 14px;border-radius:20px;font:500 14px var(--font-body);cursor:pointer;display:flex;align-items:center;gap:6px;background:{{ p.bg }};color:{{ p.fg }};border:1px solid {{ p.border }}"><i class="{{ p.icon }}"></i>{{ p.label }}</button>
+</sc-for>
+</div>
+<div style="flex:1;min-height:24px"></div>
+<button class="btn btn-primary btn-block" style="height:52px;font-size:16px;border-radius:14px" onClick="{{ nextOnb }}">Calcular plan óptimo</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ onb2 }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ analyzing }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--color-accent-300)">
+{{ spinner }}
+<div style="font-size:15px;color:var(--color-neutral-300)">Calculando tu plan óptimo…</div>
+</div>
+</sc-if>
+<sc-if value="{{ planReady }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;animation:rise .4s ease">
+<div style="font-size:12px;color:var(--color-accent-300);letter-spacing:.06em;text-transform:uppercase">Paso 2 de 3 · Tu plan</div>
+<h2 style="font-size:24px;font-weight:500;margin:8px 0 16px;letter-spacing:-0.01em;text-wrap:pretty">{{ incomeL }} repartidos en {{ folderCount }} carpetas</h2>
+<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px;margin-bottom:8px">
+<sc-for list="{{ groupRows }}" as="g" hint-placeholder-count="4"><div style="width:{{ g.w }};background:{{ g.color }}"></div></sc-for>
+</div>
+<div style="flex:1;min-height:0;overflow:auto">
+<sc-for list="{{ groupRows }}" as="g" hint-placeholder-count="4">
+<div style="padding:9px 0">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><div style="width:8px;height:8px;border-radius:2px;background:{{ g.color }}"></div><span style="font-size:14px;font-weight:500;flex:1">{{ g.label }}</span><span style="font-size:13px;color:var(--color-neutral-400)">{{ g.pctL }}</span><span style="font-size:14px;font-variant-numeric:tabular-nums;width:72px;text-align:right">{{ g.amtL }}</span></div>
+<div style="font-size:12.5px;color:var(--color-neutral-500);padding-left:16px;line-height:1.5">{{ g.names }}</div>
+</div>
+</sc-for>
+<div style="margin-top:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--color-accent-800)">
+<div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;margin-bottom:8px"><i class="ph ph-sparkle" style="color:var(--color-accent-300)"></i>Por qué este plan</div>
+<sc-for list="{{ basis }}" as="b" hint-placeholder-count="4">
+<div style="font-size:12.5px;line-height:1.45;color:var(--color-neutral-300);padding:4px 0">{{ b }}</div>
+</sc-for>
+</div>
+</div>
+<button class="btn btn-primary btn-block" style="height:52px;font-size:16px;border-radius:14px;margin-top:14px" onClick="{{ nextOnb }}">Crear mis carpetas</button>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ onb3 }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-height:0;display:flex;flex-direction:column;animation:rise .4s ease">
+<div style="font-size:12px;color:var(--color-accent-300);letter-spacing:.06em;text-transform:uppercase">Paso 3 de 3</div>
+<h2 style="font-size:26px;font-weight:500;margin:8px 0 6px;letter-spacing:-0.01em">Conecta cómo pagas</h2>
+<p style="font-size:14px;color:var(--color-neutral-400);margin:0 0 16px;line-height:1.5">Cada pago llega a la carpeta correcta, sin que escribas nada.</p>
+<div style="flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ sourceList }}" as="s" hint-placeholder-count="5">
+<div style="padding:10px 12px;border-radius:12px;background:var(--color-surface)">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:10px;background:var(--color-neutral-900);display:flex;align-items:center;justify-content:center;font-size:19px"><i class="{{ s.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ s.name }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ s.sub }}</div></div>
+<button onClick="{{ s.toggle }}" disabled="{{ s.soon }}" style="height:32px;min-width:96px;padding:0 12px;border-radius:16px;font:500 13px var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;background:{{ s.btnBg }};color:{{ s.btnFg }};border:1px solid {{ s.btnBorder }}"><i class="{{ s.btnIcon }}"></i>{{ s.btnLabel }}</button>
+</div>
+<div style="font-size:12px;line-height:1.45;color:var(--color-neutral-400);margin:8px 0 0 48px">{{ s.how }}</div>
+</div>
+</sc-for>
+</div>
+<button class="btn btn-primary btn-block" style="height:52px;font-size:16px;border-radius:14px;margin-top:14px" onClick="{{ finishOnb }}">Ir a mis finanzas</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+<div ref="{{ scrollRef }}" style="flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;position:relative">
+
+<sc-if value="{{ tabHome }}" hint-placeholder-val="{{ true }}">
+<div style="padding:8px 20px 24px;display:flex;flex-direction:column;gap:18px;animation:rise .35s ease">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<div><div style="font-size:13px;color:var(--color-neutral-500)">Lunes 12 de octubre</div><div style="font-size:20px;font-weight:500;margin-top:2px">Hola, Ana</div></div>
+<div style="display:flex;gap:8px">
+<button class="btn btn-icon btn-ghost" onClick="{{ openConnect }}" style="width:40px;height:40px;border-radius:12px;font-size:19px"><i class="ph ph-plugs-connected"></i></button>
+<button class="btn btn-icon btn-primary" onClick="{{ openAdd }}" style="width:40px;height:40px;border-radius:12px;font-size:19px"><i class="ph ph-plus"></i></button>
+</div>
+</div>
+<div>
+<div style="font-size:13px;color:var(--color-neutral-400)">Puedes gastar hoy</div>
+<div style="font-size:52px;font-weight:500;letter-spacing:-0.03em;line-height:1.05;margin-top:4px;font-variant-numeric:tabular-nums">{{ dailyL }}</div>
+<div style="font-size:13px;color:var(--color-neutral-500);margin-top:6px">{{ flexLeftL }} libres en tus carpetas de gasto · {{ daysLeft }} días para fin de mes</div>
+</div>
+<div style="padding:14px;border-radius:14px;background:var(--color-surface);box-shadow:var(--shadow-sm)">
+<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:10px"><span style="color:var(--color-neutral-400)">Octubre · sueldo {{ incomeL }}</span><span style="color:var(--color-accent-300)">39% del mes</span></div>
+<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;background:var(--color-neutral-900)">
+<div style="width:{{ barSpentW }};background:var(--color-neutral-300)"></div>
+<div style="width:{{ barSavedW }};background:var(--color-accent)"></div>
+</div>
+<div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--color-neutral-400)">
+<span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:2px;background:var(--color-neutral-300)"></span>Gastado {{ spentL }}</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:2px;background:var(--color-accent)"></span>Ahorro y deudas {{ savedL }}</span>
+</div>
+</div>
+<sc-if value="{{ hasHot }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ askHot }}" style="cursor:pointer;padding:14px;border-radius:14px;border:1px solid var(--color-accent-700);background:linear-gradient(160deg, var(--color-accent-900), transparent);display:flex;gap:12px">
+<i class="ph ph-sparkle" style="font-size:20px;color:var(--color-accent-300);margin-top:1px"></i>
+<div style="flex:1"><div style="font-size:14px;font-weight:500;margin-bottom:4px">{{ hotTitle }}</div><div style="font-size:13px;line-height:1.45;color:var(--color-neutral-300)">Pídele a tu asesor un ajuste que no toque tu ahorro.</div><div style="font-size:13px;color:var(--color-accent-300);margin-top:8px;display:flex;align-items:center;gap:4px">Pedir propuesta <i class="ph ph-arrow-right"></i></div></div>
+</div>
+</sc-if>
+<div onClick="{{ goDebts }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--color-surface)">
+<i class="ph ph-credit-card" style="font-size:20px;color:var(--color-neutral-300)"></i>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">Deuda {{ debtTotalL }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ debtFreeL }} · {{ creditMonthL }} cargados a crédito este mes</div></div>
+<i class="ph ph-caret-right" style="color:var(--color-neutral-600)"></i>
+</div>
+<div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span style="font-size:16px;font-weight:500">Carpetas de gasto</span><button onClick="{{ goFolders }}" style="background:none;border:0;color:var(--color-accent-300);font:500 13px var(--font-body);cursor:pointer">Ver las {{ folderCount }}</button></div>
+<sc-for list="{{ peekFolders }}" as="f" hint-placeholder-count="4">
+<div onClick="{{ f.open }}" style="cursor:pointer;padding:10px 0">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:10px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--color-neutral-300)"><i class="{{ f.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ f.name }}</div><div style="font-size:12px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">{{ f.ofL }}</div></div>
+<div style="text-align:right"><div style="font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;color:{{ f.leftColor }}">{{ f.leftL }}</div><div style="font-size:11.5px;color:var(--color-neutral-500)">{{ f.leftLabel }}</div></div>
+</div>
+<div style="height:3px;border-radius:2px;background:var(--color-neutral-900);margin:8px 0 0 48px;overflow:hidden"><div style="height:100%;width:{{ f.barW }};background:{{ f.barColor }}"></div></div>
+</div>
+</sc-for>
+</div>
+<div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px"><span style="font-size:16px;font-weight:500">Últimos movimientos</span><span style="font-size:12px;color:var(--color-neutral-500);display:flex;align-items:center;gap:4px"><i class="ph-fill ph-circle" style="font-size:7px;color:var(--color-accent)"></i>{{ liveLabel }}</span></div>
+<sc-for list="{{ recentTx }}" as="t" hint-placeholder-count="5">
+<div onClick="{{ t.open }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:10px 0">
+<div style="width:38px;height:38px;border-radius:11px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--color-neutral-300)"><i class="{{ t.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ t.name }}</div><div style="font-size:12px;color:var(--color-neutral-500);display:flex;align-items:center;gap:4px"><i class="{{ t.srcIcon }}"></i>{{ t.sub }}</div></div>
+<div style="text-align:right"><div style="font-size:14px;font-variant-numeric:tabular-nums">{{ t.amtL }}</div><div style="font-size:11.5px;color:{{ t.tagColor }}">{{ t.folderName }}</div></div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ tabFolders }}" hint-placeholder-val="{{ false }}">
+<sc-if value="{{ noFolderOpen }}" hint-placeholder-val="{{ true }}">
+<div style="padding:8px 20px 28px;animation:rise .35s ease">
+<div style="font-size:26px;font-weight:500;letter-spacing:-0.01em">Carpetas</div>
+<div style="font-size:13px;color:var(--color-neutral-500);margin-top:2px">{{ incomeL }} asignados · S/ 0 sin destino</div>
+<sc-for list="{{ folderGroups }}" as="grp" hint-placeholder-count="4">
+<div style="margin-top:22px">
+<div style="display:flex;justify-content:space-between;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--color-neutral-500);margin-bottom:2px"><span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:2px;background:{{ grp.color }}"></span>{{ grp.label }}</span><span style="font-variant-numeric:tabular-nums">{{ grp.amtL }}</span></div>
+<sc-for list="{{ grp.items }}" as="f" hint-placeholder-count="3">
+<div onClick="{{ f.open }}" style="cursor:pointer;padding:10px 0;border-bottom:1px solid var(--color-divider)">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:10px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--color-neutral-300)"><i class="{{ f.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ f.name }}</div><div style="font-size:12px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">{{ f.ofL }}</div></div>
+<div style="text-align:right"><div style="font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;color:{{ f.leftColor }}">{{ f.leftL }}</div><div style="font-size:11.5px;color:var(--color-neutral-500)">{{ f.leftLabel }}</div></div>
+</div>
+<div style="height:3px;border-radius:2px;background:var(--color-neutral-900);margin:8px 0 0 48px;overflow:hidden"><div style="height:100%;width:{{ f.barW }};background:{{ f.barColor }}"></div></div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ folderOpen }}" hint-placeholder-val="{{ false }}">
+<div style="padding:4px 20px 28px;animation:rise .3s ease">
+<button onClick="{{ closeFolder }}" style="background:none;border:0;color:var(--color-accent-300);font:500 15px var(--font-body);cursor:pointer;display:flex;align-items:center;gap:4px;padding:6px 0;margin-left:-4px"><i class="ph ph-caret-left"></i>Carpetas</button>
+<div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+<div style="width:40px;height:40px;border-radius:11px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--color-neutral-300)"><i class="{{ fo.icon }}"></i></div>
+<div><div style="font-size:20px;font-weight:500">{{ fo.name }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ fo.groupLabel }}</div></div>
+</div>
+<div style="font-size:44px;font-weight:500;letter-spacing:-0.02em;margin-top:18px;font-variant-numeric:tabular-nums;color:{{ fo.leftColor }}">{{ fo.leftL }}</div>
+<div style="font-size:13px;color:var(--color-neutral-400)">{{ fo.leftLabel }} · {{ fo.ofL }}</div>
+<div style="height:6px;border-radius:3px;background:var(--color-neutral-900);margin:14px 0 6px;overflow:hidden"><div style="height:100%;width:{{ fo.barW }};background:{{ fo.barColor }}"></div></div>
+<div style="font-size:12px;color:var(--color-neutral-500)">{{ fo.pace }}</div>
+<div style="margin-top:16px;padding:12px 14px;border-radius:14px;border:1px solid var(--color-accent-800);display:flex;gap:10px;font-size:13px;line-height:1.45;color:var(--color-neutral-300)"><i class="ph ph-sparkle" style="font-size:17px;color:var(--color-accent-300);margin-top:1px"></i><span>{{ fo.tip }}</span></div>
+<div style="margin-top:14px;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:14px;background:var(--color-surface)">
+<span style="font-size:14px">Presupuesto</span>
+<div style="display:flex;align-items:center;gap:10px">
+<button class="btn btn-icon btn-secondary" onClick="{{ budgetMinus }}" style="width:34px;height:34px;border-radius:10px"><i class="ph ph-minus"></i></button>
+<span style="font-size:15px;font-weight:500;min-width:72px;text-align:center;font-variant-numeric:tabular-nums">{{ fo.budgetL }}</span>
+<button class="btn btn-icon btn-secondary" onClick="{{ budgetPlus }}" style="width:34px;height:34px;border-radius:10px"><i class="ph ph-plus"></i></button>
+</div>
+</div>
+<div style="font-size:12px;color:var(--color-neutral-500);margin-top:6px;padding-left:2px">{{ adjustNote }}</div>
+<div style="font-size:16px;font-weight:500;margin:22px 0 4px">Movimientos</div>
+<sc-for list="{{ fo.tx }}" as="t" hint-placeholder-count="3">
+<div onClick="{{ t.open }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:10px 0">
+<div style="width:38px;height:38px;border-radius:11px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--color-neutral-300)"><i class="{{ t.srcIcon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ t.name }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ t.sub }}</div></div>
+<div style="font-size:14px;font-variant-numeric:tabular-nums">{{ t.amtL }}</div>
+</div>
+</sc-for>
+<sc-if value="{{ fo.noTx }}" hint-placeholder-val="{{ false }}"><div style="font-size:13px;color:var(--color-neutral-500);padding:8px 0">{{ fo.emptyNote }}</div></sc-if>
+</div>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{ tabDebts }}" hint-placeholder-val="{{ false }}">
+<div style="padding:8px 20px 28px;display:flex;flex-direction:column;gap:14px;animation:rise .35s ease">
+<div><div style="font-size:26px;font-weight:500;letter-spacing:-0.01em">Deudas</div><div style="font-size:13px;color:var(--color-neutral-500);margin-top:2px">Tarjetas, cuotas y lo que cargas a crédito</div></div>
+<div>
+<div style="font-size:13px;color:var(--color-neutral-400)">Debes en total</div>
+<div style="font-size:46px;font-weight:500;letter-spacing:-0.03em;line-height:1.05;margin-top:4px;font-variant-numeric:tabular-nums">{{ debtTotalL }}</div>
+<div style="font-size:13px;color:var(--color-neutral-500);margin-top:6px">{{ debtFreeL }} pagando {{ debtPayL }}/mes</div>
+</div>
+<div class="seg" style="display:flex">
+<sc-for list="{{ stratOpts }}" as="o" hint-placeholder-count="3">
+<button onClick="{{ o.pick }}" style="flex:1;height:34px;border:0;border-radius:8px;font:500 13px var(--font-body);cursor:pointer;background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</button>
+</sc-for>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<div style="padding:12px 14px;border-radius:14px;background:var(--color-surface)"><div style="font-size:12px;color:var(--color-neutral-400)">Libre de deudas</div><div style="font-size:20px;font-weight:500;margin-top:2px">{{ stratEndL }}</div></div>
+<div style="padding:12px 14px;border-radius:14px;background:var(--color-surface)"><div style="font-size:12px;color:var(--color-neutral-400)">Intereses a pagar</div><div style="font-size:20px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums">{{ stratIntL }}</div></div>
+</div>
+<div style="font-size:12.5px;line-height:1.45;color:var(--color-neutral-400);margin-top:-4px">{{ stratNote }}</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ debtList }}" as="d" hint-placeholder-count="2">
+<div style="padding:14px;border-radius:14px;background:var(--color-surface)">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:22px;height:22px;border-radius:6px;border:1px solid var(--color-accent-700);color:var(--color-accent-300);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ d.order }}</span>
+<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:500">{{ d.name }}</div><div style="font-size:12px;color:var(--color-neutral-500)">TCEA {{ d.tceaL }} · paga antes del {{ d.due }}</div></div>
+<div style="text-align:right"><div style="font-size:17px;font-weight:500;font-variant-numeric:tabular-nums">{{ d.balL }}</div><div style="font-size:11.5px;color:var(--color-neutral-500)">de {{ d.limitL }}</div></div>
+</div>
+<div style="height:4px;border-radius:2px;background:var(--color-neutral-900);margin:12px 0 10px;overflow:hidden"><div style="height:100%;width:{{ d.useW }};background:{{ d.useColor }}"></div></div>
+<div style="display:flex;justify-content:space-between;font-size:12.5px;color:var(--color-neutral-400)"><span>Mínimo {{ d.minL }} · tu pago {{ d.payL }}</span><span>Libre en {{ d.freeL }}</span></div>
+<sc-if value="{{ d.hasCuotas }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--color-divider);font-size:12.5px;color:var(--color-neutral-300);display:flex;gap:8px;align-items:center"><i class="ph ph-calendar-dots" style="color:var(--color-neutral-500)"></i><span style="flex:1">{{ d.cuotas }}</span></div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 2px"><span style="font-size:16px;font-weight:500">Gastos con crédito este mes</span><span style="font-size:14px;font-variant-numeric:tabular-nums">{{ creditMonthL }}</span></div>
+<div style="font-size:12.5px;color:var(--color-neutral-500);line-height:1.45;margin-bottom:4px">Págalos completos antes del cierre para que no generen intereses.</div>
+<sc-for list="{{ creditTx }}" as="t" hint-placeholder-count="4">
+<div onClick="{{ t.open }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--color-divider)">
+<div style="width:36px;height:36px;border-radius:10px;background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:17px;color:var(--color-neutral-300)"><i class="{{ t.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ t.name }}</div><div style="font-size:12px;color:var(--color-neutral-500);display:flex;align-items:center;gap:4px"><i class="{{ t.srcIcon }}"></i>{{ t.sub }}</div></div>
+<div style="font-size:14px;font-variant-numeric:tabular-nums">{{ t.amtL }}</div>
+</div>
+</sc-for>
+</div>
+<button class="btn btn-primary btn-block" onClick="{{ askDebt }}" style="height:44px;border-radius:12px;gap:6px"><i class="ph ph-sparkle"></i>¿Cómo salgo más rápido?</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ tabMetrics }}" hint-placeholder-val="{{ false }}">
+<div style="padding:8px 20px 28px;display:flex;flex-direction:column;gap:12px;animation:rise .35s ease">
+<div style="font-size:26px;font-weight:500;letter-spacing:-0.01em">Métricas</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+<sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+<div style="padding:12px 14px;border-radius:14px;background:var(--color-surface)"><div style="font-size:12px;color:var(--color-neutral-400)">{{ k.label }}</div><div style="font-size:24px;font-weight:500;margin-top:2px;font-variant-numeric:tabular-nums">{{ k.value }}</div><div style="font-size:11.5px;color:{{ k.noteColor }};margin-top:2px">{{ k.note }}</div></div>
+</sc-for>
+</div>
+<div style="padding:14px;border-radius:14px;background:var(--color-surface)">
+<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:12px"><span style="font-weight:500">Gasto mensual</span><span style="color:var(--color-neutral-500)">línea = sueldo</span></div>
+<div style="height:120px;display:flex;align-items:flex-end;gap:10px;position:relative">
+<div style="position:absolute;left:0;right:0;bottom:{{ incomeLineB }};border-top:1px dashed var(--color-neutral-600)"></div>
+<sc-for list="{{ months }}" as="m" hint-placeholder-count="6">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;height:100%">
+<div style="font-size:10px;color:var(--color-neutral-500);font-variant-numeric:tabular-nums">{{ m.vL }}</div>
+<div style="width:100%;height:{{ m.h }};border-radius:5px 5px 2px 2px;background:{{ m.bg }}"></div>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:10px;margin-top:6px"><sc-for list="{{ months }}" as="m" hint-placeholder-count="6"><div style="flex:1;text-align:center;font-size:11.5px;color:var(--color-neutral-500)">{{ m.label }}</div></sc-for></div>
+</div>
+<div style="padding:14px;border-radius:14px;background:var(--color-surface)">
+<div style="font-size:13px;font-weight:500">Tu gasto vs. el hogar peruano promedio</div>
+<div style="font-size:11.5px;color:var(--color-neutral-500);margin:2px 0 12px">% de tu gasto del plan · referencia INEI 2024</div>
+<div style="display:flex;flex-direction:column;gap:11px">
+<sc-for list="{{ bench }}" as="b" hint-placeholder-count="5">
+<div>
+<div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px"><span style="color:var(--color-neutral-300)">{{ b.label }}</span><span style="font-variant-numeric:tabular-nums">{{ b.youL }} <span style="color:var(--color-neutral-500)">· Perú {{ b.refL }}</span></span></div>
+<div style="height:4px;border-radius:2px;background:var(--color-neutral-900);position:relative"><div style="height:100%;width:{{ b.youW }};border-radius:2px;background:var(--color-accent)"></div><div style="position:absolute;top:-3px;left:{{ b.refW }};width:2px;height:10px;border-radius:1px;background:var(--color-neutral-300)"></div></div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="padding:14px;border-radius:14px;background:var(--color-surface)">
+<div style="font-size:13px;font-weight:500;margin-bottom:12px">¿Cómo pagas?</div>
+<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px">
+<sc-for list="{{ payMix }}" as="p" hint-placeholder-count="4"><div style="width:{{ p.w }};background:{{ p.color }}"></div></sc-for>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-top:12px">
+<sc-for list="{{ payMix }}" as="p" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--color-neutral-300)"><span style="width:7px;height:7px;border-radius:2px;background:{{ p.color }}"></span><span style="flex:1">{{ p.label }}</span><span style="font-variant-numeric:tabular-nums;color:var(--color-neutral-400)">{{ p.pctL }}</span></div>
+</sc-for>
+</div>
+</div>
+<div style="font-size:16px;font-weight:500;margin-top:8px">Metas</div>
+<sc-for list="{{ goals }}" as="g" hint-placeholder-count="3">
+<div style="padding:14px;border-radius:14px;background:var(--color-surface)">
+<div style="display:flex;align-items:center;gap:10px">
+<i class="{{ g.icon }}" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1;font-size:15px;font-weight:500">{{ g.name }}</div>
+<span style="font-size:12px;color:var(--color-neutral-400)">{{ g.monthlyL }}</span>
+</div>
+<div style="display:flex;align-items:baseline;gap:6px;margin-top:10px"><span style="font-size:24px;font-weight:500;font-variant-numeric:tabular-nums">{{ g.savedL }}</span><span style="font-size:13px;color:var(--color-neutral-500)">{{ g.targetL }}</span></div>
+<div style="height:6px;border-radius:3px;background:var(--color-neutral-900);margin:10px 0 8px;overflow:hidden"><div style="height:100%;width:{{ g.w }};background:var(--color-accent)"></div></div>
+<div style="font-size:12.5px;color:var(--color-neutral-400);line-height:1.45">{{ g.foot }}</div>
+<sc-if value="{{ g.needsPlan }}" hint-placeholder-val="{{ false }}">
+<button class="btn btn-primary" onClick="{{ g.ask }}" style="margin-top:12px;height:38px;border-radius:10px;gap:6px"><i class="ph ph-sparkle"></i>Pedir plan al asesor</button>
+</sc-if>
+</div>
+</sc-for>
+<div style="padding:14px;border-radius:14px;border:1px solid var(--color-accent-700);background:linear-gradient(165deg, var(--color-accent-900), transparent)">
+<div style="font-size:12px;color:var(--color-accent-300);letter-spacing:.06em;text-transform:uppercase">Ingresos extra que vienen</div>
+<sc-for list="{{ extras }}" as="x" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--color-divider)">
+<i class="{{ x.icon }}" style="font-size:18px;color:var(--color-neutral-300)"></i>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ x.name }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ x.sub }}</div></div>
+<span style="font-size:14px;font-variant-numeric:tabular-nums">{{ x.amtL }}</span>
+</div>
+</sc-for>
+<button class="btn btn-primary" onClick="{{ askGrati }}" style="margin-top:12px;height:38px;border-radius:10px;gap:6px"><i class="ph ph-sparkle"></i>Planear mi gratificación</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ tabAdvisor }}" hint-placeholder-val="{{ false }}">
+<div style="padding:4px 20px 12px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:12px;padding:4px 0 6px">
+<div style="width:40px;height:40px;border-radius:12px;border:1px solid var(--color-accent);display:flex;align-items:center;justify-content:center;color:var(--color-accent-300);font-size:20px;box-shadow:0 0 20px var(--color-accent-800)"><i class="ph ph-sparkle"></i></div>
+<div><div style="font-size:17px;font-weight:500">Tu asesor</div><div style="font-size:12px;color:var(--color-neutral-500)">Conoce tus carpetas, deudas y metas</div></div>
+</div>
+<sc-for list="{{ messages }}" as="m" hint-placeholder-count="2">
+<div style="display:flex;justify-content:{{ m.justify }};animation:rise .3s ease">
+<sc-if value="{{ m.isText }}" hint-placeholder-val="{{ true }}">
+<div style="max-width:86%;padding:10px 13px;border-radius:{{ m.radius }};font-size:14px;line-height:1.5;white-space:pre-wrap;background:{{ m.bg }};border:1px solid {{ m.border }}">{{ m.text }}</div>
+</sc-if>
+<sc-if value="{{ m.isPlan }}" hint-placeholder-val="{{ false }}">
+<div style="width:100%;padding:14px;border-radius:14px;border:1px solid var(--color-accent-700);background:linear-gradient(170deg, var(--color-accent-900), var(--color-surface))">
+<div style="font-size:12px;color:var(--color-accent-300);letter-spacing:.06em;text-transform:uppercase">Propuesta de ajuste</div>
+<div style="font-size:14px;line-height:1.45;margin:6px 0 10px">{{ m.resumen }}</div>
+<sc-for list="{{ m.moves }}" as="mv" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:7px 0;border-top:1px solid var(--color-divider)"><span style="color:var(--color-neutral-300)">{{ mv.fromName }}</span><i class="ph ph-arrow-right" style="color:var(--color-neutral-500)"></i><span style="flex:1">{{ mv.toName }}</span><span style="font-variant-numeric:tabular-nums;color:var(--color-accent-300)">{{ mv.amtL }}</span></div>
+</sc-for>
+<button class="btn btn-primary btn-block" onClick="{{ m.apply }}" disabled="{{ m.applied }}" style="height:42px;border-radius:11px;margin-top:10px">{{ m.btn }}</button>
+</div>
+</sc-if>
+</div>
+</sc-for>
+<sc-if value="{{ thinking }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--color-neutral-500)">{{ spinnerSm }}Revisando tus carpetas…</div>
+</sc-if>
+</div>
+</sc-if>
+</div>
+
+<sc-if value="{{ tabAdvisor }}" hint-placeholder-val="{{ false }}">
+<div style="padding:8px 16px 10px;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--color-divider)">
+<div style="display:flex;gap:6px;overflow-x:auto">
+<sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="3">
+<button onClick="{{ s.ask }}" style="flex-shrink:0;height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--color-neutral-800);background:transparent;color:var(--color-neutral-300);font:500 12.5px var(--font-body);cursor:pointer">{{ s.label }}</button>
+</sc-for>
+</div>
+<div style="display:flex;gap:8px;align-items:center">
+<input type="text" placeholder="Pregúntale a tu asesor…" value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onDraftKey }}" class="input" style="flex:1;min-width:0;height:42px;border-radius:21px;padding:0 16px;font-size:14px"></input>
+<button class="btn btn-icon btn-primary" onClick="{{ sendDraft }}" style="width:42px;height:42px;border-radius:21px;font-size:18px"><i class="ph ph-paper-plane-right"></i></button>
+</div>
+</div>
+</sc-if>
+
+<div style="height:82px;flex-shrink:0;display:flex;padding:8px 4px 0;border-top:1px solid var(--color-divider)">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+<button onClick="{{ t.go }}" style="flex:1;background:none;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:4px;font:500 10.5px var(--font-body);color:{{ t.color }}">
+<i class="{{ t.icon }}" style="font-size:24px"></i>{{ t.label }}
+</button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasSheet }}" hint-placeholder-val="{{ false }}">
+<div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(8,9,14,.6);z-index:20"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;z-index:21;max-height:86%;overflow:auto;border-radius:22px 22px 0 0;background:var(--color-surface);box-shadow:var(--shadow-lg);padding:10px 20px 34px;animation:rise .25s ease">
+<div style="width:36px;height:5px;border-radius:3px;background:var(--color-neutral-700);margin:0 auto 14px"></div>
+
+<sc-if value="{{ sheetRecat }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:12px;color:var(--color-neutral-500)">{{ rc.sub }}</div>
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin:2px 0 8px"><span style="font-size:20px;font-weight:500">{{ rc.name }}</span><span style="font-size:20px;font-variant-numeric:tabular-nums">{{ rc.amtL }}</span></div>
+<div style="font-size:13px;color:var(--color-neutral-400);line-height:1.45;margin-bottom:14px;display:flex;gap:8px"><i class="ph ph-sparkle" style="color:var(--color-accent-300);font-size:16px"></i><span>{{ rc.why }}</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<sc-for list="{{ rcOptions }}" as="o" hint-placeholder-count="8">
+<button onClick="{{ o.pick }}" style="height:44px;border-radius:11px;display:flex;align-items:center;gap:8px;padding:0 12px;font:500 13px var(--font-body);cursor:pointer;text-align:left;color:var(--color-text);background:{{ o.bg }};border:1px solid {{ o.border }}"><i class="{{ o.icon }}" style="font-size:16px"></i>{{ o.name }}</button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetConnect }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:20px;font-weight:500">Cómo leemos tus gastos</div>
+<div style="font-size:13px;color:var(--color-neutral-400);margin:4px 0 14px;line-height:1.45">Sin pedir tus claves del banco. Todo se puede desactivar.</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ sourceList }}" as="s" hint-placeholder-count="5">
+<div style="padding:10px 12px;border-radius:12px;background:var(--color-bg)">
+<div style="display:flex;align-items:center;gap:12px">
+<div style="width:36px;height:36px;border-radius:10px;background:var(--color-neutral-900);display:flex;align-items:center;justify-content:center;font-size:19px"><i class="{{ s.icon }}"></i></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">{{ s.name }}</div><div style="font-size:12px;color:var(--color-neutral-500)">{{ s.sub }}</div></div>
+<button onClick="{{ s.toggle }}" disabled="{{ s.soon }}" style="height:32px;min-width:96px;padding:0 12px;border-radius:16px;font:500 13px var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;background:{{ s.btnBg }};color:{{ s.btnFg }};border:1px solid {{ s.btnBorder }}"><i class="{{ s.btnIcon }}"></i>{{ s.btnLabel }}</button>
+</div>
+<div style="font-size:12px;line-height:1.45;color:var(--color-neutral-400);margin:8px 0 0 48px">{{ s.how }}</div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetAdd }}" hint-placeholder-val="{{ false }}">
+<div style="font-size:20px;font-weight:500;margin-bottom:14px">Registrar gasto</div>
+<div style="display:flex;align-items:baseline;gap:6px;border-bottom:1px solid var(--color-accent);padding-bottom:6px">
+<span style="font-size:26px;color:var(--color-neutral-500)">S/</span>
+<input type="text" inputmode="decimal" placeholder="0" value="{{ addAmt }}" onChange="{{ onAddAmt }}" style="flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--color-text);font:500 34px var(--font-heading);font-variant-numeric:tabular-nums"></input>
+</div>
+<input type="text" class="input" placeholder="¿Dónde? ej. Tambo, InDrive, Inkafarma" value="{{ addName }}" onChange="{{ onAddName }}" style="width:100%;box-sizing:border-box;height:44px;margin-top:14px;border-radius:11px;font-size:14px"></input>
+<div style="display:flex;gap:6px;margin-top:12px">
+<sc-for list="{{ addMethods }}" as="m" hint-placeholder-count="3">
+<button onClick="{{ m.pick }}" style="flex:1;height:36px;border-radius:10px;font:500 13px var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;color:var(--color-text);background:{{ m.bg }};border:1px solid {{ m.border }}"><i class="{{ m.icon }}"></i>{{ m.label }}</button>
+</sc-for>
+</div>
+<div style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:12px;border-radius:12px;background:var(--color-bg)">
+<i class="{{ guess.icon }}" style="font-size:20px;color:var(--color-accent-300)"></i>
+<div style="flex:1"><div style="font-size:12px;color:var(--color-neutral-500)">Carpeta detectada</div><div style="font-size:14px;font-weight:500">{{ guess.name }}</div></div>
+<span style="font-size:12px;color:var(--color-neutral-400)">{{ guess.conf }}</span>
+</div>
+<div style="display:flex;gap:8px;margin-top:12px">
+<button class="btn btn-secondary" onClick="{{ scanTicket }}" style="flex:1;height:46px;border-radius:12px;gap:6px"><i class="ph ph-scan"></i>Escanear boleta</button>
+<button class="btn btn-primary" onClick="{{ saveAdd }}" style="flex:1;height:46px;border-radius:12px">Guardar</button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:20px;right:20px;top:58px;z-index:30;padding:12px 14px;border-radius:12px;background:var(--color-neutral-900);box-shadow:var(--shadow-md);font-size:13px;display:flex;gap:8px;align-items:center;animation:rise .25s ease"><i class="{{ toastIcon }}" style="color:var(--color-accent-300);font-size:17px"></i><span style="flex:1">{{ toast }}</span></div>
+</sc-if>
+
+<div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--color-neutral-300);z-index:40;pointer-events:none"></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;start&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;app&quot;,&quot;onboarding&quot;],&quot;default&quot;:&quot;app&quot;,&quot;tsType&quot;:&quot;'app'|'onboarding'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;livePing&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;}}">
+const F = [
+  {id:'vivienda',name:'Alquiler',icon:'house',grp:'nec',base:650},
+  {id:'mercado',name:'Mercado y súper',icon:'shopping-cart',grp:'nec',base:480},
+  {id:'transporte',name:'Transporte',icon:'bus',grp:'nec',base:170},
+  {id:'servicios',name:'Luz, agua, celular',icon:'lightning',grp:'nec',base:150},
+  {id:'salud',name:'Salud',icon:'first-aid',grp:'nec',base:80},
+  {id:'restaurantes',name:'Comer fuera',icon:'fork-knife',grp:'des',base:160},
+  {id:'ocio',name:'Salidas y ocio',icon:'ticket',grp:'des',base:80},
+  {id:'suscripciones',name:'Suscripciones',icon:'television-simple',grp:'des',base:45},
+  {id:'libre',name:'Libre',icon:'sparkle',grp:'des',base:65},
+  {id:'emergencia',name:'Fondo de emergencia',icon:'lifebuoy',grp:'aho',base:150},
+  {id:'inversion',name:'Fondo mutuo',icon:'trend-up',grp:'aho',base:50},
+  {id:'viaje',name:'Viaje a Cusco',icon:'mountains',grp:'aho',base:0},
+  {id:'deudas',name:'Pago de tarjetas',icon:'credit-card',grp:'deu',base:520},
+];
+const FM = Object.fromEntries(F.map(f => [f.id, f]));
+const G = [
+  {id:'nec',label:'Necesidades',color:'var(--color-neutral-300)'},
+  {id:'des',label:'Deseos',color:'var(--color-neutral-600)'},
+  {id:'aho',label:'Ahorro y metas',color:'var(--color-accent)'},
+  {id:'deu',label:'Deudas',color:'var(--color-accent-700)'},
+];
+const GM = Object.fromEntries(G.map(g => [g.id, g]));
+const SPENT0 = {vivienda:650,mercado:142,transporte:38,servicios:39.9,salud:0,restaurantes:71,ocio:0,suscripciones:20.9,libre:12};
+const PAY = {
+  bbvaD:{label:'BBVA Débito ··4821',short:'BBVA Débito',ap:true,credit:false},
+  bbvaC:{label:'BBVA Visa Signature ··1007',short:'BBVA Crédito',ap:true,credit:true,debt:'bbva'},
+  cmr:{label:'CMR Falabella ··3005',short:'CMR',ap:false,credit:true,debt:'cmr'},
+  yape:{label:'Yape',short:'Yape',ap:false,credit:false},
+  cash:{label:'Efectivo',short:'Efectivo',ap:false,credit:false},
+};
+const payIcon = p => PAY[p].ap ? 'ph ph-apple-logo' : p === 'yape' ? 'ph ph-device-mobile' : p === 'cash' ? 'ph ph-money' : 'ph ph-credit-card';
+const TX0 = [
+  {id:'t1',name:'Plaza Vea',amt:86.4,f:'mercado',pay:'bbvaD',when:'Hoy · 1:12 p. m.',why:'Supermercado (98%). Registrado por Apple Pay.'},
+  {id:'t2',name:'Cabify',amt:14.9,f:'transporte',pay:'bbvaC',when:'Hoy · 8:40 a. m.',why:'Viaje en taxi por app (97%).'},
+  {id:'t3',name:'Tambo+',amt:18.5,f:null,pay:'bbvaD',when:'Ayer',why:'Tambo vende de todo: snacks, abarrotes, recargas. ¿A qué carpeta va?'},
+  {id:'t4',name:'Bembos',amt:32.9,f:'restaurantes',pay:'bbvaC',when:'Ayer',why:'Comida rápida (99%).'},
+  {id:'t5',name:'Yape a Rosa M.',amt:25,f:null,pay:'yape',when:'Ayer',why:'Yapeo a una persona. No sé qué pagaste.'},
+  {id:'t6',name:'Netflix',amt:24.9,f:'suscripciones',pay:'bbvaC',when:'Sáb 10',why:'Cargo recurrente mensual.'},
+  {id:'t7',name:'Saga Falabella',amt:189,f:null,pay:'cmr',when:'Sáb 10',why:'Tienda por departamentos. Lo puse en Libre.'},
+  {id:'t8',name:'Luz del Sur',amt:96.3,f:'servicios',pay:'bbvaD',when:'Vie 9',why:'Recibo de luz, cargo recurrente.'},
+  {id:'t9',name:'Starbucks Larcomar',amt:21.5,f:'restaurantes',pay:'bbvaC',when:'Jue 8',why:'Cafetería (99%).'},
+  {id:'t10',name:'Cineplanet',amt:38,f:'ocio',pay:'bbvaC',when:'Jue 8',why:'Cine (98%).'},
+  {id:'t11',name:'Wong',amt:64.2,f:'mercado',pay:'bbvaD',when:'Mié 7',why:'Supermercado (98%).'},
+  {id:'t12',name:'Metropolitano',amt:10,f:'transporte',pay:'cash',when:'Mié 7',why:'Recarga de tarjeta de transporte.'},
+];
+const DEBTS0 = [
+  {id:'cmr',name:'CMR Falabella',bal:1180,limit:2500,tcea:0.92,min:70,due:'5 nov',cuotas:'Televisor Samsung · cuota 4 de 12 · S/ 98'},
+  {id:'bbva',name:'BBVA Visa Signature',bal:3260,limit:8000,tcea:0.58,min:165,due:'8 nov',cuotas:''},
+];
+const KW = [[/uber|cabify|indrive|didi|metropolitano|grifo|primax|repsol|pecsa|corredor/i,'transporte'],[/plaza vea|wong|tottus|metro|vivanda|makro|mass|mercado|bodega/i,'mercado'],[/bembos|kfc|starbucks|pardos|norky|chifa|cevich|pollo|rappi|pedidosya|café|cafe|pizza|restaurante/i,'restaurantes'],[/netflix|spotify|disney|max|youtube|icloud|prime/i,'suscripciones'],[/inkafarma|mifarma|clínica|clinica|doctor|farmacia|dental|boticas/i,'salud'],[/cineplanet|cinemark|teleticket|joinnus|bar\b|discoteca|concierto/i,'ocio'],[/luz del sur|enel|sedapal|claro|movistar|entel|bitel|calidda/i,'servicios']];
+const MON = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DAYS_LEFT = 19, MONTH_PCT = 0.39;
+const num = (n, d) => Math.abs(n).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+const fmt = n => (n < 0 ? '−S/ ' : 'S/ ') + num(n, Math.abs(n) % 1 ? 2 : 0);
+const fmt0 = n => (n < 0 ? '−S/ ' : 'S/ ') + num(Math.round(n), 0);
+const monthAt = n => { const i = 9 + n; return MON[i % 12] + ' ' + (2026 + Math.floor(i / 12)); };
+const pct = (a, b) => b > 0 ? Math.max(0, Math.min(100, a / b * 100)) + '%' : '0%';
+
+function simulate(debts, pay, strat) {
+  let ds = debts.map(d => ({...d, r: Math.pow(1 + d.tcea, 1/12) - 1, done: null}));
+  let month = 0, interest = 0;
+  const minTotal = ds.reduce((a, d) => a + d.min, 0);
+  if (strat === 'min') pay = minTotal;
+  while (ds.some(d => d.bal > 0.5) && month < 240) {
+    month++;
+    ds.forEach(d => { if (d.bal > 0) { const i = d.bal * d.r; d.bal += i; interest += i; } });
+    let budget = pay;
+    ds.forEach(d => { if (d.bal > 0) { const p = Math.min(d.min, d.bal, budget); d.bal -= p; budget -= p; } });
+    const live = ds.filter(d => d.bal > 0.5).sort((a, b) => strat === 'snowball' ? a.bal - b.bal : b.r - a.r);
+    for (const d of live) { if (budget <= 0) break; const p = Math.min(d.bal, budget); d.bal -= p; budget -= p; }
+    ds.forEach(d => { if (d.bal <= 0.5 && d.done === null) d.done = month; });
+    if (strat === 'min' && month > 1 && ds.every(d => d.bal > 0.5 && d.min <= d.bal * d.r)) { month = 240; break; }
+  }
+  return {months: month, interest, done: Object.fromEntries(ds.map(d => [d.id, d.done]))};
+}
+function buildBudgets(inc, pr) {
+  const k = inc / 2600, b = {};
+  F.forEach(f => b[f.id] = Math.round(f.base * k / 5) * 5);
+  if (!pr.deuda) { b.emergencia += b.deudas; b.deudas = 0; }
+  if (!pr.invertir) { b.emergencia += b.inversion; b.inversion = 0; }
+  if (pr.viaje) { const m = Math.min(b.libre, Math.round(inc * 0.02 / 5) * 5); b.viaje += m; b.libre -= m; }
+  const s = Object.values(b).reduce((a, c) => a + c, 0);
+  b.libre += inc - s;
+  return b;
+}
+const PRIO = [
+  {id:'deuda',label:'Tengo deuda de tarjeta',icon:'ph ph-credit-card'},
+  {id:'emergencia',label:'Fondo de emergencia',icon:'ph ph-lifebuoy'},
+  {id:'invertir',label:'Empezar a invertir',icon:'ph ph-trend-up'},
+  {id:'viaje',label:'Viajar',icon:'ph ph-airplane-tilt'},
+];
+const SUG = ['Optimiza mi plan este mes','¿Qué tarjeta pago primero?','¿Qué hago con mi gratificación?','¿Cuánto debo tener de emergencia?'];
+const SOURCES = {
+  applepay:{name:'Pagos con Apple Pay',sub:'BBVA Débito ··4821 · BBVA Visa ··1007',icon:'ph ph-apple-logo',how:'Una automatización de Atajos registra monto, comercio y tarjeta cada vez que pagas con el iPhone.'},
+  correo:{name:'Alertas de consumo por correo',sub:'BBVA, CMR Falabella',icon:'ph ph-envelope-simple',how:'Leemos los correos de "consumo realizado" para capturar lo que pagas con la tarjeta física o en línea.'},
+  yape:{name:'Yape y Plin',sub:'Constancias compartidas',icon:'ph ph-device-mobile',how:'Comparte la constancia desde Yape o Plin y la registramos con su monto y destinatario.'},
+  eecc:{name:'Estado de cuenta mensual',sub:'PDF de tu tarjeta',icon:'ph ph-file-text',how:'Súbelo al cierre y cuadramos cuotas, intereses y comisiones con lo registrado.'},
+  open:{name:'Conexión directa al banco',sub:'Finanzas Abiertas · SBS',icon:'ph ph-bank',how:'La SBS está definiendo el reglamento de Finanzas Abiertas. Cuando esté vigente, podrás conectar tu banco directo.',soon:true},
+};
+
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    const onb = (p.start ?? 'app') === 'onboarding';
+    const prios = {deuda:true, emergencia:true, invertir:true, viaje:false};
+    this.state = {
+      phase: onb ? 'onb' : 'app', step: 0, income: '2600', prios, analyzing: false,
+      budgets: buildBudgets(2600, prios), txs: TX0.map(t => ({...t})),
+      sources: onb ? {applepay:false,correo:false,yape:false,eecc:false,open:false} : {applepay:true,correo:true,yape:true,eecc:false,open:false},
+      connecting: null, tab: 'home', folderId: null, sheet: null, rcId: null, strat: 'avalanche',
+      addAmt: '', addName: '', addPay: 'cash', toast: '', toastIcon: 'ph-fill ph-check-circle', adjustNote: '', draft: '', thinking: false,
+      messages: [{role:'assistant', text:'Hola Ana. Revisé tus carpetas: Mercado y Transporte van bien, pero Comer fuera ya va en 80% con 39% del mes. Y ojo: la CMR cobra 92% de TCEA, es la primera que hay que liquidar. ¿Por dónde empezamos?'}],
+    };
+    this.scrollRef = React.createRef();
+  }
+  componentDidMount() {
+    if (this.state.phase === 'app' && (this.props.livePing ?? true)) this._live = setTimeout(() => this.pushLive(), 5000);
+  }
+  componentDidUpdate(pp, ps) {
+    const el = this.scrollRef.current; if (!el) return;
+    if (ps.tab !== this.state.tab || ps.folderId !== this.state.folderId) el.scrollTop = 0;
+    if (this.state.tab === 'advisor' && (ps.messages.length !== this.state.messages.length || ps.thinking !== this.state.thinking || ps.tab !== 'advisor')) setTimeout(() => { el.scrollTop = el.scrollHeight; }, 30);
+  }
+  componentWillUnmount() { clearTimeout(this._t); clearTimeout(this._live); }
+  pushLive() {
+    if (!this.state.sources.applepay) return;
+    const t = {id:'live' + Date.now(), name:'Starbucks Miraflores', amt:16.9, f:'restaurantes', pay:'bbvaC', when:'Ahora', why:'Cafetería (99%). Llegó por Apple Pay hace segundos.'};
+    this.setState(s => ({txs:[t, ...s.txs]}));
+    this.flash('Apple Pay · Starbucks S/ 16.90 → Comer fuera', 'ph ph-apple-logo');
+  }
+  flash(msg, icon) { clearTimeout(this._t); this.setState({toast: msg, toastIcon: icon || 'ph-fill ph-check-circle'}); this._t = setTimeout(() => this.setState({toast: ''}), 2800); }
+  inc() { return Math.max(0, parseFloat(String(this.state.income).replace(/[^0-9.]/g, '')) || 0); }
+  spentOf(id) { return (SPENT0[id] || 0) + this.state.txs.filter(t => t.f === id).reduce((a, t) => a + t.amt, 0); }
+  debts() {
+    const extra = {};
+    this.state.txs.filter(t => t.id.startsWith('live') || t.id.startsWith('m')).forEach(t => { const d = PAY[t.pay].debt; if (d) extra[d] = (extra[d] || 0) + t.amt; });
+    return DEBTS0.map(d => ({...d, bal: d.bal + (extra[d.id] || 0)}));
+  }
+  fv(f) {
+    const b = this.state.budgets[f.id] || 0, flow = f.grp === 'nec' || f.grp === 'des';
+    const open = () => this.setState({tab:'folders', folderId:f.id, adjustNote:''});
+    if (flow) {
+      const sp = this.spentOf(f.id), left = b - sp, r = b ? sp / b : 0;
+      return {id:f.id, name:f.name, icon:'ph ph-' + f.icon, grp:f.grp, budget:b, spent:sp, left, r, open, flow,
+        leftL: fmt(Math.round(left * 100) / 100), leftLabel: left < 0 ? 'excedido' : 'disponible',
+        leftColor: left < 0 ? 'var(--color-accent-300)' : 'var(--color-text)',
+        ofL: fmt(Math.round(sp * 100) / 100) + ' de ' + fmt0(b), barW: pct(sp, b),
+        barColor: f.id !== 'vivienda' && r > MONTH_PCT + 0.3 ? 'var(--color-accent-400)' : 'var(--color-neutral-300)'};
+    }
+    return {id:f.id, name:f.name, icon:'ph ph-' + f.icon, grp:f.grp, budget:b, spent:b, left:0, r:1, open, flow,
+      leftL: fmt0(b), leftLabel: b ? (f.grp === 'deu' ? 'para pagar' : 'apartado') : 'sin aporte', leftColor: b ? 'var(--color-accent-300)' : 'var(--color-neutral-500)',
+      ofL: b ? (f.grp === 'deu' ? 'Se paga antes del 5 nov' : 'Transferido el día de pago') : 'Sin aporte este mes', barW: b ? '100%' : '0%',
+      barColor: f.grp === 'deu' ? 'var(--color-accent-700)' : 'var(--color-accent)'};
+  }
+  goalsData() {
+    const b = this.state.budgets;
+    const ess = F.filter(f => f.grp === 'nec').reduce((a, f) => a + b[f.id], 0);
+    const efT = ess * 3, efS = 1250;
+    const efM = b.emergencia ? Math.ceil((efT - efS) / b.emergencia) : null;
+    const vM = b.viaje ? Math.ceil((1800 - 300) / b.viaje) : null;
+    const iM = b.inversion ? Math.ceil((3000 - 620) / b.inversion) : null;
+    return [
+      {id:'emergencia', name:'Fondo de emergencia', icon:'ph ph-lifebuoy', saved:efS, target:efT, monthly:b.emergencia,
+        foot:'Meta: 3 meses de gastos esenciales. Tu CTS de noviembre es un respaldo adicional.' + (efM ? ' Lo completas en ' + monthAt(efM) + '.' : '')},
+      {id:'inversion', name:'Fondo mutuo', icon:'ph ph-trend-up', saved:620, target:3000, monthly:b.inversion,
+        foot: iM ? 'Llegas a S/ 3,000 en ' + monthAt(iM) + '. Sube el aporte al terminar de pagar la CMR.' : 'Sin aporte mensual.'},
+      {id:'viaje', name:'Viaje a Cusco', icon:'ph ph-mountains', saved:300, target:1800, monthly:b.viaje,
+        foot: vM ? 'Listo en ' + monthAt(vM) + '.' : 'Sin aporte mensual: a este ritmo no llegas.'},
+    ];
+  }
+  sys() {
+    const s = this.state, b = s.budgets, inc = Object.values(b).reduce((a, c) => a + c, 0);
+    const folders = F.map(f => { const v = this.fv(f); return `${f.id} (${f.name}, ${GM[f.grp].label}): presupuesto S/ ${b[f.id]}` + (v.flow ? `, gastado S/ ${v.spent.toFixed(2)}` : ''); }).join('\n');
+    const goals = this.goalsData().map(g => `${g.name}: S/ ${g.saved} de S/ ${Math.round(g.target)}, aporte S/ ${g.monthly}/mes`).join('\n');
+    const debts = this.debts().map(d => `${d.name}: saldo S/ ${d.bal.toFixed(0)}, TCEA ${Math.round(d.tcea * 100)}%, mínimo S/ ${d.min}, vence ${d.due}` + (d.cuotas ? ` (${d.cuotas})` : '')).join('\n');
+    const sim = simulate(this.debts(), b.deudas, 'avalanche');
+    return `Eres el asesor financiero personal dentro de una app peruana de presupuesto por carpetas. Usuaria: Ana, vive en Lima, trabajadora en planilla, sueldo neto S/ ${inc}/mes (ya descontada AFP). Hoy es lunes 12 de octubre de 2026 (39% del mes, quedan ${DAYS_LEFT} días). Moneda: soles (S/).
+Responde SIEMPRE en español peruano neutro, cálido y directo, máximo 80 palabras, texto plano sin markdown ni viñetas. Usa los números reales de abajo.
+Principios: presupuesto base cero (cada sol tiene carpeta; mover dinero entre carpetas mantiene el total). Deudas: método avalancha, primero la de mayor TCEA; pagar siempre más que el mínimo; las compras con tarjeta de crédito deben pagarse completas al cierre. Fondo de emergencia: 3 a 6 meses de gastos esenciales. Contexto Perú: gratificación en julio y diciembre (un sueldo + 9% de bonificación, inafecta a AFP), CTS depositada en mayo y noviembre (respaldo ante desempleo). Nunca sugieras recortar el fondo de emergencia ni el pago de deudas para cubrir deseos. No recomiendes productos financieros específicos.
+Si propones mover dinero entre carpetas de este mes, llama a la herramienta proponer_ajuste (la usuaria verá un botón Aplicar) y luego explica en 1–2 frases.
+Carpetas:
+${folders}
+Deudas (pago mensual total S/ ${b.deudas}; con avalancha queda libre en ${sim.months} meses, intereses ~S/ ${Math.round(sim.interest)}):
+${debts}
+Metas:
+${goals}
+Movimientos sin categorizar: ${s.txs.filter(t => !t.f).map(t => t.name + ' S/ ' + t.amt).join(', ') || 'ninguno'}.`;
+  }
+  addPlan(inp) {
+    const b = this.state.budgets;
+    const moves = (inp.movimientos || []).filter(m => FM[m.de] && FM[m.a] && m.de !== m.a && m.monto > 0).map(m => ({de:m.de, a:m.a, monto:Math.min(Math.round(m.monto), b[m.de])})).filter(m => m.monto > 0);
+    if (!moves.length) return 'No se pudo mostrar: movimientos inválidos.';
+    this.setState(s => ({messages:[...s.messages, {kind:'plan', id:'p' + Date.now(), resumen:inp.resumen || '', moves, applied:false}]}));
+    return 'Propuesta mostrada a la usuaria con botón Aplicar.';
+  }
+  applyPlan(id) {
+    const m = this.state.messages.find(x => x.id === id); if (!m || m.applied) return;
+    const b = {...this.state.budgets};
+    m.moves.forEach(mv => { const a = Math.min(mv.monto, b[mv.de]); b[mv.de] -= a; b[mv.a] += a; });
+    this.setState(s => ({budgets:b, messages:s.messages.map(x => x.id === id ? {...x, applied:true} : x)}));
+    this.flash('Plan actualizado · sigue en base cero');
+  }
+  async ask(text) {
+    text = (text || '').trim(); if (!text || this.state.thinking) return;
+    const msgs = [...this.state.messages, {role:'user', text}];
+    this.setState({messages:msgs, draft:'', thinking:true, tab:'advisor', folderId:null, sheet:null});
+    const hist = [];
+    msgs.filter(m => m.text).forEach(m => { const last = hist[hist.length - 1]; if (last && last.role === m.role) last.content += '\n' + m.text; else hist.push({role:m.role, content:m.text}); });
+    while (hist.length && hist[0].role !== 'user') hist.shift();
+    const ids = F.map(f => f.id);
+    try {
+      const out = await window.claude.complete({
+        system: this.sys(), messages: hist, max_tokens: 700,
+        tools: [{name:'proponer_ajuste', description:'Muestra a la usuaria una propuesta para mover soles entre carpetas de este mes, con botón Aplicar.',
+          input_schema:{type:'object', properties:{resumen:{type:'string', description:'Una frase: qué logra el ajuste'}, movimientos:{type:'array', items:{type:'object', properties:{de:{type:'string', enum:ids}, a:{type:'string', enum:ids}, monto:{type:'number'}}, required:['de','a','monto']}}}, required:['resumen','movimientos']},
+          run: async inp => this.addPlan(inp)}],
+      });
+      const t = (out || '').replace(/\*\*/g, '').trim() || 'Listo, revisa la propuesta.';
+      this.setState(s => ({messages:[...s.messages, {role:'assistant', text:t}], thinking:false}));
+    } catch (e) {
+      this.setState(s => ({messages:[...s.messages, {role:'assistant', text:'No pude conectarme en este momento. Intenta de nuevo.'}], thinking:false}));
+    }
+  }
+  toggleSource(id) {
+    if (this.state.connecting || SOURCES[id].soon) return;
+    if (this.state.sources[id]) { this.setState(s => ({sources:{...s.sources, [id]:false}})); return; }
+    this.setState({connecting:id});
+    setTimeout(() => { this.setState(s => ({connecting:null, sources:{...s.sources, [id]:true}})); this.flash(id === 'applepay' ? 'Atajo instalado · tus pagos con iPhone se registran solos' : SOURCES[id].name + ' activado'); }, 1100);
+  }
+  guess() {
+    const n = this.state.addName;
+    if (!n.trim()) return {id:null, name:'Escribe dónde compraste', icon:'ph ph-question', conf:''};
+    const hit = KW.find(([re]) => re.test(n));
+    const id = hit ? hit[1] : 'libre';
+    return {id, name:FM[id].name, icon:'ph ph-' + FM[id].icon, conf: hit ? 'Alta confianza' : 'Sugerencia'};
+  }
+  renderVals() {
+    const s = this.state;
+    const income = s.phase === 'onb' ? this.inc() : Object.values(s.budgets).reduce((a, c) => a + c, 0);
+    const views = F.map(f => this.fv(f));
+    const VM = Object.fromEntries(views.map(v => [v.id, v]));
+    const flex = views.filter(v => ['mercado','transporte','restaurantes','ocio','libre'].includes(v.id));
+    const flexLeft = flex.reduce((a, v) => a + Math.max(0, v.left), 0);
+    const spent = views.filter(v => v.flow).reduce((a, v) => a + v.spent, 0);
+    const saved = views.filter(v => !v.flow).reduce((a, v) => a + v.budget, 0);
+    const hot = views.filter(v => v.flow && v.id !== 'vivienda' && v.r > MONTH_PCT + 0.3).sort((a, b) => b.r - a.r)[0];
+    const openRecat = id => this.setState({sheet:'recat', rcId:id});
+    const txView = t => {
+      const f = t.f && FM[t.f];
+      return {name:t.name, amtL:'−' + fmt(t.amt), sub:(PAY[t.pay].ap ? 'Apple Pay · ' : '') + PAY[t.pay].short + ' · ' + t.when, srcIcon:payIcon(t.pay),
+        icon: f ? 'ph ph-' + f.icon : 'ph ph-question', folderName: f ? f.name : 'Por revisar',
+        tagColor: f ? 'var(--color-neutral-500)' : 'var(--color-accent-300)', open:() => openRecat(t.id)};
+    };
+    const groupRows = G.map(g => {
+      const items = views.filter(v => v.grp === g.id), amt = items.reduce((a, v) => a + v.budget, 0);
+      return {label:g.label, color:g.color, amtL:fmt0(amt), pctL: income ? Math.round(amt / income * 100) + '%' : '0%', w: pct(amt, income),
+        names: items.filter(v => v.budget > 0).map(v => v.name + ' ' + fmt0(v.budget)).join(' · '), items: items.filter(v => v.budget > 0 || v.id === 'viaje')};
+    });
+    const b = s.budgets, ess = F.filter(f => f.grp === 'nec').reduce((a, f) => a + b[f.id], 0);
+    const savePct = income ? Math.round((b.emergencia + b.inversion + b.viaje + b.deudas) / income * 100) : 0;
+    const basis = [
+      `Alquiler y servicios = ${income ? Math.round((b.vivienda + b.servicios) / income * 100) : 0}% de tu sueldo; el hogar peruano promedio destina 21% de su gasto a vivienda y servicios (INEI 2024).`,
+      b.deudas ? `${fmt0(b.deudas)}/mes a tarjetas: primero la CMR (TCEA 92%), luego BBVA (58%). Método avalancha.` : 'Sin deudas: ese dinero va a tu fondo de emergencia.',
+      `Fondo de emergencia hacia 3 meses de gastos esenciales (${fmt0(ess * 3)}).`,
+      `Gratificación de diciembre y CTS de noviembre se planifican aparte, para acelerar deudas y metas.`,
+    ];
+    const fo0 = s.folderId ? VM[s.folderId] : null;
+    let fo = {tx:[]};
+    if (fo0) {
+      const ftx = s.txs.filter(t => t.f === fo0.id).map(txView);
+      const tips = {
+        restaurantes:'70% de tus gastos aquí son de viernes a domingo, y casi todo con la tarjeta de crédito. Paga con débito para que no se vuelva deuda.',
+        mercado:'Vas a buen ritmo. Comprar en Plaza Vea en vez de Wong te ahorró ~S/ 22 este mes.',
+        transporte:'Cabify 3 veces por semana cuesta lo mismo que tu recarga del Metropolitano de todo el mes.',
+        suscripciones:'Netflix y Spotify suman S/ 45.80. Si compartes plan familiar, ahorras hasta S/ 15 al mes.',
+        emergencia:'Este dinero va a una cuenta de ahorro aparte. No lo toques salvo emergencias reales.',
+        deudas:'Con S/ 520 al mes liquidas la CMR en pocos meses. Pagar solo el mínimo te tomaría años.',
+        viaje:'Sin aporte todavía. Pídele a tu asesor un plan con tu gratificación de diciembre.',
+        libre:'Libre es tu colchón de gasto sin culpa. Lo que liberas en otras carpetas llega aquí.',
+      };
+      fo = {...fo0, groupLabel: GM[fo0.grp].label, budgetL: fmt0(fo0.budget), tx: ftx, noTx: ftx.length === 0,
+        emptyNote: fo0.flow ? 'Aún no hay movimientos este mes.' : 'Se aparta automáticamente el día de pago.',
+        pace: fo0.flow ? `Llevas ${Math.round(fo0.r * 100)}% gastado con 39% del mes recorrido.` : 'Se aparta al recibir tu sueldo, antes de gastar.',
+        tip: tips[fo0.id] || 'Va de acuerdo al plan. Te aviso si cambia el ritmo.'};
+    }
+    const adjust = d => {
+      const id = s.folderId; if (!id || id === 'libre') { this.setState({adjustNote:'Libre recibe lo que liberas en otras carpetas.'}); return; }
+      const bb = {...s.budgets};
+      if (d > 0 && bb.libre < 10) { this.setState({adjustNote:'Libre está en S/ 0. Mueve dinero desde otra carpeta.'}); return; }
+      if (d < 0 && bb[id] < 10) return;
+      bb[id] += d; bb.libre -= d;
+      this.setState({budgets:bb, adjustNote: d > 0 ? `+S/ 10 tomados de Libre (queda ${fmt0(bb.libre)}) · sigue en base cero` : `S/ 10 regresaron a Libre (${fmt0(bb.libre)}) · sigue en base cero`});
+    };
+    // debts
+    const debts = this.debts();
+    const debtTotal = debts.reduce((a, d) => a + d.bal, 0);
+    const sims = {avalanche: simulate(debts, b.deudas, 'avalanche'), snowball: simulate(debts, b.deudas, 'snowball'), min: simulate(debts, b.deudas, 'min')};
+    const cur = sims[s.strat];
+    const order = s.strat === 'snowball' ? debts.slice().sort((a, c) => a.bal - c.bal) : debts.slice().sort((a, c) => c.tcea - a.tcea);
+    const endL = m => m >= 240 ? 'Más de 20 años' : monthAt(m);
+    const debtList = order.map((d, i) => ({name:d.name, order:i + 1, tceaL:Math.round(d.tcea * 100) + '%', due:d.due, balL:fmt0(d.bal), limitL:fmt0(d.limit),
+      useW:pct(d.bal, d.limit), useColor: d.bal / d.limit > 0.4 ? 'var(--color-accent-400)' : 'var(--color-neutral-300)',
+      minL:fmt0(d.min), payL: s.strat === 'min' ? fmt0(d.min) : (i === 0 ? fmt0(b.deudas - order.slice(1).reduce((a, x) => a + x.min, 0)) : fmt0(d.min)),
+      freeL: endL(cur.done[d.id] || 240), hasCuotas: !!d.cuotas, cuotas: d.cuotas}));
+    const savedVsMin = sims.min.interest - sims.avalanche.interest;
+    const stratNote = s.strat === 'avalanche' ? `Pagas primero la deuda más cara. Ahorras ${fmt0(savedVsMin)} en intereses frente a pagar solo el mínimo.`
+      : s.strat === 'snowball' ? `Pagas primero la deuda más chica para ganar impulso. Cuesta ${fmt0(Math.max(0, sims.snowball.interest - sims.avalanche.interest))} más que avalancha.`
+      : 'Solo el mínimo: la deuda casi no baja porque los intereses se comen el pago.';
+    const creditTxs = s.txs.filter(t => PAY[t.pay].credit);
+    const creditMonth = creditTxs.reduce((a, t) => a + t.amt, 0);
+    // metrics
+    const essLeft = ess;
+    const efMonths = 1250 / essLeft;
+    const dti = income ? Math.round(b.deudas / income * 100) : 0;
+    const kpis = [
+      {label:'Tasa de ahorro', value: income ? Math.round((b.emergencia + b.inversion + b.viaje) / income * 100) + '%' : '0%', note:'Meta 10% mientras pagas deudas', noteColor:'var(--color-neutral-500)'},
+      {label:'Deuda / sueldo', value: dti + '%', note: dti > 20 ? 'Alto: bájalo de 20%' : 'Saludable', noteColor: dti > 20 ? 'var(--color-accent-300)' : 'var(--color-neutral-500)'},
+      {label:'Fondo de emergencia', value: efMonths.toFixed(1) + ' meses', note:'de 3 meses de esenciales', noteColor:'var(--color-neutral-500)'},
+      {label:'Uso de crédito', value: Math.round(debtTotal / debts.reduce((a, d) => a + d.limit, 0) * 100) + '%', note:'Ideal por debajo de 30%', noteColor:'var(--color-accent-300)'},
+    ];
+    const mv = [['may',2310],['jun',2480],['jul',2950],['ago',2390],['sep',2280],['oct',Math.round(spent)]];
+    const maxV = Math.max(income, ...mv.map(m => m[1])) * 1.12;
+    const months = mv.map(([l, v], i) => ({label:l, vL: v >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(v), h: pct(v, maxV),
+      bg: i === mv.length - 1 ? 'var(--color-accent)' : v > income ? 'var(--color-accent-700)' : 'var(--color-neutral-700)'}));
+    const planSpend = F.filter(f => f.grp === 'nec' || f.grp === 'des').reduce((a, f) => a + b[f.id], 0) || 1;
+    const bench = [
+      ['Comida en casa', b.mercado, 28.9], ['Vivienda y servicios', b.vivienda + b.servicios, 21.3], ['Comer fuera', b.restaurantes, 12.3], ['Salud', b.salud, 8.3], ['Transporte', b.transporte, 7.7],
+    ].map(([label, v, ref]) => { const you = v / planSpend * 100; return {label, youL: Math.round(you) + '%', refL: ref.toFixed(1).replace('.0', '') + '%', youW: Math.min(100, you * 2) + '%', refW: Math.min(99, ref * 2) + '%'}; });
+    const mixGroups = [['Apple Pay', t => PAY[t.pay].ap, 'var(--color-accent)'], ['Yape', t => t.pay === 'yape', 'var(--color-accent-700)'], ['Tarjeta física', t => !PAY[t.pay].ap && PAY[t.pay].credit, 'var(--color-neutral-300)'], ['Efectivo', t => t.pay === 'cash', 'var(--color-neutral-600)']];
+    const totTx = s.txs.reduce((a, t) => a + t.amt, 0) || 1;
+    const payMix = mixGroups.map(([label, fn, color]) => { const v = s.txs.filter(fn).reduce((a, t) => a + t.amt, 0); return {label, color, w: pct(v, totTx), pctL: Math.round(v / totTx * 100) + '%'}; });
+    const bruto = income / 0.87;
+    const extras = [
+      {name:'CTS', sub:'Depósito de noviembre · cuenta CTS', icon:'ph ph-vault', amtL:'~' + fmt0(bruto * 0.58)},
+      {name:'Gratificación', sub:'Diciembre · sueldo + 9% de bonificación', icon:'ph ph-gift', amtL:'~' + fmt0(bruto * 1.09)},
+    ];
+    const goals = this.goalsData().map(g => ({...g, savedL:fmt0(g.saved), targetL:'de ' + fmt0(g.target), w:pct(g.saved, g.target),
+      monthlyL: g.monthly ? '+' + fmt0(g.monthly) + '/mes' : 'sin aporte', needsPlan: !g.monthly,
+      ask: () => this.ask(`Mi meta ${g.name} (llevo ${fmt0(g.saved)} de ${fmt0(g.target)}) no tiene aporte mensual. ¿Cómo la activo sin descuidar mis deudas?`)}));
+    const hotPct = hot ? Math.round(hot.r * 100) : 0;
+    const askHot = () => hot && this.ask(`${hot.name} va al ${hotPct}% y apenas llevo 39% del mes. Propón un ajuste sin tocar mi ahorro ni el pago de tarjetas.`);
+    const rcTx = s.rcId && s.txs.find(t => t.id === s.rcId);
+    const rc = rcTx ? {name:rcTx.name, amtL:'−' + fmt(rcTx.amt), sub:(PAY[rcTx.pay].ap ? 'Apple Pay · ' : '') + PAY[rcTx.pay].label + ' · ' + rcTx.when, why:rcTx.why} : {};
+    const rcOptions = F.filter(f => f.grp === 'nec' || f.grp === 'des').map(f => {
+      const on = rcTx && rcTx.f === f.id;
+      return {name:f.name, icon:'ph ph-' + f.icon, bg: on ? 'var(--color-accent-900)' : 'var(--color-bg)', border: on ? 'var(--color-accent)' : 'var(--color-neutral-800)',
+        pick:() => { this.setState(st => ({txs:st.txs.map(t => t.id === s.rcId ? {...t, f:f.id, why:`Lo moviste a ${f.name}. Aprendido para la próxima.`} : t), sheet:null})); this.flash(`${rcTx.name} → ${f.name}. Lo recordaré.`); }};
+    });
+    const g = this.guess();
+    const tabsDef = [['home','Inicio','house'],['folders','Carpetas','folders'],['debts','Deudas','credit-card'],['metrics','Métricas','chart-bar'],['advisor','Asesor','sparkle']];
+    const msgs = s.messages.map(m => m.kind === 'plan' ? {
+      isPlan:true, isText:false, justify:'flex-start', resumen:m.resumen, applied:m.applied, btn: m.applied ? 'Aplicado' : 'Aplicar a mis carpetas',
+      apply:() => this.applyPlan(m.id), moves:m.moves.map(x => ({fromName:FM[x.de].name, toName:FM[x.a].name, amtL:fmt0(x.monto)}))
+    } : {isText:true, isPlan:false, text:m.text, justify: m.role === 'user' ? 'flex-end' : 'flex-start',
+      bg: m.role === 'user' ? 'var(--color-accent-900)' : 'var(--color-surface)', border: m.role === 'user' ? 'var(--color-accent-700)' : 'transparent',
+      radius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px'});
+    const nConn = Object.values(s.sources).filter(Boolean).length;
+    return {
+      isOnb: s.phase === 'onb', isApp: s.phase === 'app',
+      onb0: s.step === 0, onb1: s.step === 1, onb2: s.step === 2, onb3: s.step === 3,
+      onbDots: [0,1,2,3].map(i => ({bg: i <= s.step ? 'var(--color-accent)' : 'var(--color-neutral-800)'})),
+      incomeInput: s.income, onIncome: e => this.setState({income: e.target.value.replace(/[^0-9]/g, '')}),
+      prioList: PRIO.map(p => { const on = s.prios[p.id]; return {...p, bg: on ? 'var(--color-accent-900)' : 'transparent', fg: on ? 'var(--color-accent-200)' : 'var(--color-neutral-300)', border: on ? 'var(--color-accent-700)' : 'var(--color-neutral-800)', toggle:() => this.setState(st => ({prios:{...st.prios, [p.id]:!st.prios[p.id]}}))}; }),
+      nextOnb: () => {
+        if (s.step === 1) {
+          if (this.inc() < 500) { this.flash('Escribe tu sueldo neto mensual', 'ph ph-warning'); return; }
+          this.setState({step:2, analyzing:true, budgets:buildBudgets(this.inc(), s.prios)});
+          setTimeout(() => this.setState({analyzing:false}), 1600);
+        } else this.setState({step: s.step + 1});
+      },
+      finishOnb: () => { this.setState({phase:'app', tab:'home'}); this.flash(nConn ? `${nConn} ${nConn === 1 ? 'fuente activa' : 'fuentes activas'} · plan activo` : 'Plan activo · conecta tus pagos cuando quieras'); if (s.sources.applepay) this._live = setTimeout(() => this.pushLive(), 4000); },
+      analyzing: s.analyzing, planReady: !s.analyzing,
+      spinner: React.createElement('i', {className:'ph ph-circle-notch', style:{fontSize:34, display:'inline-block', animation:'spin 1s linear infinite'}}),
+      spinnerSm: React.createElement('i', {className:'ph ph-circle-notch', style:{fontSize:16, display:'inline-block', animation:'spin 1s linear infinite', color:'var(--color-accent-300)'}}),
+      incomeL: fmt0(income), folderCount: F.filter(f => b[f.id] > 0).length, groupRows, basis,
+      sourceList: Object.entries(SOURCES).map(([id, x]) => {
+        const on = s.sources[id], busy = s.connecting === id, soon = !!x.soon;
+        return {...x, soon, toggle:() => this.toggleSource(id),
+          btnBg: on ? 'var(--color-accent-900)' : 'transparent', btnFg: on ? 'var(--color-accent-200)' : soon ? 'var(--color-neutral-500)' : 'var(--color-text)',
+          btnBorder: on ? 'var(--color-accent-700)' : busy ? 'var(--color-accent)' : 'var(--color-neutral-700)',
+          btnIcon: soon ? 'ph ph-clock' : on ? 'ph ph-check' : busy ? 'ph ph-circle-notch' : 'ph ph-plus', btnLabel: soon ? 'Pronto' : on ? 'Activo' : busy ? 'Activando' : 'Activar'};
+      }),
+      tabHome: s.tab === 'home', tabFolders: s.tab === 'folders', tabDebts: s.tab === 'debts', tabMetrics: s.tab === 'metrics', tabAdvisor: s.tab === 'advisor',
+      dailyL: fmt(Math.round(flexLeft / DAYS_LEFT * 100) / 100), flexLeftL: fmt0(flexLeft), daysLeft: DAYS_LEFT,
+      barSpentW: pct(spent, income), barSavedW: pct(saved, income), spentL: fmt0(spent), savedL: fmt0(saved),
+      hasHot: !!hot, hotTitle: hot ? `${hot.name} va al ${hotPct}% con 39% del mes` : '', askHot,
+      debtTotalL: fmt0(debtTotal), debtFreeL: 'Libre en ' + endL(sims.avalanche.months), debtPayL: fmt0(b.deudas), creditMonthL: fmt(Math.round(creditMonth * 100) / 100),
+      goDebts: () => this.setState({tab:'debts'}),
+      peekFolders: flex.slice().sort((a, c) => c.r - a.r).slice(0, 4),
+      liveLabel: nConn ? `${nConn} fuentes activas` : 'Sin fuentes',
+      recentTx: s.txs.slice(0, 5).map(txView),
+      goFolders: () => this.setState({tab:'folders', folderId:null}),
+      openConnect: () => this.setState({sheet:'connect'}), openAdd: () => this.setState({sheet:'add', addAmt:'', addName:'', addPay:'cash'}),
+      folderGroups: groupRows, noFolderOpen: !fo0, folderOpen: !!fo0, fo,
+      closeFolder: () => this.setState({folderId:null}), budgetPlus: () => adjust(10), budgetMinus: () => adjust(-10), adjustNote: s.adjustNote || 'Al ajustar, la diferencia sale de Libre o vuelve a Libre.',
+      stratOpts: [['avalanche','Avalancha'],['snowball','Bola de nieve'],['min','Solo mínimo']].map(([id, label]) => ({label, pick:() => this.setState({strat:id}), bg: s.strat === id ? 'var(--color-accent-900)' : 'transparent', fg: s.strat === id ? 'var(--color-accent-200)' : 'var(--color-neutral-400)'})),
+      stratEndL: endL(cur.months), stratIntL: cur.months >= 240 ? 'Sin fin' : fmt0(cur.interest), stratNote, debtList,
+      creditTx: creditTxs.map(txView), askDebt: () => this.ask('¿Qué tarjeta pago primero y cómo salgo más rápido de mis deudas?'),
+      kpis, months, incomeLineB: pct(income, maxV), bench, payMix, goals, extras,
+      askGrati: () => this.ask(`En diciembre recibo mi gratificación (~${fmt0(bruto * 1.09)}). ¿Cómo la reparto entre deudas, emergencia y metas?`),
+      messages: msgs, thinking: s.thinking,
+      suggestions: SUG.map(l => ({label:l, ask:() => this.ask(l)})),
+      draft: s.draft, onDraft: e => this.setState({draft:e.target.value}),
+      onDraftKey: e => { if (e.key === 'Enter') this.ask(s.draft); }, sendDraft: () => this.ask(s.draft),
+      tabs: tabsDef.map(([id, label, icon]) => ({label, icon:(s.tab === id ? 'ph-fill ph-' : 'ph ph-') + icon, color: s.tab === id ? 'var(--color-accent-300)' : 'var(--color-neutral-500)', go:() => this.setState({tab:id, folderId:null})})),
+      hasSheet: !!s.sheet, sheetRecat: s.sheet === 'recat', sheetConnect: s.sheet === 'connect', sheetAdd: s.sheet === 'add',
+      closeSheet: () => this.setState({sheet:null}), rc, rcOptions,
+      addAmt: s.addAmt, addName: s.addName, guess: g,
+      addMethods: [['cash','Efectivo','ph ph-money'],['yape','Yape','ph ph-device-mobile'],['cmr','Tarjeta','ph ph-credit-card']].map(([id, label, icon]) => ({label, icon, pick:() => this.setState({addPay:id}), bg: s.addPay === id ? 'var(--color-accent-900)' : 'transparent', border: s.addPay === id ? 'var(--color-accent)' : 'var(--color-neutral-800)'})),
+      onAddAmt: e => this.setState({addAmt:e.target.value.replace(/[^0-9.]/g, '')}), onAddName: e => this.setState({addName:e.target.value}),
+      scanTicket: () => { this.setState({addAmt:'27.80', addName:'Inkafarma'}); this.flash('Boleta leída: Inkafarma · S/ 27.80'); },
+      saveAdd: () => {
+        const amt = parseFloat(s.addAmt); if (!amt || !s.addName.trim()) { this.flash('Falta el monto o el lugar', 'ph ph-warning'); return; }
+        const t = {id:'m' + Date.now(), name:s.addName.trim(), amt, f:g.id || 'libre', pay:s.addPay, when:'Hoy · ahora', why:'Registrado a mano. Puedes cambiar la carpeta.'};
+        this.setState(st => ({txs:[t, ...st.txs], sheet:null})); this.flash(`${fmt(amt)} → ${FM[t.f].name}`);
+      },
+      hasToast: !!s.toast, toast: s.toast, toastIcon: s.toastIcon,
+    };
+  }
+}
+</script>
+</body>
+</html>

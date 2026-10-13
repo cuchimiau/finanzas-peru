@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nocturne-270bb39e-9f22-4323-84aa-42d92a865a66/styles.css">
+<script src="_ds/nocturne-270bb39e-9f22-4323-84aa-42d92a865a66/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-bg);font-family:var(--font-body);color:var(--color-text)}a{color:var(--color-accent-300)}a:hover{color:var(--color-accent-200)}</style>
+</helmet>
+<section style="padding:56px;display:flex;flex-direction:column;gap:28px">
+<div style="max-width:760px">
+<div style="font-size:13px;color:var(--color-accent-300);letter-spacing:.06em;text-transform:uppercase">Ronda 1 · App de finanzas personales</div>
+<h1 style="font-size:34px;font-weight:500;letter-spacing:-0.02em;margin:8px 0 10px">Dos direcciones y el onboarding</h1>
+<p style="font-size:15px;line-height:1.55;color:var(--color-neutral-400);margin:0;text-wrap:pretty">Las tres pantallas son interactivas. El asesor responde con IA real y puede proponer mover dinero entre carpetas. <a href="#1a">1a</a> pone las carpetas al centro; <a href="#1b">1b</a> abre con el resumen del asesor; <a href="#1c">1c</a> es el onboarding que calcula el plan.</p>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+<div id="1a" style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:13px;font-weight:600;padding:3px 9px;border-radius:6px;border:1px solid var(--color-accent);color:var(--color-accent-300)">1a</span><span style="font-size:15px;font-weight:500">Carpetas primero</span></div>
+<div style="font-size:13px;color:var(--color-neutral-500);max-width:410px">Cuánto puedes gastar hoy y tus carpetas de gasto con barras de progreso.</div>
+<dc-import name="Finanzas App" direction="carpetas" start="app" hint-size="410px,864px"></dc-import>
+</div>
+<div id="1b" style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:13px;font-weight:600;padding:3px 9px;border-radius:6px;border:1px solid var(--color-accent);color:var(--color-accent-300)">1b</span><span style="font-size:15px;font-weight:500">Asesor primero</span></div>
+<div style="font-size:13px;color:var(--color-neutral-500);max-width:410px">Un resumen diario del asesor, con acciones concretas y el avance del plan.</div>
+<dc-import name="Finanzas App" direction="asesor" start="app" hint-size="410px,864px"></dc-import>
+</div>
+<div id="1c" style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font-size:13px;font-weight:600;padding:3px 9px;border-radius:6px;border:1px solid var(--color-accent);color:var(--color-accent-300)">1c</span><span style="font-size:15px;font-weight:500">Onboarding y plan</span></div>
+<div style="font-size:13px;color:var(--color-neutral-500);max-width:410px">Ingreso, prioridades, el plan calculado y la conexión de Apple Pay y tarjetas.</div>
+<dc-import name="Finanzas App" direction="carpetas" start="onboarding" hint-size="410px,864px"></dc-import>
+</div>
+</div>
+</section>
+</x-dc>
+</body>
+</html>
