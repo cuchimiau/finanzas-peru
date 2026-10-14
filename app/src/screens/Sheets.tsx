@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FM, FOLDERS, SOURCES, SOURCE_IDS, type Card, type Goal } from '../domain/data';
+import { FM, FOLDERS, SOURCES, SOURCE_IDS, folderName, type Card, type Goal } from '../domain/data';
 import { fmt, fmt0, parseAmount } from '../domain/format';
 import { agoLabel, whenLabel } from '../domain/dates';
 import { emptyCard, payChoices, payInfo, viaApplePay } from '../domain/cards';
@@ -8,8 +8,9 @@ import { Field, Icon, Segmented, SourceCard, inputStyle } from '../components/co
 import { ConnectForm, ShortcutGuide } from '../components/ConnectForm';
 import type { Store } from '../state/store';
 import type { Derived } from '../state/selectors';
+import { CloseSheet, FolderForm, OptimizeSheet, PlanEditor } from './PlanSheets';
 
-const TITLES = { recat: 'Movimiento', connect: 'Cómo leemos tus gastos', add: 'Registrar gasto', card: 'Tarjeta', goal: 'Meta', settings: 'Ajustes' };
+const TITLES = { recat: 'Movimiento', connect: 'Cómo leemos tus gastos', add: 'Registrar', card: 'Deuda o tarjeta', goal: 'Meta', settings: 'Ajustes', folder: 'Carpeta', plan: 'Editar plan', optimize: 'Optimizar', close: 'Cierre de mes' };
 
 export function SheetHost({ store, d }: { store: Store; d: Derived }) {
   const { s } = store;
@@ -33,6 +34,10 @@ export function SheetHost({ store, d }: { store: Store; d: Derived }) {
         {s.sheet === 'card' && <CardForm key={s.cardId || 'new'} store={store} />}
         {s.sheet === 'goal' && <GoalForm key={s.goalId || ''} store={store} />}
         {s.sheet === 'settings' && <Settings store={store} />}
+        {s.sheet === 'folder' && <FolderForm key={s.editFolderId || 'new'} store={store} />}
+        {s.sheet === 'plan' && <PlanEditor store={store} />}
+        {s.sheet === 'optimize' && <OptimizeSheet store={store} d={d} />}
+        {s.sheet === 'close' && <CloseSheet store={store} d={d} />}
       </div>
     </>
   );
@@ -104,37 +109,76 @@ function Sources({ store, d }: { store: Store; d: Derived }) {
   );
 }
 
+const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 function AddExpense({ store }: { store: Store }) {
   const { s } = store;
+  const income = s.addKind === 'ingreso';
   const learned = learnedFolder(s.addName, s.txs);
   const g = guessFolder(s.addName);
-  const id = learned || g.id;
-  const guess = id ? { name: FM[id].name, icon: 'ph ph-' + FM[id].icon, conf: learned ? 'Aprendido' : g.confident ? 'Alta confianza' : 'Sugerencia' }
-    : { name: 'Escribe dónde compraste', icon: 'ph ph-question', conf: '' };
+  const auto = learned || g.id;
+  const chosen = s.addF && FM[s.addF] ? s.addF : null;
+  const id = income ? chosen || 'libre' : chosen || auto;
+  const [pick, setPick] = useState(false);
+  const today = isoDay(new Date()), yest = isoDay(new Date(Date.now() - 86400000));
+  const dateMode = !s.addDate ? 'hoy' : s.addDate === yest ? 'ayer' : 'otra';
+  const options = income ? FOLDERS : FOLDERS.filter(isFlow);
   return (
     <form onSubmit={e => { e.preventDefault(); store.saveAdd(); }}>
-      <div style={{ fontSize: 20, fontWeight: 500, marginBottom: 14 }}>Registrar gasto</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 10 }}>
+        <div style={{ fontSize: 20, fontWeight: 500 }}>Registrar</div>
+        <div style={{ width: 190 }}>
+          <Segmented label="Tipo" value={s.addKind} options={[['gasto', 'Gasto'], ['ingreso', 'Ingreso']]} onChange={k => { store.setAdd({ addKind: k, addF: null }); setPick(false); }} />
+        </div>
+      </div>
       <label className="amount-field" style={{ gap: 6, paddingBottom: 6 }}>
-        <span style={{ fontSize: 26, color: 'var(--color-neutral-500)' }}>S/</span>
+        <span style={{ fontSize: 26, color: income ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }}>{income ? '+S/' : 'S/'}</span>
         <span className="visually-hidden">Monto</span>
         <input type="text" inputMode="decimal" placeholder="0" autoComplete="off" value={s.addAmt} onChange={e => store.setAddAmt(e.target.value)} style={{ fontSize: 34, letterSpacing: 0 }} autoFocus />
       </label>
-      <input type="text" className="input" placeholder="¿Dónde? ej. Tambo, InDrive, Inkafarma" aria-label="Lugar" value={s.addName} maxLength={80}
+      <input type="text" className="input" placeholder={income ? '¿De dónde? ej. Bono, venta, cachuelo, devolución' : '¿Dónde? ej. Tambo, InDrive, Inkafarma'} aria-label="Lugar" value={s.addName} maxLength={80}
         onChange={e => store.setAddName(e.target.value)} style={{ ...inputStyle, marginTop: 14, fontSize: 14 }} />
-      <div style={{ display: 'flex', gap: 6, marginTop: 12, overflowX: 'auto' }} role="radiogroup" aria-label="Medio de pago">
-        {payChoices(s.cards).map(m => (
-          <button type="button" key={m.id} role="radio" aria-checked={s.addPay === m.id} className={'option ghost' + (s.addPay === m.id ? ' on' : '')}
-            style={{ flex: '1 0 auto', height: 36, borderRadius: 10, justifyContent: 'center', gap: 5, whiteSpace: 'nowrap' }} onClick={() => store.setAddPay(m.id)}>
-            <Icon name={m.icon} />{m.label}
-          </button>
+
+      <div style={{ display: 'flex', gap: 6, marginTop: 12, alignItems: 'center' }} role="radiogroup" aria-label="Fecha">
+        {([['hoy', 'Hoy', ''], ['ayer', 'Ayer', yest]] as const).map(([k, l, v]) => (
+          <button type="button" key={k} role="radio" aria-checked={dateMode === k} className={'option ghost' + (dateMode === k ? ' on' : '')}
+            style={{ height: 36, borderRadius: 10, justifyContent: 'center', padding: '0 14px' }} onClick={() => store.setAdd({ addDate: v })}>{l}</button>
         ))}
+        <input type="date" className="input" aria-label="Otra fecha" max={today} value={dateMode === 'otra' ? s.addDate : ''}
+          onChange={e => store.setAdd({ addDate: e.target.value === today ? '' : e.target.value })}
+          style={{ flex: 1, height: 36, borderRadius: 10, fontSize: 13.5, borderColor: dateMode === 'otra' ? 'var(--color-accent)' : undefined }} />
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, padding: 12, borderRadius: 12, background: 'var(--color-bg)' }}>
-        <Icon name={guess.icon} style={{ fontSize: 20, color: 'var(--color-accent-300)' }} />
-        <div style={{ flex: 1 }}><div className="row-sub">Carpeta detectada</div><div className="row-title">{guess.name}</div></div>
-        <span style={{ fontSize: 12, color: 'var(--color-neutral-400)' }}>{guess.conf}</span>
-      </div>
-      <button type="submit" className="btn btn-primary btn-block" style={{ height: 46, borderRadius: 12, marginTop: 12 }}>Guardar</button>
+
+      {!income && (
+        <div style={{ display: 'flex', gap: 6, marginTop: 10, overflowX: 'auto' }} role="radiogroup" aria-label="Medio de pago">
+          {payChoices(s.cards).map(m => (
+            <button type="button" key={m.id} role="radio" aria-checked={s.addPay === m.id} className={'option ghost' + (s.addPay === m.id ? ' on' : '')}
+              style={{ flex: '1 0 auto', height: 36, borderRadius: 10, justifyContent: 'center', gap: 5, whiteSpace: 'nowrap' }} onClick={() => store.setAddPay(m.id)}>
+              <Icon name={m.icon} />{m.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <button type="button" onClick={() => setPick(v => !v)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, padding: 12, borderRadius: 12, background: 'var(--color-bg)', border: 0, color: 'var(--color-text)', cursor: 'pointer', textAlign: 'left' }}>
+        <Icon name={id && FM[id] ? 'ph ph-' + FM[id].icon : 'ph ph-question'} style={{ fontSize: 20, color: 'var(--color-accent-300)' }} />
+        <div style={{ flex: 1 }}>
+          <div className="row-sub">{income ? 'Suma a la carpeta (solo este mes)' : chosen ? 'Carpeta elegida' : 'Carpeta detectada'}</div>
+          <div className="row-title">{id && FM[id] ? FM[id].name : 'Escribe dónde compraste'}</div>
+        </div>
+        <span style={{ fontSize: 12, color: 'var(--color-accent-300)' }}>{pick ? 'Cerrar' : 'Cambiar'}</span>
+      </button>
+      {!income && !chosen && auto && <div className="row-sub" style={{ marginTop: 4 }}>{learned ? 'Aprendido de tus correcciones' : g.confident ? 'Por el tipo de comercio' : 'Sugerencia'}</div>}
+      {pick && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
+          {options.map(f => (
+            <button type="button" key={f.id} className={'option' + (id === f.id ? ' on' : '')} style={{ height: 40 }} onClick={() => { store.setAdd({ addF: f.id }); setPick(false); }}>
+              <Icon name={'ph ph-' + f.icon} style={{ fontSize: 15 }} />{f.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <button type="submit" className="btn btn-primary btn-block" style={{ height: 46, borderRadius: 12, marginTop: 12 }}>{income ? 'Guardar ingreso' : 'Guardar gasto'}</button>
     </form>
   );
 }
@@ -145,46 +189,63 @@ function CardForm({ store }: { store: Store }) {
   const { s } = store;
   const existing = s.cards.find(c => c.id === s.cardId);
   const [c, setC] = useState<Card>(() => existing ?? emptyCard());
-  const [txt, setTxt] = useState({ bal: num(existing?.bal ?? 0), limit: num(existing?.limit ?? 0), tcea: existing ? num(Math.round(existing.tcea * 1000) / 10) : '', min: num(existing?.min ?? 0), dueDay: String(existing?.dueDay ?? 5) });
+  const [txt, setTxt] = useState({ bal: num(existing?.bal ?? 0), limit: num(existing?.limit ?? 0), tcea: existing ? num(Math.round(existing.tcea * 1000) / 10) : '', min: num(existing?.min ?? 0), dueDay: String(existing?.dueDay || 5) });
   const [err, setErr] = useState('');
-  const credit = c.kind === 'credit';
+  const credit = c.kind === 'credit', loan = c.kind === 'loan', debt = credit || loan;
   const field = (k: keyof typeof txt) => ({ value: txt[k], onChange: (e: React.ChangeEvent<HTMLInputElement>) => setTxt(t => ({ ...t, [k]: e.target.value.replace(/[^0-9.,]/g, '') })) });
 
   const save = () => {
     const name = c.name.trim();
-    if (!name) { setErr('Ponle un nombre, por ejemplo "BBVA Visa" o "CMR".'); return; }
-    const bal = parseAmount(txt.bal), tcea = parseAmount(txt.tcea) / 100, dueDay = Math.round(parseAmount(txt.dueDay));
+    if (!name) { setErr(loan ? 'Escribe a quién le debes, por ejemplo "Préstamo de mi tío" o "Caja Huancayo".' : 'Ponle un nombre, por ejemplo "BBVA Visa" o "CMR".'); return; }
+    const bal = parseAmount(txt.bal), tcea = parseAmount(txt.tcea) / 100, dueDay = Math.round(parseAmount(txt.dueDay)), min = parseAmount(txt.min);
     if (credit && bal > 0 && !(tcea > 0 && tcea < 5)) { setErr('Escribe la TCEA en % (aparece en tu estado de cuenta, ej. 58).'); return; }
-    if (credit && (dueDay < 1 || dueDay > 31)) { setErr('El día de pago va de 1 a 31.'); return; }
+    if (loan && bal > 0 && !(min > 0)) { setErr('Escribe cuánto pagas al mes (la cuota).'); return; }
+    if (loan && tcea >= 5) { setErr('El interés anual parece muy alto. Escríbelo en %, ej. 25.'); return; }
+    if (debt && (dueDay < 1 || dueDay > 31)) { setErr('El día de pago va de 1 a 31.'); return; }
     // El saldo se cuenta desde hoy: los cargos que lleguen después se suman solos.
     const balChanged = !existing || existing.bal !== bal;
-    store.saveCard({ ...c, name: name.slice(0, 30), bal: credit ? bal : 0, limit: credit ? parseAmount(txt.limit) : 0, tcea: credit ? tcea : 0, min: credit ? parseAmount(txt.min) : 0, dueDay: credit ? dueDay : 0, cuotas: credit ? c.cuotas : '', balDate: balChanged ? new Date().toISOString() : c.balDate });
+    store.saveCard({
+      ...c, name: name.slice(0, 30), applePay: loan ? false : c.applePay,
+      bal: debt ? bal : 0, limit: credit ? parseAmount(txt.limit) : 0, tcea: debt ? tcea : 0, min: debt ? min : 0, dueDay: debt ? dueDay : 0,
+      cuotas: debt ? c.cuotas : '', balDate: balChanged ? new Date().toISOString() : c.balDate,
+    });
   };
 
   return (
     <form onSubmit={e => { e.preventDefault(); save(); }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ fontSize: 20, fontWeight: 500 }}>{existing ? 'Editar tarjeta' : 'Agregar tarjeta'}</div>
-      <Field label="Nombre">
-        <input className="input" style={inputStyle} value={c.name} onChange={e => setC({ ...c, name: e.target.value })} placeholder="BBVA Visa, Interbank débito, CMR…" autoFocus={!existing} />
+      <div style={{ fontSize: 20, fontWeight: 500 }}>{existing ? (loan ? 'Editar préstamo' : 'Editar tarjeta') : 'Agregar deuda o tarjeta'}</div>
+      <Segmented label="Tipo" value={c.kind} options={[['credit', 'T. crédito'], ['debit', 'T. débito'], ['loan', 'Préstamo']]} onChange={kind => setC({ ...c, kind })} />
+      {loan && <div className="row-sub" style={{ marginTop: -4 }}>Deudas que no son de tarjeta: familia o amigos, caja, cooperativa, financiera, compras en cuotas de tienda…</div>}
+      <Field label={loan ? '¿A quién le debes?' : 'Nombre'}>
+        <input className="input" style={inputStyle} value={c.name} onChange={e => setC({ ...c, name: e.target.value })} placeholder={loan ? 'Préstamo de mi tío, Caja Arequipa…' : 'BBVA Visa, Interbank débito, CMR…'} autoFocus={!existing} />
       </Field>
-      <Segmented label="Tipo" value={c.kind} options={[['credit', 'Crédito'], ['debit', 'Débito']]} onChange={kind => setC({ ...c, kind })} />
-      <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, cursor: 'pointer' }}>
-        <input type="checkbox" checked={c.applePay} onChange={e => setC({ ...c, applePay: e.target.checked })} style={{ width: 20, height: 20, accentColor: 'var(--color-accent)' }} />
-        La uso con Apple Pay
-      </label>
+      {!loan && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, cursor: 'pointer' }}>
+          <input type="checkbox" checked={c.applePay} onChange={e => setC({ ...c, applePay: e.target.checked })} style={{ width: 20, height: 20, accentColor: 'var(--color-accent)' }} />
+          La uso con Apple Pay
+        </label>
+      )}
       {credit && (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <Field label="Deuda actual (S/)" hint="Total que debes hoy, con cuotas."><input className="input" style={inputStyle} inputMode="decimal" {...field('bal')} placeholder="0" /></Field>
-            <Field label="Línea de crédito (S/)"><input className="input" style={inputStyle} inputMode="decimal" {...field('limit')} placeholder="0" /></Field>
-            <Field label="TCEA (%)" hint="En tu estado de cuenta."><input className="input" style={inputStyle} inputMode="decimal" {...field('tcea')} placeholder="58" /></Field>
-            <Field label="Pago mínimo (S/)"><input className="input" style={inputStyle} inputMode="decimal" {...field('min')} placeholder="0" /></Field>
-            <Field label="Día de pago"><input className="input" style={inputStyle} inputMode="numeric" {...field('dueDay')} placeholder="5" /></Field>
-          </div>
-          <Field label="Compras en cuotas (opcional)">
-            <input className="input" style={inputStyle} value={c.cuotas} onChange={e => setC({ ...c, cuotas: e.target.value.slice(0, 80) })} placeholder="Televisor · cuota 4 de 12 · S/ 98" />
-          </Field>
-        </>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <Field label="Deuda actual (S/)" hint="Total que debes hoy, con cuotas."><input className="input" style={inputStyle} inputMode="decimal" {...field('bal')} placeholder="0" /></Field>
+          <Field label="Línea de crédito (S/)"><input className="input" style={inputStyle} inputMode="decimal" {...field('limit')} placeholder="0" /></Field>
+          <Field label="TCEA (%)" hint="En tu estado de cuenta."><input className="input" style={inputStyle} inputMode="decimal" {...field('tcea')} placeholder="58" /></Field>
+          <Field label="Pago mínimo (S/)"><input className="input" style={inputStyle} inputMode="decimal" {...field('min')} placeholder="0" /></Field>
+          <Field label="Día de pago"><input className="input" style={inputStyle} inputMode="numeric" {...field('dueDay')} placeholder="5" /></Field>
+        </div>
+      )}
+      {loan && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <Field label="Cuánto debes hoy (S/)"><input className="input" style={inputStyle} inputMode="decimal" {...field('bal')} placeholder="0" /></Field>
+          <Field label="Cuota mensual (S/)"><input className="input" style={inputStyle} inputMode="decimal" {...field('min')} placeholder="0" /></Field>
+          <Field label="Interés anual (%)" hint="Déjalo en 0 si no te cobra intereses."><input className="input" style={inputStyle} inputMode="decimal" {...field('tcea')} placeholder="0" /></Field>
+          <Field label="Día de pago"><input className="input" style={inputStyle} inputMode="numeric" {...field('dueDay')} placeholder="5" /></Field>
+        </div>
+      )}
+      {debt && (
+        <Field label={loan ? 'Detalle (opcional)' : 'Compras en cuotas (opcional)'}>
+          <input className="input" style={inputStyle} value={c.cuotas} onChange={e => setC({ ...c, cuotas: e.target.value.slice(0, 80) })} placeholder={loan ? 'Faltan 6 cuotas · sin intereses' : 'Televisor · cuota 4 de 12 · S/ 98'} />
+        </Field>
       )}
       {err && <div role="alert" style={{ fontSize: 12.5, color: 'var(--color-accent-300)' }}>{err}</div>}
       <div style={{ display: 'flex', gap: 8 }}>
@@ -216,7 +277,7 @@ function GoalForm({ store }: { store: Store }) {
       <Field label="Meta (S/)" hint={isEf ? `Déjalo vacío para usar 3 meses de gastos esenciales (${fmt0(auto)}).` : undefined}>
         <input className="input" style={inputStyle} inputMode="decimal" value={target} onChange={e => setTarget(e.target.value.replace(/[^0-9.,]/g, ''))} placeholder={isEf ? String(auto) : '0'} />
       </Field>
-      <div className="row-sub">El aporte mensual es el presupuesto de la carpeta "{FM[g0.id].name}" ({fmt0(s.budgets[g0.id])}). Cámbialo en Carpetas.</div>
+      <div className="row-sub">El aporte mensual es el presupuesto de la carpeta "{folderName(g0.id)}" ({fmt0(s.budgets[g0.id])}). Cámbialo en Carpetas.</div>
       <button type="submit" className="btn btn-primary btn-block" style={{ height: 46, borderRadius: 12 }}>Guardar</button>
     </form>
   );

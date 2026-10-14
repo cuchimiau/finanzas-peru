@@ -1,5 +1,5 @@
 import { FM, FOLDERS, GROUPS, type FolderId, type Tx } from '../domain/data';
-import { monthCtx, whenLabel } from '../domain/dates';
+import { monthCtx, monthKeyOf, whenLabel } from '../domain/dates';
 import { fmt, fmt0, pct } from '../domain/format';
 import { MAX_MONTHS, simulate } from '../domain/debts';
 import { currentDebts, payIcon, payInfo, viaApplePay } from '../domain/cards';
@@ -26,7 +26,8 @@ export function derive(s: State, now = new Date()) {
   const vctx = { monthPct: m.pct, firstDue: debts.slice().sort((a, b) => b.tcea - a.tcea)[0]?.due ?? null };
   const views = FOLDERS.map(f => folderView(f, s.budgets, monthTxs, vctx));
   const VM = Object.fromEntries(views.map(v => [v.id, v])) as Record<FolderId, FolderView>;
-  const flex = views.filter(v => FLEX_IDS.includes(v.id));
+  // Gasto variable: todos tus deseos (incluidas carpetas propias) + mercado y transporte.
+  const flex = views.filter(v => v.grp === 'des' || FLEX_IDS.includes(v.id));
   const flexLeft = flex.reduce((a, v) => a + Math.max(0, v.left), 0);
   const spent = views.filter(v => v.flow).reduce((a, v) => a + v.spent, 0);
   const saved = views.filter(v => !v.flow).reduce((a, v) => a + v.budget, 0);
@@ -38,7 +39,7 @@ export function derive(s: State, now = new Date()) {
       id: g.id, label: g.label, color: g.color, amt, amtL: fmt0(amt),
       pctL: income ? Math.round((amt / income) * 100) + '%' : '0%', w: pct(amt, income),
       names: items.filter(v => v.budget > 0).map(v => v.name + ' ' + fmt0(v.budget)).join(' · '),
-      items: items.filter(v => v.budget > 0 || v.grp === 'aho'),
+      items,
     };
   });
 
@@ -52,6 +53,8 @@ export function derive(s: State, now = new Date()) {
   const creditMonth = creditTxs.reduce((a, t) => a + t.amt, 0);
   const folderCount = FOLDERS.filter(f => s.budgets[f.id] > 0).length;
   const lastApplePay = s.txs.find(t => t.source === 'applepay');
+  const monthIncomes = s.incomes.filter(i => monthKeyOf(i.date) === m.key);
+  const extraIncome = monthIncomes.reduce((a, i) => a + i.amt, 0);
 
   const txView = (t: Tx): TxView => {
     const f = t.f ? FM[t.f] : null, p = payInfo(t.pay, s.cards);
@@ -65,7 +68,7 @@ export function derive(s: State, now = new Date()) {
 
   return {
     m, income, monthTxs, views, VM, flex, flexLeft, spent, saved, hot, groupRows, debts, debtTotal, sims,
-    creditTxs, creditMonth, folderCount, lastApplePay, txView,
+    creditTxs, creditMonth, folderCount, lastApplePay, txView, monthIncomes, extraIncome, salary: parseIncome(s.income),
     debtFreeL: debts.length ? 'Libre en ' + endL(sims.avalanche.months) : 'Sin deudas',
   };
 }

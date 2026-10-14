@@ -34,7 +34,7 @@ export function Home({ store, d }: { store: Store; d: Derived }) {
 
       <div style={{ padding: 14, borderRadius: 14, background: 'var(--color-surface)', boxShadow: 'var(--shadow-sm)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 10 }}>
-          <span style={{ color: 'var(--color-neutral-400)' }}>{cap(m.name)} · sueldo {fmt0(d.income)}</span>
+          <span style={{ color: 'var(--color-neutral-400)' }}>{cap(m.name)} · {d.extraIncome ? `sueldo ${fmt0(d.salary)} + extra ${fmt0(d.extraIncome)}` : `sueldo ${fmt0(d.income)}`}</span>
           <span style={{ color: 'var(--color-accent-300)' }}>{m.pctL} del mes</span>
         </div>
         <div className="stack-bar" style={{ height: 8, borderRadius: 4, background: 'var(--color-neutral-900)' }}>
@@ -58,6 +58,15 @@ export function Home({ store, d }: { store: Store; d: Derived }) {
         </div>
       )}
 
+      <div {...pressable(() => store.openSheet('optimize'))} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1px solid var(--color-accent-800)' }}>
+        <Icon name="ph ph-magic-wand" style={{ fontSize: 20, color: 'var(--color-accent-300)' }} />
+        <div className="row-main">
+          <div className="row-title">Optimiza tu mes</div>
+          <div className="row-sub">Plan de ahorro para lo que queda del mes y tu plan del próximo</div>
+        </div>
+        <Icon name="ph ph-caret-right" style={{ color: 'var(--color-neutral-600)' }} />
+      </div>
+
       {d.hot && (
         <div {...pressable(askHot)} style={{ padding: 14, borderRadius: 14, border: '1px solid var(--color-accent-700)', background: 'linear-gradient(160deg, var(--color-accent-900), transparent)', display: 'flex', gap: 12 }}>
           <Icon name="ph ph-sparkle" style={{ fontSize: 20, color: 'var(--color-accent-300)', marginTop: 1 }} />
@@ -69,7 +78,7 @@ export function Home({ store, d }: { store: Store; d: Derived }) {
         </div>
       )}
 
-      {(d.debts.length > 0 || s.cards.some(c => c.kind === 'credit')) && (
+      {(d.debts.length > 0 || s.cards.some(c => c.kind !== 'debit')) && (
         <div {...pressable(() => store.goTab('debts'))} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, background: 'var(--color-surface)' }}>
           <Icon name="ph ph-credit-card" style={{ fontSize: 20, color: 'var(--color-neutral-300)' }} />
           <div className="row-main">

@@ -1,7 +1,9 @@
 // Catálogos y tipos del modelo. Los datos de la persona (tarjetas, metas, movimientos) viven en el estado.
 
 export type GroupId = 'nec' | 'des' | 'aho' | 'deu';
-export type FolderId =
+/** Id de carpeta. Las de fábrica son fijas ('libre', 'deudas', …); las tuyas se generan ('u…'). */
+export type FolderId = string;
+export type CoreFolderId =
   | 'vivienda' | 'mercado' | 'transporte' | 'servicios' | 'salud'
   | 'restaurantes' | 'ocio' | 'suscripciones' | 'libre'
   | 'emergencia' | 'inversion' | 'viaje' | 'deudas';
@@ -12,11 +14,15 @@ export type GoalId = 'emergencia' | 'inversion' | 'viaje';
 export type Budgets = Record<FolderId, number>;
 
 export interface Folder { id: FolderId; name: string; icon: string; grp: GroupId; base: number }
+
+/** Carpetas que la app necesita: se pueden renombrar pero no borrar. */
+export const LOCKED_FOLDERS: FolderId[] = ['libre', 'deudas', 'emergencia'];
 export interface Group { id: GroupId; label: string; color: string }
 
 export interface Profile { name: string }
 
-export type CardKind = 'debit' | 'credit';
+/** Tarjeta de débito, de crédito, o préstamo / deuda no bancaria (familia, caja, cooperativa, tienda…). */
+export type CardKind = 'debit' | 'credit' | 'loan';
 export interface Card {
   id: string;
   name: string;
@@ -53,12 +59,16 @@ export interface Tx {
 
 export interface Goal { id: GoalId; name: string; saved: number; target: number }
 
+/** Ingreso extra del mes (bono, venta, cachuelo…): suma a una carpeta solo ese mes. */
+export interface Income { id: string; name: string; amt: number; date: string; f: FolderId }
+
 /** Deuda derivada de una tarjeta de crédito (lo que usa la simulación). */
-export interface Debt { id: string; name: string; bal: number; limit: number; tcea: number; min: number; due: string; cuotas: string }
+export interface Debt { id: string; name: string; bal: number; limit: number; tcea: number; min: number; due: string; cuotas: string; kind?: CardKind }
 
 export interface Source { name: string; sub: string; icon: string; how: string; soon?: boolean }
 
-export const FOLDERS: Folder[] = [
+/** Carpetas de fábrica (las nuevas cuentas empiezan con estas). */
+export const DEFAULT_FOLDERS: Folder[] = [
   { id: 'vivienda', name: 'Alquiler', icon: 'house', grp: 'nec', base: 650 },
   { id: 'mercado', name: 'Mercado y súper', icon: 'shopping-cart', grp: 'nec', base: 480 },
   { id: 'transporte', name: 'Transporte', icon: 'bus', grp: 'nec', base: 170 },
@@ -71,10 +81,23 @@ export const FOLDERS: Folder[] = [
   { id: 'emergencia', name: 'Fondo de emergencia', icon: 'lifebuoy', grp: 'aho', base: 150 },
   { id: 'inversion', name: 'Fondo mutuo', icon: 'trend-up', grp: 'aho', base: 50 },
   { id: 'viaje', name: 'Viaje', icon: 'mountains', grp: 'aho', base: 0 },
-  { id: 'deudas', name: 'Pago de tarjetas', icon: 'credit-card', grp: 'deu', base: 520 },
+  { id: 'deudas', name: 'Pago de deudas', icon: 'credit-card', grp: 'deu', base: 520 },
 ];
-export const FOLDER_IDS = FOLDERS.map(f => f.id);
-export const FM = Object.fromEntries(FOLDERS.map(f => [f.id, f])) as Record<FolderId, Folder>;
+/*
+ * Registro vivo de carpetas: el store llama a setFolders() con las carpetas de la persona
+ * antes de cada render, y todos los módulos leen FOLDERS / FM / FOLDER_IDS actualizados.
+ */
+export let FOLDERS: Folder[] = DEFAULT_FOLDERS;
+export let FOLDER_IDS: FolderId[] = DEFAULT_FOLDERS.map(f => f.id);
+export let FM: Record<FolderId, Folder> = Object.fromEntries(DEFAULT_FOLDERS.map(f => [f.id, f]));
+export function setFolders(list: Folder[]) {
+  if (list === FOLDERS) return;
+  FOLDERS = list;
+  FOLDER_IDS = list.map(f => f.id);
+  FM = Object.fromEntries(list.map(f => [f.id, f]));
+}
+/** Nombre seguro aunque la carpeta haya sido borrada. */
+export const folderName = (id: FolderId | null | undefined) => (id && FM[id] ? FM[id].name : 'Por revisar');
 export const isFolderId = (x: unknown): x is FolderId => typeof x === 'string' && Object.prototype.hasOwnProperty.call(FM, x);
 
 export const GROUPS: Group[] = [
@@ -105,6 +128,7 @@ export type Prios = Record<PrioId, boolean>;
 export const DEFAULT_PRIOS: Prios = { emergencia: true, invertir: true, viaje: false };
 
 export const SUGGESTIONS = [
+  'Optimiza mi fin de mes',
   'Optimiza mi plan este mes',
   '¿Qué tarjeta pago primero?',
   '¿Qué hago con mi gratificación?',

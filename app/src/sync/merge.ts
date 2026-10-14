@@ -76,5 +76,8 @@ export function mergeRemote(remote: Persisted, local: Persisted): Persisted {
   const ids = new Set(remote.txs.map(t => t.id));
   const txs = [...remote.txs, ...local.txs.filter(t => !ids.has(t.id))].sort(byDateDesc);
   const messages = local.messages.length > remote.messages.length ? local.messages : remote.messages;
-  return { ...remote, txs, messages };
+  const rIn = remote.incomes || [], lIn = local.incomes || [];
+  const incIds = new Set(rIn.map(i => i.id));
+  const incomes = [...rIn, ...lIn.filter(i => !incIds.has(i.id))];
+  return { ...remote, txs, messages, incomes };
 }

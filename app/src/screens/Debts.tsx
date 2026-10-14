@@ -17,7 +17,7 @@ export function Debts({ store, d }: { store: Store; d: Derived }) {
       : 'Solo el mínimo: la deuda casi no baja porque los intereses se comen el pago.';
   const othersMin = order.slice(1).reduce((a, x) => a + x.min, 0);
   const minTotal = d.debts.reduce((a, x) => a + x.min, 0);
-  const debitCards = s.cards.filter(c => c.kind === 'debit' || !d.debts.some(x => x.id === c.id));
+  const debitCards = s.cards.filter(c => !d.debts.some(x => x.id === c.id));
 
   return (
     <div className="rise" style={{ padding: '8px 20px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -26,12 +26,12 @@ export function Debts({ store, d }: { store: Store; d: Derived }) {
           <div className="page-title">Deudas</div>
           <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 2 }}>Tarjetas, cuotas y lo que cargas a crédito</div>
         </div>
-        <button className="btn btn-secondary" onClick={() => store.openCard(null)} style={{ height: 34, borderRadius: 10, gap: 5, fontSize: 13 }}><Icon name="ph ph-plus" />Tarjeta</button>
+        <button className="btn btn-secondary" onClick={() => store.openCard(null)} style={{ height: 34, borderRadius: 10, gap: 5, fontSize: 13 }}><Icon name="ph ph-plus" />Deuda o tarjeta</button>
       </div>
 
       {d.debts.length === 0 ? (
         <div className="surface" style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--color-neutral-300)' }}>
-          No tienes deudas de tarjeta registradas. Agrega tus tarjetas de crédito con su saldo, TCEA, pago mínimo y día de pago para ver cuándo quedas libre y cuánto pagas en intereses.
+          No tienes deudas registradas. Agrega tus tarjetas de crédito o préstamos (familia, caja, cooperativa, cuotas de tienda) con su saldo, interés, cuota y día de pago para ver cuándo quedas libre y cuánto pagas en intereses.
         </div>
       ) : (
         <>
@@ -39,7 +39,7 @@ export function Debts({ store, d }: { store: Store; d: Derived }) {
             <div style={{ fontSize: 13, color: 'var(--color-neutral-400)' }}>Debes en total</div>
             <div className="tnum" style={{ fontSize: 46, fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1.05, marginTop: 4 }}>{fmt0(d.debtTotal)}</div>
             <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 6 }}>{d.debtFreeL} pagando {fmt0(pay)}/mes</div>
-            {pay < minTotal && <div role="alert" style={{ fontSize: 12.5, color: 'var(--color-accent-300)', marginTop: 6 }}>Tu carpeta de tarjetas ({fmt0(pay)}) no cubre los mínimos ({fmt0(minTotal)}). Súbela en Carpetas.</div>}
+            {pay < minTotal && <div role="alert" style={{ fontSize: 12.5, color: 'var(--color-accent-300)', marginTop: 6 }}>Tu carpeta Pago de deudas ({fmt0(pay)}) no cubre los mínimos y cuotas ({fmt0(minTotal)}). Súbela en Carpetas.</div>}
           </div>
 
           <Segmented label="Estrategia de pago" value={s.strat} options={STRATS} onChange={store.setStrat} />
@@ -59,7 +59,7 @@ export function Debts({ store, d }: { store: Store; d: Derived }) {
                     <span style={{ width: 22, height: 22, borderRadius: 6, border: '1px solid var(--color-accent-700)', color: 'var(--color-accent-300)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
                     <div className="row-main">
                       <div style={{ fontSize: 15, fontWeight: 500 }}>{debt.name}</div>
-                      <div className="row-sub">TCEA {Math.round(debt.tcea * 100)}% · paga antes del {debt.due}</div>
+                      <div className="row-sub">{debt.kind === 'loan' ? (debt.tcea > 0 ? `Préstamo · ${Math.round(debt.tcea * 100)}% anual` : 'Préstamo sin intereses') : `TCEA ${Math.round(debt.tcea * 100)}%`} · paga antes del {debt.due}</div>
                     </div>
                     <div className="row-end">
                       <div className="tnum" style={{ fontSize: 17, fontWeight: 500 }}>{fmt0(debt.bal)}</div>
@@ -68,7 +68,7 @@ export function Debts({ store, d }: { store: Store; d: Derived }) {
                   </div>
                   <Track w={pct(debt.bal, debt.limit || debt.bal)} color={debt.limit && debt.bal / debt.limit > 0.4 ? 'var(--color-accent-400)' : 'var(--color-neutral-300)'} height={4} style={{ margin: '12px 0 10px' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--color-neutral-400)' }}>
-                    <span>Mínimo {fmt0(debt.min)} · tu pago {payL}</span>
+                    <span>{debt.kind === 'loan' ? 'Cuota' : 'Mínimo'} {fmt0(debt.min)} · tu pago {payL}</span>
                     <span>Libre en {endL(cur.done[debt.id] || MAX_MONTHS)}</span>
                   </div>
                   {debt.cuotas && (
@@ -87,7 +87,7 @@ export function Debts({ store, d }: { store: Store; d: Derived }) {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {debitCards.map(c => (
             <button key={c.id} className="chip" style={{ height: 34, fontSize: 13 }} onClick={() => store.openCard(c.id)}>
-              <Icon name={c.applePay ? 'ph ph-apple-logo' : 'ph ph-credit-card'} />{c.name}{c.kind === 'credit' ? ' · sin deuda' : ''}
+              <Icon name={c.applePay ? 'ph ph-apple-logo' : 'ph ph-credit-card'} />{c.name}{c.kind !== 'debit' ? ' · sin deuda' : ''}
             </button>
           ))}
         </div>

@@ -1,6 +1,6 @@
 // Asesor con Gemini. La app arma el prompt y el historial; el Apps Script solo agrega la clave y llama a la API.
 
-import { FOLDERS, FOLDER_IDS, GM, type Budgets, type Card, type Goal, type Tx } from './data';
+import { FOLDERS, FOLDER_IDS, GM, type Budgets, type Card, type Goal, type Income, type Tx } from './data';
 import { monthCtx } from './dates';
 import { simulate } from './debts';
 import { currentDebts } from './cards';
@@ -10,7 +10,7 @@ export const ADVISOR_TOOL_NAME = 'proponer_ajuste';
 
 export interface ChatTurn { role: 'user' | 'assistant'; text: string }
 
-export interface AdvisorContext { name: string; budgets: Budgets; txs: Tx[]; cards: Card[]; goals: Goal[]; now?: Date }
+export interface AdvisorContext { name: string; budgets: Budgets; txs: Tx[]; cards: Card[]; goals: Goal[]; incomes?: Income[]; salary?: number; now?: Date }
 
 /** Pedido que viaja al Apps Script (acción "ask"). */
 export interface GeminiRequest {
@@ -21,8 +21,8 @@ export interface GeminiRequest {
 /** Respuesta del Apps Script: texto final + argumentos de cada llamada a proponer_ajuste. */
 export interface GeminiResponse { text: string; calls: { resumen?: string; movimientos?: unknown }[] }
 
-/** Declaración de la función en el formato de Gemini (esquema OpenAPI). */
-export const advisorTool = {
+/** Declaración de la función en el formato de Gemini (esquema OpenAPI), con tus carpetas actuales. */
+export const advisorTool = () => ({
   name: ADVISOR_TOOL_NAME,
   description: 'Muestra a la usuaria una propuesta para mover soles entre carpetas de este mes, con botón Aplicar. El total no cambia.',
   parameters: {
@@ -44,7 +44,7 @@ export const advisorTool = {
     },
     required: ['resumen', 'movimientos'],
   },
-} as const;
+});
 
 export function buildSystemPrompt(ctx: AdvisorContext): string {
   const now = ctx.now ?? new Date();
@@ -74,7 +74,9 @@ Deudas${sim ? ` (pago mensual total S/ ${b.deudas}; con avalancha queda libre en
 ${debtsL}
 Metas:
 ${goalsL}
-Movimientos sin categorizar este mes: ${uncategorized}.`;
+Movimientos sin categorizar este mes: ${uncategorized}.
+Ingresos extra este mes: ${(ctx.incomes || []).filter(i => i.date.slice(0, 7) === m.key).map(i => `${i.name} S/ ${i.amt}`).join(', ') || 'ninguno'}${ctx.salary ? ` (sueldo base S/ ${ctx.salary})` : ''}.
+Si te piden optimizar el fin de mes: calcula lo que sobra en deseos según el ritmo de gasto y propón moverlo a la deuda de mayor interés o al fondo de emergencia con ${ADVISOR_TOOL_NAME}; nunca recortes necesidades.`;
 }
 
 /** Historial en el formato de Gemini: une turnos seguidos del mismo rol y empieza por la persona. */
@@ -91,5 +93,5 @@ export function toGeminiContents(turns: ChatTurn[]): GeminiRequest['contents'] {
 }
 
 export function buildGeminiRequest(ctx: AdvisorContext, turns: ChatTurn[]): GeminiRequest {
-  return { system: buildSystemPrompt(ctx), contents: toGeminiContents(turns.slice(-30)), tools: [{ functionDeclarations: [advisorTool] }] };
+  return { system: buildSystemPrompt(ctx), contents: toGeminiContents(turns.slice(-30)), tools: [{ functionDeclarations: [advisorTool()] }] };
 }

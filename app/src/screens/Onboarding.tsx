@@ -113,7 +113,7 @@ function CardsStep({ store }: { store: Store }) {
             <div className="ibox dark"><Icon name={c.applePay ? 'ph ph-apple-logo' : 'ph ph-credit-card'} /></div>
             <div className="row-main">
               <div className="row-title">{c.name}</div>
-              <div className="row-sub">{c.kind === 'credit' ? `Crédito · debes ${fmt0(c.bal)} · TCEA ${Math.round(c.tcea * 100)}%` : 'Débito'}</div>
+              <div className="row-sub">{c.kind === 'credit' ? `Crédito · debes ${fmt0(c.bal)} · TCEA ${Math.round(c.tcea * 100)}%` : c.kind === 'loan' ? `Préstamo · debes ${fmt0(c.bal)} · cuota ${fmt0(c.min)}` : 'Débito'}</div>
             </div>
             <Icon name="ph ph-caret-right" style={{ color: 'var(--color-neutral-600)' }} />
           </div>

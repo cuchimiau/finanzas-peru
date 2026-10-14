@@ -17,6 +17,11 @@ function FolderList({ store, d }: { store: Store; d: Derived }) {
     <div className="rise" style={{ padding: '8px 20px 28px' }}>
       <div className="page-title">Carpetas</div>
       <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 2 }}>{fmt0(d.income)} asignados · S/ 0 sin destino</div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+        <button className="btn btn-secondary" onClick={() => store.openSheet('plan')} style={{ flex: 1, height: 38, borderRadius: 10, gap: 6, fontSize: 13 }}><Icon name="ph ph-sliders-horizontal" />Editar plan</button>
+        <button className="btn btn-secondary" onClick={() => store.openFolderEdit(null)} style={{ flex: 1, height: 38, borderRadius: 10, gap: 6, fontSize: 13 }}><Icon name="ph ph-folder-plus" />Nueva carpeta</button>
+        <button className="btn btn-primary" onClick={() => store.openSheet('optimize')} style={{ flex: 1, height: 38, borderRadius: 10, gap: 6, fontSize: 13 }}><Icon name="ph ph-magic-wand" />Optimizar</button>
+      </div>
       {d.groupRows.map(g => (
         <div key={g.id} style={{ marginTop: 22 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--color-neutral-500)', marginBottom: 2 }}>
@@ -77,7 +82,8 @@ function FolderDetail({ store, d, id }: { store: Store; d: Derived; id: FolderId
       </button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
         <div className="ibox xl"><Icon name={fo.icon} /></div>
-        <div><div style={{ fontSize: 20, fontWeight: 500 }}>{fo.name}</div><div className="row-sub">{GM[fo.grp].label}</div></div>
+        <div style={{ flex: 1 }}><div style={{ fontSize: 20, fontWeight: 500 }}>{fo.name}</div><div className="row-sub">{GM[fo.grp].label}</div></div>
+        <button className="btn btn-icon btn-ghost" aria-label="Editar carpeta" onClick={() => store.openFolderEdit(id)} style={{ width: 38, height: 38, borderRadius: 10, fontSize: 18 }}><Icon name="ph ph-pencil-simple" /></button>
       </div>
       <div className="tnum" style={{ fontSize: 44, fontWeight: 500, letterSpacing: '-0.02em', marginTop: 18, color: fo.leftColor }}>{fo.leftL}</div>
       <div style={{ fontSize: 13, color: 'var(--color-neutral-400)' }}>{fo.leftLabel} · {fo.ofL}</div>
@@ -189,7 +195,7 @@ function BudgetEditor({ store, id }: { store: Store; id: FolderId }) {
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--color-divider)' }}>
           <div style={{ fontSize: 13.5, fontWeight: 500, marginBottom: 8 }}>Los {fmt0(-diff)} que liberas van a:</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {(['libre', 'emergencia', 'deudas', 'inversion', 'viaje', 'restaurantes', 'mercado'] as FolderId[]).filter(x => x !== id).map(x => (
+            {(['libre', 'emergencia', 'deudas', 'inversion', 'viaje', 'restaurantes', 'mercado'] as FolderId[]).filter(x => x !== id && FM[x]).map(x => (
               <button type="button" key={x} className={'chip' + (to === x ? ' on' : '')} aria-pressed={to === x} onClick={() => setTo(x)} style={{ height: 32, fontSize: 12.5, padding: '0 11px' }}>{FM[x].name}</button>
             ))}
           </div>

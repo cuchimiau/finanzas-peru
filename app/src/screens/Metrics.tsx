@@ -1,4 +1,4 @@
-import { FOLDERS, INEI_BENCH, type Tx } from '../domain/data';
+import { FOLDERS, INEI_BENCH, folderName, type Tx } from '../domain/data';
 import { fmt0, pct } from '../domain/format';
 import { lastMonthKeys, monthShort } from '../domain/dates';
 import { payInfo, viaApplePay } from '../domain/cards';
@@ -120,6 +120,23 @@ export function Metrics({ store, d }: { store: Store; d: Derived }) {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="surface">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span style={{ fontSize: 13, fontWeight: 500 }}>Ingresos del mes</span>
+          <span className="tnum" style={{ fontSize: 14 }}>{fmt0(d.salary + d.extraIncome)}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--color-neutral-400)', padding: '8px 0 4px' }}><span>Sueldo</span><span className="tnum">{fmt0(d.salary)}</span></div>
+        {d.monthIncomes.map(i => (
+          <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, padding: '6px 0', borderTop: '1px solid var(--color-divider)' }}>
+            <Icon name="ph ph-arrow-circle-down" style={{ color: 'var(--color-accent-300)' }} />
+            <span style={{ flex: 1 }}>{i.name} <span className="muted">→ {folderName(i.f)}</span></span>
+            <span className="tnum">+{fmt0(i.amt)}</span>
+            <button type="button" className="btn btn-ghost" aria-label={`Eliminar ingreso ${i.name}`} onClick={() => { if (confirm(`¿Eliminar el ingreso "${i.name}"?`)) store.deleteIncome(i.id); }} style={{ height: 28, padding: '0 6px', color: 'var(--color-neutral-500)' }}><Icon name="ph ph-x" /></button>
+          </div>
+        ))}
+        <button type="button" className="link-btn" onClick={() => { store.openSheet('add'); store.setAdd({ addKind: 'ingreso' }); }} style={{ marginTop: 6, fontSize: 12.5 }}>+ Registrar ingreso extra</button>
       </div>
 
       <div className="section-title" style={{ marginTop: 8 }}>Metas</div>

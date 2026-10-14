@@ -97,7 +97,7 @@ export function goalViews(b: Budgets, goals: Goal[], now = new Date()): GoalView
 /** Adivina la carpeta de un gasto por el nombre del comercio. */
 export function guessFolder(name: string): { id: FolderId | null; confident: boolean } {
   if (!name.trim()) return { id: null, confident: false };
-  const hit = KEYWORDS.find(([re]) => re.test(name));
+  const hit = KEYWORDS.find(([re, id]) => FM[id] && re.test(name));
   return { id: hit ? hit[1] : 'libre', confident: !!hit };
 }
 
@@ -105,7 +105,7 @@ export function guessFolder(name: string): { id: FolderId | null; confident: boo
 export function learnedFolder(name: string, txs: Tx[]): FolderId | null {
   const key = name.trim().toLowerCase();
   const prev = txs.find(t => t.f && t.name.trim().toLowerCase() === key && t.why.startsWith('Lo moviste'));
-  return prev?.f ?? null;
+  return prev?.f && FM[prev.f] ? prev.f : null;
 }
 
 export interface Move { de: FolderId; a: FolderId; monto: number }
@@ -136,7 +136,7 @@ export const grossFromNet = (net: number) => net / 0.87;
 /** Gasto de carpetas de necesidades y deseos por mes, para el gráfico. */
 export function spendByMonth(txs: Tx[], keys: string[]): Record<string, number> {
   const out = Object.fromEntries(keys.map(k => [k, 0]));
-  txs.forEach(t => { const k = monthKeyOf(t.date); if (k in out && t.f && (FM[t.f].grp === 'nec' || FM[t.f].grp === 'des')) out[k] += t.amt; });
+  txs.forEach(t => { const k = monthKeyOf(t.date); if (k in out && (!t.f || !FM[t.f] || FM[t.f].grp === 'nec' || FM[t.f].grp === 'des')) out[k] += t.amt; });
   return out;
 }
 

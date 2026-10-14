@@ -9,6 +9,8 @@ import { buildGeminiRequest, buildSystemPrompt, toGeminiContents } from './advis
 import { agoLabel, lastMonthKeys, monthAt, monthCtx, nextDueLabel, whenLabel } from './dates';
 import { fmt, fmt0, parseAmount } from './format';
 import { inboxToTxs, mergeRemote, parseSpoken } from '../sync/merge';
+import { nextMonthPlan, restOfMonth } from './optimize';
+import { FM } from './data';
 import { encodeConnection, parseConnection } from '../sync/backend';
 import type { Persisted } from '../state/persisted';
 
@@ -263,5 +265,57 @@ describe('frases dictadas a Siri', () => {
       [0, 'Almuerzo Pardos', 'cash', 'siri', true, 'restaurantes'],
       [0, 'Starbucks', 'c1', 'applepay', true, 'restaurantes'],
     ]);
+  });
+});
+
+describe('optimizar el mes', () => {
+  const b0 = () => buildBudgets(2600, { deuda: true, emergencia: true, invertir: true, viaje: false });
+  const debts = [{ id: 'c1', name: 'CMR', bal: 1000, limit: 2000, tcea: 0.92, min: 70, due: '5 nov', cuotas: '' }, { id: 'l1', name: 'Tío', bal: 500, limit: 0, tcea: 0, min: 100, due: '1 nov', cuotas: '', kind: 'loan' as const }];
+
+  it('resto del mes: ahorro de deseos hacia la deuda más cara, sin tocar necesidades', () => {
+    const txs = [tx({ f: 'restaurantes', amt: 20 }), tx({ f: 'mercado', amt: 300 }), tx({ f: 'ocio', amt: 70 })];
+    const r = restOfMonth(b0(), txs, 0.5, 15, debts, 0);
+    expect(r.target.id).toBe('deudas');
+    expect(r.target.why).toContain('CMR');
+    expect(r.moves.every(m => FM[m.de].grp === 'des')).toBe(true);
+    expect(r.moves.find(m => m.de === 'restaurantes')!.monto).toBe(120); // 160 − 20 gastado − 20 esperado
+    expect(r.moves.find(m => m.de === 'ocio')).toBeUndefined();          // va a pasarse: no hay sobrante
+    expect(r.risks.map(x => x.id)).toEqual(['ocio', 'mercado']);         // 140 > 80 y 600 > 480
+    expect(sumBudgets(applyMoves(b0(), r.moves.map(m => ({ ...m, a: 'deudas' }))))).toBe(2600);
+  });
+
+  it('próximo mes: ajusta a lo real +10%, respeta mínimos y lo que sobra va a la deuda', () => {
+    const t = b0();
+    const txs = [tx({ f: 'mercado', amt: 300 }), tx({ f: 'restaurantes', amt: 200 })];
+    const p = nextMonthPlan(t, txs, 0.5, 2600, 400, debts, 0);
+    expect(p.budgets.mercado).toBe(660);           // 600 proyectado × 1.1
+    expect(p.budgets.restaurantes).toBe(200);      // 400 × 1.1 = 440, tope +25% de 160 = 200
+    expect(sumBudgets(p.budgets)).toBe(2600);
+    expect(p.budgets.vivienda).toBe(650);          // necesidades sin datos: se mantienen
+    expect(p.budgets.deudas).toBeGreaterThanOrEqual(400);
+    // Sin deudas, lo que sobra va a emergencia.
+    const p2 = nextMonthPlan(t, [], 1, 3000, 0, [], 1000);
+    expect(p2.budgets.deudas).toBe(0);
+    expect(p2.budgets.emergencia).toBe(t.emergencia + t.deudas + 400);
+    expect(sumBudgets(p2.budgets)).toBe(3000);
+  });
+
+  it('próximo mes: si no alcanza, recorta lo voluntario y avisa; nunca necesidades', () => {
+    const p = nextMonthPlan(b0(), [tx({ f: 'vivienda', amt: 900 })], 1, 2600, 520, debts, 0);
+    expect(p.budgets.vivienda).toBe(990);
+    expect(p.budgets.deudas).toBeGreaterThanOrEqual(520);
+    expect(sumBudgets(p.budgets)).toBe(2600);
+    expect(p.budgets.libre + p.budgets.inversion).toBe(0);
+    expect(p.notes.join(' ')).toContain('recorté');
+    // Si ni así alcanza, lo dice claramente.
+    const q = nextMonthPlan(b0(), [tx({ f: 'vivienda', amt: 1500 })], 1, 2600, 520, debts, 0);
+    expect(q.notes.join(' ')).toContain('superan tu sueldo');
+    expect(q.budgets.vivienda).toBe(1650);
+  });
+
+  it('préstamo sin intereses en la simulación', () => {
+    const s0 = simulate([debts[1]], 100, 'avalanche');
+    expect(s0.months).toBe(5);
+    expect(s0.interest).toBe(0);
   });
 });

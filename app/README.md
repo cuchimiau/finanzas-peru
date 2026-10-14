@@ -39,20 +39,28 @@ En iPhone, una app instalada en la pantalla de inicio no puede iniciar sesión c
 3. Abre la app desde el ícono, crea tu plan con tu nombre, sueldo y tarjetas, y pega el **código de conexión** en el último paso. También puedes pegarlo después en **Ajustes**.
 4. Si cambias de teléfono o reinstalas la app, pega el mismo código y tus datos vuelven desde Drive.
 
-### 4. Pagos con Apple Pay (Atajo)
-1. En el iPhone, abre **Atajos** › **Automatización** › **Nueva automatización** › **Transacción**.
-2. Elige tus tarjetas de Wallet y marca **Ejecutar inmediatamente**.
-3. Agrega la acción **Obtener contenido de URL**:
-   - URL: la de tu aplicación web. Está en la app, en Ajustes › Pagos con Apple Pay › Copiar.
-   - Método: **POST**. Cuerpo de la solicitud: **JSON** con estos campos:
-     - `secret` (texto): el código secreto (Ajustes › Copiar)
-     - `action` (texto): `addTx`
-     - `amount`: variable **Importe**
-     - `merchant`: variable **Comercio**
-     - `card`: variable **Tarjeta**
-4. Cada pago queda en la bandeja y entra a su carpeta la próxima vez que abras la app. Si una carpeta no es la correcta, tócala para cambiarla: la app lo recuerda para la próxima.
+### 4. Registrar gastos con Siri (Atajo, sirve para cualquier iPhone)
+1. Pega en script.google.com la versión nueva de `Code.gs` (Implementar › Administrar implementaciones › ✏️ › Nueva versión).
+2. En la app, entra a **Ajustes › Registrar gastos con Siri** y toca **Copiar URL del Atajo**.
+3. En la app Atajos, crea un atajo nuevo llamado **Gasto** con estas tres acciones:
+   - **Solicitar entrada**, con la pregunta "¿Qué gastaste?".
+   - **Codificar URL**.
+   - **Obtener contenido de URL**: pega la URL que copiaste y, al final, inserta la variable **URL codificada**.
+4. Di *"Oye Siri, Gasto"* → *"25 soles en Tambo con BBVA"*. Si no dices el monto, la app te lo pide.
+
+**Con iOS 17 o posterior** también puedes usar la automatización **Transacción** de Wallet. La URL está en la misma sección de Ajustes.
 
 ## Qué hace la app
+
+- **Personalización:**
+  - Carpetas propias: crear, renombrar, cambiar ícono o tipo, y borrar.
+  - **Editar plan**, para poner todos los montos de una vez.
+  - Registrar gastos con fecha (hoy, ayer u otra) e **ingresos extra** que suman solo al mes.
+- **Deudas no bancarias:** préstamos de familia, caja, cooperativa o tienda, con cuota, interés opcional y día de pago.
+- **Optimizar:**
+  - Para el resto del mes: cuánto puedes gastar por día, qué carpetas se van a pasar y cuánto puedes ahorrar todavía. Ese ahorro va a la deuda más cara o al fondo de emergencia.
+  - Para el **próximo mes**: un plan con tu gasto real + 10%.
+- **Cierre de mes:** el día 1, un resumen del mes anterior y el plan para empezar el nuevo.
 
 - **Plan base cero:** cada sol tiene carpeta. Al ajustar una carpeta, la diferencia sale de **Libre** o vuelve a Libre. Los mínimos de tus tarjetas siempre caben en el plan.
 - **Puedes gastar hoy:** lo libre en tus carpetas de gasto dividido entre los días que quedan del mes. Usa la fecha real y el mes se reinicia solo.

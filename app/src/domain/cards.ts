@@ -23,7 +23,7 @@ export const payIcon = (t: Pick<Tx, 'pay' | 'source'>) =>
 export const payChoices = (cards: Card[]): { id: PayRef; label: string; icon: string }[] => [
   { id: 'cash', label: 'Efectivo', icon: 'ph ph-money' },
   { id: 'yape', label: 'Yape', icon: 'ph ph-device-mobile' },
-  ...cards.map(c => ({ id: c.id, label: c.name, icon: 'ph ph-credit-card' })),
+  ...cards.filter(c => c.kind !== 'loan').map(c => ({ id: c.id, label: c.name, icon: 'ph ph-credit-card' })),
 ];
 
 /**
@@ -32,6 +32,7 @@ export const payChoices = (cards: Card[]): { id: PayRef; label: string; icon: st
  */
 export function matchCard(raw: string, cards: Card[]): PayRef {
   const s = (raw || '').toLowerCase().trim();
+  cards = cards.filter(c => c.kind !== 'loan');
   if (s) {
     const digits = s.match(/\d{4}/)?.[0];
     const hit = cards.find(c => (digits && c.name.includes(digits)) || s.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(s));
@@ -42,14 +43,17 @@ export function matchCard(raw: string, cards: Card[]): PayRef {
 
 /** Deudas = tarjetas de crédito: saldo informado + lo cargado después de esa fecha. */
 export function currentDebts(cards: Card[], txs: Tx[], now = new Date()): Debt[] {
-  return cards.filter(c => c.kind === 'credit').map(c => {
+  return cards.filter(c => c.kind === 'credit' || c.kind === 'loan').map(c => {
     const since = new Date(c.balDate || 0).getTime();
     const charges = txs.filter(t => t.pay === c.id && new Date(t.date).getTime() > since).reduce((a, t) => a + t.amt, 0);
-    return { id: c.id, name: c.name, bal: Math.round((c.bal + charges) * 100) / 100, limit: c.limit, tcea: c.tcea, min: c.min, due: nextDueLabel(c.dueDay, now), cuotas: c.cuotas };
+    return { id: c.id, name: c.name, bal: Math.round((c.bal + charges) * 100) / 100, limit: c.limit, tcea: c.tcea, min: c.min, due: nextDueLabel(c.dueDay, now), cuotas: c.cuotas, kind: c.kind };
   }).filter(d => d.bal > 0.5);
 }
 
-export const minPayments = (cards: Card[]) => cards.filter(c => c.kind === 'credit' && c.bal > 0).reduce((a, c) => a + c.min, 0);
+export const minPayments = (cards: Card[]) => cards.filter(c => (c.kind === 'credit' || c.kind === 'loan') && c.bal > 0).reduce((a, c) => a + Math.min(c.min, c.bal), 0);
+
+/** ¿Tiene deudas (tarjetas o préstamos) con saldo? */
+export const hasDebt = (cards: Card[]) => cards.some(c => (c.kind === 'credit' || c.kind === 'loan') && c.bal > 0);
 
 export const newCardId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 

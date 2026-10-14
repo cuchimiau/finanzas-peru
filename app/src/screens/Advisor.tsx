@@ -1,4 +1,4 @@
-import { FM, SUGGESTIONS } from '../domain/data';
+import { SUGGESTIONS, folderName } from '../domain/data';
 import { fmt0 } from '../domain/format';
 import { Icon, Spinner } from '../components/common';
 import type { Store } from '../state/store';
@@ -43,9 +43,9 @@ export function Advisor({ store }: { store: Store }) {
                 <div style={{ fontSize: 14, lineHeight: 1.45, margin: '6px 0 10px' }}>{m.resumen}</div>
                 {m.moves.map((mv, j) => (
                   <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '7px 0', borderTop: '1px solid var(--color-divider)' }}>
-                    <span style={{ color: 'var(--color-neutral-300)' }}>{FM[mv.de].name}</span>
+                    <span style={{ color: 'var(--color-neutral-300)' }}>{folderName(mv.de)}</span>
                     <Icon name="ph ph-arrow-right" style={{ color: 'var(--color-neutral-500)' }} />
-                    <span style={{ flex: 1 }}>{FM[mv.a].name}</span>
+                    <span style={{ flex: 1 }}>{folderName(mv.a)}</span>
                     <span className="tnum" style={{ color: 'var(--color-accent-300)' }}>{fmt0(mv.monto)}</span>
                   </div>
                 ))}

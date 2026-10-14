@@ -1,24 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  DEFAULT_GOALS, DEFAULT_PRIOS, FM, FOLDER_IDS, isFolderId,
-  type Budgets, type Card, type FolderId, type Goal, type GoalId, type PayRef, type PrioId, type Tx,
+  DEFAULT_FOLDERS, DEFAULT_GOALS, DEFAULT_PRIOS, FM, FOLDER_IDS, folderName, setFolders,
+  LOCKED_FOLDERS, type Budgets, type Card, type Folder, type FolderId, type Goal, type GoalId, type Income, type PayRef, type PrioId, type Tx,
 } from '../domain/data';
 import { fmt, fmt0, parseAmount } from '../domain/format';
 import type { Strategy } from '../domain/debts';
-import { minPayments } from '../domain/cards';
+import { hasDebt, minPayments } from '../domain/cards';
 import { applyMoves, buildBudgets, guessFolder, learnedFolder, planChange, planIncome, sanitizeMoves, txsOfMonth, type Take } from '../domain/plan';
-import { monthKey } from '../domain/dates';
+import { monthKey, monthKeyOf } from '../domain/dates';
 import { buildGeminiRequest, type ChatTurn, type GeminiResponse } from '../domain/advisor';
 import {
   BackendError, call, loadConnection, saveConnection,
   type Connection, type LoadResponse, type PingResponse, type SaveResponse,
 } from '../sync/backend';
 import { byDateDesc, inboxToTxs, mergeRemote } from '../sync/merge';
-import { PERSISTED_KEYS, isPersisted, pickPersisted, type ChatMsg, type Persisted } from './persisted';
+import { PERSISTED_KEYS, isPersisted, migrate, pickPersisted, type ChatMsg, type Persisted } from './persisted';
 
 export type { ChatMsg } from './persisted';
 export type Tab = 'home' | 'folders' | 'debts' | 'metrics' | 'advisor';
-export type Sheet = 'recat' | 'connect' | 'add' | 'card' | 'goal' | 'settings' | null;
+export type Sheet = 'recat' | 'connect' | 'add' | 'card' | 'goal' | 'settings' | 'folder' | 'plan' | 'optimize' | 'close' | null;
 export type SyncStatus = 'off' | 'idle' | 'syncing' | 'offline' | 'error';
 
 export interface SyncMeta { rev: number | null; dirty: boolean; lastSync: number | null }
@@ -27,6 +27,8 @@ export interface State extends Persisted {
   step: number; analyzing: boolean;
   tab: Tab; folderId: FolderId | null; sheet: Sheet; rcId: string | null; cardId: string | null; goalId: GoalId | null;
   addAmt: string; addName: string; addPay: PayRef;
+  /** Registrar: gasto o ingreso, fecha ('' = hoy, 'YYYY-MM-DD') y carpeta elegida a mano. */
+  addKind: 'gasto' | 'ingreso'; addDate: string; addF: FolderId | null; editFolderId: FolderId | null;
   toast: string; toastIcon: string; adjustNote: string; draft: string; thinking: boolean;
   conn: Connection | null; sync: SyncStatus; syncError: string;
   meta: SyncMeta;
@@ -41,7 +43,7 @@ function freshPersisted(): Persisted {
   return {
     v: 2, phase: 'onb', profile: { name: '' }, income: '', prios,
     budgets: buildBudgets(2600, { ...prios, deuda: false }), txs: [], cards: [], goals: DEFAULT_GOALS.map(g => ({ ...g })),
-    strat: 'avalanche', messages: [],
+    strat: 'avalanche', messages: [], folders: DEFAULT_FOLDERS.map(f => ({ ...f })), template: {}, incomes: [], monthKey: monthKey(new Date()),
   };
 }
 
@@ -51,7 +53,7 @@ function readLocal(): { data: Persisted; meta: SyncMeta } {
     const raw = localStorage.getItem(STORAGE_KEY);
     const m = localStorage.getItem(META_KEY);
     const data = raw ? JSON.parse(raw) : null;
-    return { data: isPersisted(data) ? data : freshPersisted(), meta: m ? { ...meta, ...JSON.parse(m) } : meta };
+    return { data: isPersisted(data) ? migrate(data) : migrate(freshPersisted()), meta: m ? { ...meta, ...JSON.parse(m) } : meta };
   } catch {
     return { data: freshPersisted(), meta };
   }
@@ -64,7 +66,7 @@ function initialState(reset: boolean): State {
   return {
     ...data, step: 0, analyzing: false,
     tab: 'home', folderId: null, sheet: null, rcId: null, cardId: null, goalId: null,
-    addAmt: '', addName: '', addPay: 'cash', toast: '', toastIcon: 'ph-fill ph-check-circle', adjustNote: '', draft: '', thinking: false,
+    addAmt: '', addName: '', addPay: 'cash', addKind: 'gasto', addDate: '', addF: null, editFolderId: null, toast: '', toastIcon: 'ph-fill ph-check-circle', adjustNote: '', draft: '', thinking: false,
     conn, sync: conn ? 'idle' : 'off', syncError: '', meta,
   };
 }
@@ -81,6 +83,14 @@ export function spentMap(txs: Tx[]): Partial<Record<FolderId, number>> {
   return out;
 }
 
+/** '' → ahora; 'YYYY-MM-DD' → ese día al mediodía (hora local). */
+export function dateFromInput(v: string): string {
+  if (!v) return new Date().toISOString();
+  const [y, m, d] = v.split('-').map(Number);
+  const dt = new Date(y, (m || 1) - 1, d || 1, 12, 0);
+  return Number.isNaN(dt.getTime()) || dt.getTime() > Date.now() ? new Date().toISOString() : dt.toISOString();
+}
+
 export const parseIncome = (s: string) => Math.max(0, parseFloat(String(s).replace(/[^0-9.]/g, '')) || 0);
 
 export interface StoreOptions { reset: boolean }
@@ -89,6 +99,8 @@ export function useFinanceStore(opts: StoreOptions) {
   const [s, setS] = useState<State>(() => initialState(opts.reset));
   const ref = useRef(s);
   ref.current = s;
+  // Las carpetas de la persona alimentan el registro que leen todos los módulos.
+  setFolders(s.folders);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const syncing = useRef(false);
@@ -135,7 +147,7 @@ export function useFinanceStore(opts: StoreOptions) {
       const res = await call<SaveResponse>(st.conn, 'save', { baseRev: st.meta.rev, state: snapshot, ackInbox: ack, sheetRows: sheetRows(snapshot) });
       syncing.current = false;
       if (res.conflict && isPersisted(res.state)) {
-        const merged = mergeRemote(res.state, pickPersisted(ref.current));
+        const merged = mergeRemote(migrate(res.state), pickPersisted(ref.current));
         setS(x => ({ ...x, ...merged, meta: { ...x.meta, rev: res.rev, dirty: true } }));
         if (attempt < 1) setTimeout(() => void push(attempt + 1), 50);
         return;
@@ -164,9 +176,10 @@ export function useFinanceStore(opts: StoreOptions) {
       let dirty = cur.meta.dirty;
       let restored = false;
       if (isPersisted(res.state) && res.rev !== cur.meta.rev) {
-        if (cur.phase === 'onb' && res.state.phase === 'app') { next = res.state; restored = true; dirty = false; }
-        else if (dirty) next = mergeRemote(res.state, next);
-        else next = res.state;
+        const remote = migrate(res.state);
+        if (cur.phase === 'onb' && remote.phase === 'app') { next = remote; restored = true; dirty = false; }
+        else if (dirty) next = mergeRemote(remote, next);
+        else next = remote;
       } else if (!isPersisted(res.state)) dirty = true; // Drive vacío: subir lo local
       const fresh = inboxToTxs(res.inbox || [], next.cards, next.txs);
       if (fresh.length) { next = { ...next, txs: [...fresh, ...next.txs].sort(byDateDesc) }; dirty = true; }
@@ -175,7 +188,7 @@ export function useFinanceStore(opts: StoreOptions) {
       if (restored) flash('Recuperé tus datos desde Drive', 'ph ph-cloud-check');
       else if (fresh.length) {
         const t = fresh[0], via = t.source === 'siri' ? 'Siri' : 'Apple Pay';
-        flash(fresh.length > 1 ? `${fresh.length} gastos nuevos (${via})` : t.pending ? `${via} · ${t.name}: falta el monto` : `${via} · ${t.name} ${fmt(t.amt)} → ${t.f ? FM[t.f].name : 'Por revisar'}`, t.source === 'siri' ? 'ph ph-microphone' : 'ph ph-apple-logo');
+        flash(fresh.length > 1 ? `${fresh.length} gastos nuevos (${via})` : t.pending ? `${via} · ${t.name}: falta el monto` : `${via} · ${t.name} ${fmt(t.amt)} → ${folderName(t.f)}`, t.source === 'siri' ? 'ph ph-microphone' : 'ph ph-apple-logo');
       }
       if (dirty || pendingAck.current.length) setTimeout(() => void push(), 50);
       return restored;
@@ -206,9 +219,14 @@ export function useFinanceStore(opts: StoreOptions) {
 
   useEffect(() => () => { clearTimeout(toastTimer.current); clearTimeout(saveTimer.current); }, []);
 
+  // Cambio de mes: muestra el cierre del mes anterior para empezar con un plan optimizado.
+  useEffect(() => {
+    if (s.phase === 'app' && s.monthKey !== monthKey(new Date()) && !s.sheet) set({ sheet: 'close' });
+  }, [s.phase, s.monthKey, s.sheet, set]);
+
   const inc = () => parseIncome(ref.current.income);
   const planFor = (st: State, income: number) =>
-    buildBudgets(income, { ...st.prios, deuda: st.cards.some(c => c.kind === 'credit' && c.bal > 0) }, minPayments(st.cards));
+    buildBudgets(income, { ...st.prios, deuda: hasDebt(st.cards) }, minPayments(st.cards));
 
   const actions = {
     set, flash, pull, push,
@@ -232,7 +250,7 @@ export function useFinanceStore(opts: StoreOptions) {
         if (inc() < 500) { flash('Escribe tu sueldo neto mensual', 'ph ph-warning'); return; }
       }
       if (st.step === 2) {
-        set({ step: 3, analyzing: true, budgets: planFor(st, inc()) });
+        { const b = planFor(st, inc()); set({ step: 3, analyzing: true, budgets: b, template: { ...b } }); }
         setTimeout(() => set({ analyzing: false }), 1200);
         return;
       }
@@ -247,14 +265,15 @@ export function useFinanceStore(opts: StoreOptions) {
     /** Rehace el plan con el sueldo actual (pierde los ajustes manuales de carpetas). */
     rebuildPlan: (incomeInput?: string) => {
       const st = ref.current, income = parseIncome(incomeInput ?? st.income);
-      set({ income: String(income), budgets: planFor(st, income) });
+      { const b = planFor(st, income); set({ income: String(income), budgets: b, template: { ...b } }); }
       flash(`Plan rehecho con ${fmt0(income)}`);
     },
     // ─── Navegación ───
     goTab: (tab: Tab) => set({ tab, folderId: null }),
     openFolder: (id: FolderId) => set({ tab: 'folders', folderId: id, adjustNote: '' }),
     closeFolder: () => set({ folderId: null }),
-    openSheet: (sheet: Exclude<Sheet, null>) => set(sheet === 'add' ? { sheet, addAmt: '', addName: '', addPay: 'cash' } : { sheet }),
+    openSheet: (sheet: Exclude<Sheet, null>) => set(sheet === 'add' ? { sheet, addAmt: '', addName: '', addPay: 'cash', addKind: 'gasto', addDate: '', addF: null } : { sheet }),
+    openFolderEdit: (id: FolderId | null) => set({ sheet: 'folder', editFolderId: id }),
     closeSheet: () => set({ sheet: null }),
     openRecat: (id: string) => set({ sheet: 'recat', rcId: id }),
     openCard: (id: string | null) => set({ sheet: 'card', cardId: id }),
@@ -293,13 +312,75 @@ export function useFinanceStore(opts: StoreOptions) {
     setAddAmt: (v: string) => set({ addAmt: v.replace(/[^0-9.,]/g, '').slice(0, 10) }),
     setAddName: (v: string) => set({ addName: v.slice(0, 80) }),
     setAddPay: (p: PayRef) => set({ addPay: p }),
+    setAdd: (p: Partial<Pick<State, 'addKind' | 'addDate' | 'addF'>>) => set(p),
     saveAdd: () => {
       const st = ref.current, amt = parseAmount(st.addAmt), name = st.addName.trim();
+      const date = dateFromInput(st.addDate);
+      if (st.addKind === 'ingreso') {
+        if (!amt) { flash('Escribe el monto del ingreso', 'ph ph-warning'); return; }
+        const f = st.addF && FM[st.addF] ? st.addF : 'libre';
+        const inc: Income = { id: 'i' + Date.now().toString(36), name: name || 'Ingreso extra', amt, date, f };
+        const thisMonth = monthKeyOf(date) === st.monthKey;
+        set(x => ({ incomes: [inc, ...x.incomes], budgets: thisMonth ? { ...x.budgets, [f]: (x.budgets[f] || 0) + amt } : x.budgets, sheet: null }));
+        flash(thisMonth ? `+${fmt(amt)} a ${folderName(f)} este mes` : `Ingreso de ${fmt(amt)} registrado`, 'ph ph-arrow-circle-down');
+        return;
+      }
       if (!amt || !name) { flash('Falta el monto o el lugar', 'ph ph-warning'); return; }
-      const f = learnedFolder(name, st.txs) || guessFolder(name).id || 'libre';
-      const t: Tx = { id: 'm' + Date.now().toString(36), name, amt, f, pay: st.addPay, date: new Date().toISOString(), why: 'Registrado a mano. Puedes cambiar la carpeta.', source: 'manual' };
+      const f = (st.addF && FM[st.addF] ? st.addF : null) || learnedFolder(name, st.txs) || guessFolder(name).id || 'libre';
+      const t: Tx = { id: 'm' + Date.now().toString(36), name, amt, f, pay: st.addPay, date, why: 'Registrado a mano. Puedes cambiar la carpeta.', source: 'manual' };
       set(x => ({ txs: [t, ...x.txs].sort(byDateDesc), sheet: null }));
-      flash(`${fmt(amt)} → ${FM[f].name}`);
+      flash(`${fmt(amt)} → ${folderName(f)}`);
+    },
+    deleteIncome: (id: string) => {
+      const st = ref.current, inc = st.incomes.find(i => i.id === id);
+      if (!inc) return;
+      const thisMonth = monthKeyOf(inc.date) === st.monthKey;
+      set(x => ({ incomes: x.incomes.filter(i => i.id !== id), budgets: thisMonth && x.budgets[inc.f] != null ? { ...x.budgets, [inc.f]: Math.max(0, x.budgets[inc.f] - inc.amt) } : x.budgets }));
+      flash('Ingreso eliminado');
+    },
+    // ─── Carpetas propias ───
+    saveFolder: (f: Folder) => {
+      const st = ref.current, exists = st.folders.some(x => x.id === f.id);
+      set(x => ({
+        folders: exists ? x.folders.map(y => (y.id === f.id ? f : y)) : [...x.folders, f],
+        budgets: exists ? x.budgets : { ...x.budgets, [f.id]: 0 },
+        template: exists ? x.template : { ...x.template, [f.id]: 0 },
+        sheet: null,
+      }));
+      flash(exists ? `${f.name} actualizada` : `Carpeta ${f.name} creada · asígnale un monto`);
+      if (!exists) set({ tab: 'folders', folderId: f.id, adjustNote: '' });
+    },
+    deleteFolder: (id: FolderId) => {
+      if (LOCKED_FOLDERS.includes(id)) { flash('Esta carpeta es necesaria: puedes renombrarla, no borrarla', 'ph ph-warning'); return; }
+      const name = folderName(id);
+      const drop = (b: Budgets) => { const nb: Budgets = { ...b, libre: (b.libre || 0) + (b[id] || 0) }; delete nb[id]; return nb; };
+      set(x => ({
+        folders: x.folders.filter(f => f.id !== id),
+        budgets: drop(x.budgets), template: drop(x.template),
+        txs: x.txs.map(t => (t.f === id ? { ...t, f: null, why: `La carpeta ${name} se borró: elige otra.` } : t)),
+        goals: x.goals.filter(g => g.id !== id),
+        sheet: null, folderId: null,
+      }));
+      flash(`${name} borrada · su dinero pasó a Libre`);
+    },
+    /** Optimizar: mueve lo que sobra de tus deseos a la deuda más cara / emergencia. */
+    applyRest: (moves: Take[], to: FolderId) => {
+      const st = ref.current;
+      const b = applyMoves(st.budgets, moves.filter(m => m.de !== to).map(m => ({ de: m.de, a: to, monto: m.monto })));
+      const total = moves.reduce((a, m) => a + m.monto, 0);
+      set({ budgets: b, sheet: null });
+      flash(`+${fmt0(total)} a ${folderName(to)} · sigue en base cero`, 'ph ph-magic-wand');
+    },
+    setTemplate: (b: Budgets) => { set({ template: { ...b } }); flash('Listo: será tu plan base desde el próximo mes'); },
+    /** Empieza el mes nuevo con el plan propuesto o con tu plan base. */
+    startMonth: (b: Budgets) => {
+      set({ budgets: { ...b }, template: { ...b }, monthKey: monthKey(new Date()), sheet: null });
+      flash('¡Mes nuevo, plan nuevo! Ya puedes registrar tus gastos.', 'ph ph-calendar-check');
+    },
+    /** Guarda el plan completo del mes (y opcionalmente como plan base para los próximos meses). */
+    savePlan: (b: Budgets, asTemplate: boolean) => {
+      set(x => ({ budgets: { ...b }, template: asTemplate ? { ...b } : x.template, sheet: null }));
+      flash(asTemplate ? 'Plan guardado para este mes y los siguientes' : 'Plan de este mes guardado');
     },
     // ─── Tarjetas ───
     saveCard: (c: Card) => {
@@ -331,7 +412,7 @@ export function useFinanceStore(opts: StoreOptions) {
       set({ messages, draft: '', thinking: true, tab: 'advisor', folderId: null, sheet: null });
       const turns: ChatTurn[] = messages.flatMap(m => (m.kind === 'text' ? [{ role: m.role, text: m.text }] : []));
       try {
-        const req = buildGeminiRequest({ name: st.profile.name, budgets: st.budgets, txs: st.txs, cards: st.cards, goals: st.goals }, turns);
+        const req = buildGeminiRequest({ name: st.profile.name, budgets: st.budgets, txs: st.txs, cards: st.cards, goals: st.goals, incomes: st.incomes, salary: parseIncome(st.income) }, turns);
         const out = await call<GeminiResponse & { ok: true }>(st.conn, 'ask', req as unknown as Record<string, unknown>, 60000);
         const plans: ChatMsg[] = (out.calls || []).flatMap((c, i) => {
           const moves = sanitizeMoves(c.movimientos, ref.current.budgets);
@@ -359,7 +440,7 @@ export function useFinanceStore(opts: StoreOptions) {
 /** Filas para la hoja "Movimientos" en Drive. */
 function sheetRows(p: Persisted): (string | number)[][] {
   const cardName = (pay: string) => pay === 'cash' ? 'Efectivo' : pay === 'yape' ? 'Yape' : pay === 'applepay' ? 'Apple Pay' : p.cards.find(c => c.id === pay)?.name || 'Tarjeta';
-  return p.txs.map(t => [t.date, t.name, t.amt, t.f && isFolderId(t.f) ? FM[t.f].name : 'Por revisar', cardName(t.pay), t.source === 'applepay' ? 'Apple Pay (Atajo)' : 'Manual']);
+  return p.txs.map(t => [t.date, t.name, t.amt, folderName(t.f), cardName(t.pay), t.source === 'applepay' ? 'Apple Pay (Atajo)' : 'Manual']);
 }
 
 export type Store = ReturnType<typeof useFinanceStore>;
