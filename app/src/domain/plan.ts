@@ -141,3 +141,67 @@ export function spendByMonth(txs: Tx[], keys: string[]): Record<string, number> 
 }
 
 export const currentMonthKey = () => monthKey(new Date());
+
+// ─── Editar el presupuesto de una carpeta moviendo dinero desde otras ───
+
+export interface Source { id: FolderId; available: number; warn: boolean }
+
+const ORDER: FolderId[] = ['libre', 'restaurantes', 'ocio', 'suscripciones', 'viaje', 'inversion', 'mercado', 'transporte', 'servicios', 'salud', 'vivienda', 'emergencia', 'deudas'];
+const WARN = new Set<FolderId>(['emergencia', 'deudas', 'mercado', 'transporte', 'servicios', 'salud', 'vivienda']);
+
+/**
+ * De dónde sacar dinero para subir `target`: primero Libre, luego lo no gastado de deseos,
+ * luego ahorro voluntario y, con advertencia, necesidades, emergencia y tarjetas
+ * (estas nunca por debajo de los mínimos). Nunca se toma lo ya gastado.
+ */
+export function suggestSources(b: Budgets, spent: Partial<Record<FolderId, number>>, target: FolderId, minDebt = 0): Source[] {
+  return ORDER.filter(id => id !== target).map(id => {
+    const floor = Math.max(spent[id] || 0, id === 'deudas' ? minDebt : 0);
+    return { id, available: Math.max(0, Math.floor(b[id] - floor)), warn: WARN.has(id) };
+  }).filter(s => s.available > 0);
+}
+
+/** Toma de las fuentes en orden hasta cubrir `need`. */
+export type Take = { de: FolderId; monto: number };
+export function autoCover(sources: Source[], need: number): Take[] {
+  const out: Take[] = [];
+  let left = Math.ceil(need);
+  for (const s of sources) {
+    if (left <= 0) break;
+    const take = Math.min(s.available, left);
+    if (take > 0) { out.push({ de: s.id, monto: take }); left -= take; }
+  }
+  return out;
+}
+
+/**
+ * Cambia el presupuesto de `id` a `amount` manteniendo el total:
+ * si sube, sale de `takes` (y lo que falte, de Libre); si baja, la diferencia va a `to` (Libre por defecto).
+ * Devuelve null si no alcanza o rompe algún límite.
+ */
+export function planChange(b: Budgets, id: FolderId, amount: number, takes: Take[], spent: Partial<Record<FolderId, number>> = {}, minDebt = 0, to: FolderId = 'libre'): Budgets | null {
+  const target = Math.max(0, Math.round(amount));
+  const nb = { ...b };
+  const diff = target - b[id];
+  if (diff === 0) return nb;
+  if (diff < 0) {
+    if (target < (spent[id] || 0) - 0.001 && FM[id].grp !== 'aho') return null;
+    if (id === 'deudas' && target < minDebt) return null;
+    nb[id] = target; nb[to === id ? 'libre' : to] += -diff;
+    return nb;
+  }
+  const limits = Object.fromEntries(suggestSources(b, spent, id, minDebt).map(s => [s.id, s.available])) as Partial<Record<FolderId, number>>;
+  let need = diff;
+  for (const t of takes) {
+    const m = Math.min(Math.round(t.monto), limits[t.de] ?? 0, need);
+    if (m <= 0 || t.de === id) continue;
+    nb[t.de] -= m; limits[t.de] = (limits[t.de] ?? 0) - m; need -= m;
+  }
+  if (need > 0) {
+    const fromLibre = Math.min(need, limits.libre ?? 0);
+    nb.libre -= fromLibre; need -= fromLibre;
+  }
+  if (need > 0) return null;
+  nb[id] = target;
+  return nb;
+}

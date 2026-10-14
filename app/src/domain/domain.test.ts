@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_GOALS, FOLDERS, type Card, type Debt, type Tx } from './data';
 import { simulate, type Strategy } from './debts';
-import { applyMoves, buildBudgets, folderView, goalViews, sanitizeMoves, spendByMonth, sumBudgets, txsOfMonth, type PlanOpts } from './plan';
+import { applyMoves, autoCover, buildBudgets, folderView, goalViews, planChange, sanitizeMoves, spendByMonth, suggestSources, sumBudgets, txsOfMonth, type PlanOpts } from './plan';
 import { currentDebts, matchCard, payInfo } from './cards';
 import { buildGeminiRequest, buildSystemPrompt, toGeminiContents } from './advisor';
 import { agoLabel, lastMonthKeys, monthAt, monthCtx, nextDueLabel, whenLabel } from './dates';
@@ -197,5 +197,45 @@ describe('asesor con Gemini', () => {
     const fn = req.tools[0].functionDeclarations[0] as { name: string; parameters: { properties: { movimientos: { items: { properties: { de: { enum: string[] } } } } } } };
     expect(fn.name).toBe('proponer_ajuste');
     expect(fn.parameters.properties.movimientos.items.properties.de.enum).toContain('restaurantes');
+  });
+});
+
+describe('editar presupuesto moviendo dinero', () => {
+  // Plan con Libre en 0 para reproducir el caso real.
+  const base = () => { const b = buildBudgets(2600, { deuda: true, emergencia: true, invertir: true, viaje: false }); b.emergencia += b.libre; b.libre = 0; return b; };
+
+  it('sugiere primero deseos no gastados, luego ahorro voluntario y al final emergencia/tarjetas', () => {
+    const b = base();
+    const src = suggestSources(b, { restaurantes: 100 }, 'vivienda', 400);
+    expect(src.map(x => x.id).slice(0, 5)).toEqual(['restaurantes', 'ocio', 'suscripciones', 'inversion', 'mercado']);
+    expect(src.find(x => x.id === 'restaurantes')!.available).toBe(60); // 160 − 100 gastado
+    expect(src.find(x => x.id === 'deudas')!.available).toBe(120);      // 520 − 400 de mínimos
+    expect(src.find(x => x.id === 'emergencia')!.warn).toBe(true);
+  });
+
+  it('sube Alquiler tomando de otras carpetas y el total no cambia', () => {
+    const b = base();
+    const src = suggestSources(b, {}, 'vivienda');
+    const takes = autoCover(src, 250);
+    expect(takes).toEqual([{ de: 'restaurantes', monto: 160 }, { de: 'ocio', monto: 80 }, { de: 'suscripciones', monto: 10 }]);
+    const nb = planChange(b, 'vivienda', 900, takes)!;
+    expect(nb.vivienda).toBe(900);
+    expect(sumBudgets(nb)).toBe(2600);
+    expect(planChange(b, 'vivienda', 900, [])).toBeNull(); // Libre en 0 y sin fuentes
+  });
+
+  it('no toma más de lo disponible ni baja de lo gastado o de los mínimos', () => {
+    const b = base();
+    expect(planChange(b, 'vivienda', 700, [{ de: 'restaurantes', monto: 50 }], { restaurantes: 140 })).toBeNull(); // solo 20 disponibles
+    expect(planChange(b, 'mercado', 100, [], { mercado: 150 })).toBeNull();
+    expect(planChange(b, 'deudas', 100, [], {}, 300)).toBeNull();
+  });
+
+  it('al bajar, la diferencia va a la carpeta elegida', () => {
+    const b = base();
+    const nb = planChange(b, 'restaurantes', 100, [], {}, 0, 'emergencia')!;
+    expect(nb.restaurantes).toBe(100);
+    expect(nb.emergencia).toBe(b.emergencia + 60);
+    expect(sumBudgets(nb)).toBe(2600);
   });
 });

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  DEFAULT_GOALS, DEFAULT_PRIOS, FM, isFolderId,
+  DEFAULT_GOALS, DEFAULT_PRIOS, FM, FOLDER_IDS, isFolderId,
   type Budgets, type Card, type FolderId, type Goal, type GoalId, type PayRef, type PrioId, type Tx,
 } from '../domain/data';
 import { fmt, fmt0, parseAmount } from '../domain/format';
 import type { Strategy } from '../domain/debts';
 import { minPayments } from '../domain/cards';
-import { applyMoves, buildBudgets, guessFolder, learnedFolder, planIncome, sanitizeMoves } from '../domain/plan';
+import { applyMoves, buildBudgets, guessFolder, learnedFolder, planChange, planIncome, sanitizeMoves, txsOfMonth, type Take } from '../domain/plan';
+import { monthKey } from '../domain/dates';
 import { buildGeminiRequest, type ChatTurn, type GeminiResponse } from '../domain/advisor';
 import {
   BackendError, call, loadConnection, saveConnection,
@@ -72,6 +73,13 @@ const welcome = (name: string, b: Budgets): ChatMsg => ({
   kind: 'text', role: 'assistant',
   text: `Hola ${name.split(' ')[0] || ''}. Tu plan de ${fmt0(planIncome(b))} ya está en carpetas. Pregúntame cómo vas este mes, qué tarjeta pagar primero o cómo llegar a tus metas.`.replace('Hola .', 'Hola.'),
 });
+
+/** Lo gastado este mes por carpeta (piso para no recortar por debajo). */
+export function spentMap(txs: Tx[]): Partial<Record<FolderId, number>> {
+  const out: Partial<Record<FolderId, number>> = {};
+  txsOfMonth(txs, monthKey(new Date())).forEach(t => { if (t.f) out[t.f] = (out[t.f] || 0) + t.amt; });
+  return out;
+}
 
 export const parseIncome = (s: string) => Math.max(0, parseFloat(String(s).replace(/[^0-9.]/g, '')) || 0);
 
@@ -249,14 +257,19 @@ export function useFinanceStore(opts: StoreOptions) {
     openCard: (id: string | null) => set({ sheet: 'card', cardId: id }),
     openGoal: (id: GoalId) => set({ sheet: 'goal', goalId: id }),
     // ─── Carpetas ───
-    adjustBudget: (d: number) => {
-      const st = ref.current, id = st.folderId;
-      if (!id || id === 'libre') { set({ adjustNote: 'Libre recibe lo que liberas en otras carpetas.' }); return; }
-      const bb = { ...st.budgets };
-      if (d > 0 && bb.libre < d) { set({ adjustNote: 'Libre está en S/ 0. Mueve dinero desde otra carpeta.' }); return; }
-      if (d < 0 && bb[id] < -d) return;
-      bb[id] += d; bb.libre -= d;
-      set({ budgets: bb, adjustNote: d > 0 ? `+S/ ${d} tomados de Libre (queda ${fmt0(bb.libre)}) · sigue en base cero` : `S/ ${-d} regresaron a Libre (${fmt0(bb.libre)}) · sigue en base cero` });
+    /**
+     * Cambia el presupuesto de una carpeta manteniendo el total.
+     * Si sube, sale de `takes` (y lo que falte, de Libre); si baja, la diferencia va a `to`.
+     */
+    setBudget: (id: FolderId, amount: number, takes: Take[] = [], to: FolderId = 'libre'): boolean => {
+      const st = ref.current;
+      const spent = spentMap(st.txs);
+      const nb = planChange(st.budgets, id, amount, takes, spent, minPayments(st.cards), to);
+      if (!nb) { flash(amount < st.budgets[id] ? 'No puede quedar por debajo de lo ya gastado o del mínimo de tus tarjetas' : 'Falta cubrir la diferencia', 'ph ph-warning'); return false; }
+      const parts = FOLDER_IDS.filter(x => x !== id && nb[x] !== st.budgets[x]).map(x => `${nb[x] < st.budgets[x] ? '−' : '+'}${fmt0(Math.abs(nb[x] - st.budgets[x]))} ${FM[x].name}`);
+      set({ budgets: nb, adjustNote: parts.length ? parts.join(' · ') + ' · sigue en base cero' : '' });
+      flash(`${FM[id].name} ${fmt0(nb[id])}`);
+      return true;
     },
     recategorize: (folder: FolderId) => {
       const st = ref.current, tx = st.txs.find(t => t.id === st.rcId);

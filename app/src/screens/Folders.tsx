@@ -1,6 +1,9 @@
-import { GM, type Card, type FolderId, type Tx } from '../domain/data';
+import { useState } from 'react';
+import { FM, GM, type Card, type FolderId, type Tx } from '../domain/data';
 import { fmt, fmt0 } from '../domain/format';
-import { payInfo } from '../domain/cards';
+import { minPayments, payInfo } from '../domain/cards';
+import { autoCover, suggestSources, type Take } from '../domain/plan';
+import { spentMap } from '../state/store';
 import { FolderRow, Icon, Track, TxRow } from '../components/common';
 import type { Derived } from '../state/selectors';
 import type { Store } from '../state/store';
@@ -61,7 +64,6 @@ function tipFor(id: FolderId, tx: Tx[], cards: Card[], d: Derived): string {
   return v.r > d.m.pct + 0.15 ? `Vas más rápido que el mes: ${Math.round(v.r * 100)}% gastado con ${d.m.pctL} recorrido.` : 'Vas a buen ritmo. Te aviso si cambia.';
 }
 
-const STEP = 10;
 
 function FolderDetail({ store, d, id }: { store: Store; d: Derived; id: FolderId }) {
   const { s } = store;
@@ -87,15 +89,7 @@ function FolderDetail({ store, d, id }: { store: Store; d: Derived; id: FolderId
         <span>{tipFor(id, monthTx, s.cards, d)}</span>
       </div>
 
-      <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 14, background: 'var(--color-surface)' }}>
-        <span style={{ fontSize: 14 }}>Presupuesto</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button className="btn btn-icon btn-secondary" aria-label={`Bajar S/ ${STEP}`} onClick={() => store.adjustBudget(-STEP)} style={{ width: 34, height: 34, borderRadius: 10 }}><Icon name="ph ph-minus" /></button>
-          <span className="tnum" style={{ fontSize: 15, fontWeight: 500, minWidth: 72, textAlign: 'center' }} aria-live="polite">{fmt0(fo.budget)}</span>
-          <button className="btn btn-icon btn-secondary" aria-label={`Subir S/ ${STEP}`} onClick={() => store.adjustBudget(STEP)} style={{ width: 34, height: 34, borderRadius: 10 }}><Icon name="ph ph-plus" /></button>
-        </div>
-      </div>
-      <div className="row-sub" style={{ marginTop: 6, paddingLeft: 2 }}>{s.adjustNote || 'Al ajustar, la diferencia sale de Libre o vuelve a Libre.'}</div>
+      <BudgetEditor key={`${id}-${s.budgets[id]}`} store={store} id={id} />
 
       <div className="section-title" style={{ margin: '22px 0 4px' }}>Movimientos</div>
       {tx.map(t => <TxRow key={t.id} t={d.txView(t)} variant="folder" onOpen={() => store.openRecat(t.id)} />)}
@@ -104,6 +98,113 @@ function FolderDetail({ store, d, id }: { store: Store; d: Derived; id: FolderId
           {fo.flow ? 'Aún no hay movimientos este mes.' : 'Se aparta automáticamente el día de pago.'}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Editor del presupuesto: monto exacto, pasos de 10/50 y de dónde sale (o a dónde va) la diferencia. */
+function BudgetEditor({ store, id }: { store: Store; id: FolderId }) {
+  const { s } = store;
+  const cur = s.budgets[id];
+  const [target, setTarget] = useState(cur);
+  const [text, setText] = useState(String(cur));
+  const [takes, setTakes] = useState<Take[]>([]);
+  const [to, setTo] = useState<FolderId>('libre');
+  const spent = spentMap(s.txs);
+  const minDebt = minPayments(s.cards);
+  const sources = suggestSources(s.budgets, spent, id, minDebt);
+  const diff = target - cur;
+  const taken = takes.reduce((a, t) => a + t.monto, 0);
+  const libreAuto = id === 'libre' ? 0 : Math.max(0, Math.min(diff - taken, s.budgets.libre - (takes.find(t => t.de === 'libre')?.monto ?? 0)));
+  const need = Math.max(0, diff - taken - libreAuto);
+  const floor = Math.max(spent[id] || 0, id === 'deudas' ? minDebt : 0);
+
+  const setAmt = (v: number) => { const n = Math.max(0, Math.round(v)); setTarget(n); setText(String(n)); setTakes([]); setTo('libre'); };
+  const take = (de: FolderId, max: number) => {
+    const m = Math.min(max - (takes.find(t => t.de === de)?.monto ?? 0), need);
+    if (m <= 0) return;
+    setTakes(ts => { const i = ts.findIndex(t => t.de === de); return i >= 0 ? ts.map((t, j) => (j === i ? { ...t, monto: t.monto + m } : t)) : [...ts, { de, monto: m }]; });
+  };
+  const auto = () => setTakes(autoCover(sources.filter(x => x.id !== 'libre').map(x => ({ ...x, available: x.available - (takes.find(t => t.de === x.id)?.monto ?? 0) })), need).reduce((acc, t) => {
+    const i = acc.findIndex(a => a.de === t.de); if (i >= 0) acc[i] = { ...acc[i], monto: acc[i].monto + t.monto }; else acc.push(t); return acc;
+  }, takes.slice()));
+  const apply = () => { if (store.setBudget(id, target, takes, to)) { setTakes([]); setTo('libre'); } };
+  const reset = () => setAmt(cur);
+
+  const stepBtn = (delta: number, label: string) => (
+    <button type="button" className="btn btn-secondary" onClick={() => setAmt(target + delta)} disabled={target + delta < 0} style={{ height: 32, borderRadius: 9, padding: '0 10px', fontSize: 13 }}>{label}</button>
+  );
+
+  return (
+    <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 14, background: 'var(--color-surface)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <span style={{ fontSize: 14 }}>Presupuesto</span>
+        <label className="amount-field" style={{ gap: 4, paddingBottom: 2, width: 130 }}>
+          <span style={{ fontSize: 16, color: 'var(--color-neutral-500)' }}>S/</span>
+          <span className="visually-hidden">Presupuesto de {FM[id].name}</span>
+          <input type="text" inputMode="numeric" value={text} style={{ fontSize: 22, textAlign: 'right' }}
+            onChange={e => { const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 6); setText(v); setTarget(Number(v) || 0); setTakes([]); setTo('libre'); }} />
+        </label>
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginTop: 10, justifyContent: 'flex-end' }}>
+        {stepBtn(-50, '−50')}{stepBtn(-10, '−10')}{stepBtn(10, '+10')}{stepBtn(50, '+50')}
+      </div>
+
+      {diff !== 0 && target < floor && (
+        <div role="alert" style={{ fontSize: 12.5, color: 'var(--color-accent-300)', marginTop: 10 }}>
+          No puede bajar de {fmt0(floor)} ({id === 'deudas' ? 'los mínimos de tus tarjetas' : 'lo que ya gastaste este mes'}).
+        </div>
+      )}
+
+      {diff > 0 && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--color-divider)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 13.5 }}>
+            <span style={{ fontWeight: 500 }}>{need > 0 ? `Faltan ${fmt0(need)} · ¿de dónde lo saco?` : 'Cubierto ✓'}</span>
+            {need > 0 && <button type="button" className="link-btn" onClick={auto}>Cubrir automáticamente</button>}
+          </div>
+          {libreAuto > 0 && <div className="row-sub" style={{ marginTop: 4 }}>{fmt0(libreAuto)} salen de Libre.</div>}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+            {sources.filter(x => x.id !== 'libre' && (need > 0 || takes.some(t => t.de === x.id))).map(x => {
+              const used = takes.find(t => t.de === x.id)?.monto ?? 0;
+              const can = Math.min(x.available - used, need);
+              return (
+                <div key={x.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 10, background: 'var(--color-bg)' }}>
+                  <div className="row-main">
+                    <div style={{ fontSize: 13.5 }}>{FM[x.id].name}{x.warn && <span style={{ color: 'var(--color-accent-300)', fontSize: 11.5 }}> · cuidado</span>}</div>
+                    <div className="row-sub">{used ? `Tomas ${fmt0(used)} · ` : ''}disponible {fmt0(x.available - used)}</div>
+                  </div>
+                  <button type="button" className="btn btn-secondary" disabled={can <= 0} onClick={() => take(x.id, x.available)} style={{ height: 32, borderRadius: 9, padding: '0 10px', fontSize: 12.5 }}>
+                    {can > 0 ? `Tomar ${fmt0(can)}` : used ? 'Listo' : '—'}
+                  </button>
+                </div>
+              );
+            })}
+            {sources.length === 0 && <div className="row-sub">No hay dinero disponible en otras carpetas este mes.</div>}
+          </div>
+          {takes.length > 0 && <button type="button" className="link-btn" onClick={() => setTakes([])} style={{ marginTop: 8, fontSize: 12.5 }}>Deshacer selección</button>}
+        </div>
+      )}
+
+      {diff < 0 && target >= floor && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--color-divider)' }}>
+          <div style={{ fontSize: 13.5, fontWeight: 500, marginBottom: 8 }}>Los {fmt0(-diff)} que liberas van a:</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {(['libre', 'emergencia', 'deudas', 'inversion', 'viaje', 'restaurantes', 'mercado'] as FolderId[]).filter(x => x !== id).map(x => (
+              <button type="button" key={x} className={'chip' + (to === x ? ' on' : '')} aria-pressed={to === x} onClick={() => setTo(x)} style={{ height: 32, fontSize: 12.5, padding: '0 11px' }}>{FM[x].name}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {diff !== 0 && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button type="button" className="btn btn-ghost" onClick={reset} style={{ flex: 1, height: 40, borderRadius: 10 }}>Cancelar</button>
+          <button type="button" className="btn btn-primary" onClick={apply} disabled={target < floor || (diff > 0 && need > 0)} style={{ flex: 2, height: 40, borderRadius: 10 }}>
+            Aplicar · {fmt0(target)}
+          </button>
+        </div>
+      )}
+      <div className="row-sub" style={{ marginTop: 8 }}>{diff === 0 ? (s.adjustNote || 'Escribe el monto o usa los botones. El total siempre es igual a tu sueldo.') : ''}</div>
     </div>
   );
 }
