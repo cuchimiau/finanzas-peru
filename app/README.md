@@ -1,5 +1,7 @@
 # Finanzas Perú
 
+**App:** <https://cuchimiau.github.io/finanzas-peru/> (ábrela en Safari y elige *Añadir a pantalla de inicio*).
+
 Una app para tu iPhone que reparte tu sueldo en carpetas (presupuesto base cero) y registra los pagos que haces con Apple Pay. También incluye un plan para salir de tus deudas de tarjeta, métricas y un asesor con IA (Gemini). Tus datos se guardan en tu Google Drive, en la carpeta **Finanzas Perú**.
 
 ## Cómo funciona
@@ -32,7 +34,7 @@ En iPhone, una app instalada en la pantalla de inicio no puede iniciar sesión c
 > **Si compartiste el código por error:** ejecuta `rotarSecreto()` y vuelve a conectar la app y el Atajo.
 
 ### 3. La app en tu iPhone
-1. Abre en **Safari** la dirección de GitHub Pages, por ejemplo `https://<tu-usuario>.github.io/<repositorio>/`.
+1. Abre en **Safari** <https://cuchimiau.github.io/finanzas-peru/>.
 2. Toca **Compartir** › **Añadir a pantalla de inicio**.
 3. Abre la app desde el ícono, crea tu plan con tu nombre, sueldo y tarjetas, y pega el **código de conexión** en el último paso. También puedes pegarlo después en **Ajustes**.
 4. Si cambias de teléfono o reinstalas la app, pega el mismo código y tus datos vuelven desde Drive.
