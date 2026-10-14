@@ -1,0 +1,17 @@
+{
+  "name": "Finanzas Perú",
+  "short_name": "Finanzas",
+  "description": "Tu plan de finanzas en carpetas, con Apple Pay, deudas y asesor con IA.",
+  "lang": "es-PE",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#161826",
+  "theme_color": "#161826",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
