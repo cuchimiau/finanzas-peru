@@ -23,7 +23,16 @@ export function ConnectForm({ store, compact }: { store: Store; compact?: boolea
   const [err, setErr] = useState('');
   const [info, setInfo] = useState<{ folderUrl: string; gemini: boolean; model: string } | null>(null);
 
-  const needsSecret = !!code.trim() && !code.trim().startsWith('FP1.');
+  const raw = code.trim();
+  const isUrl = /^https?:\/\//.test(raw);
+  const isDev = isUrl && /\/dev\/?$/.test(raw);
+  // Si pegan primero el código secreto (b1a…), lo pasamos a su campo.
+  const onCode = (v: string) => {
+    const t = v.trim();
+    if (/^[0-9a-f]{32,}$/i.test(t)) { setSecret(t); setCode(''); setErr(''); return; }
+    setCode(v);
+  };
+  const needsSecret = isUrl || (!!secret && !raw.startsWith('FP1.'));
 
   const submit = async () => {
     setErr('');
@@ -66,14 +75,16 @@ export function ConnectForm({ store, compact }: { store: Store; compact?: boolea
 
   return (
     <form onSubmit={e => { e.preventDefault(); void submit(); }} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <Field label="Código de conexión" hint="Lo muestra el Apps Script al ejecutar configurar() (empieza con FP1.). También puedes pegar la URL /exec.">
-        <input className="input" style={inputStyle} value={code} onChange={e => setCode(e.target.value)} placeholder="FP1.…" autoComplete="off" autoCapitalize="off" spellCheck={false} />
+      <Field label={isUrl ? 'URL de la aplicación web (termina en /exec)' : 'Código de conexión o URL /exec'}
+        hint={isUrl ? 'En script.google.com: Implementar › Administrar implementaciones › URL de la aplicación web.' : 'Pega el código que empieza con FP1. Si configurar() te mostró un código largo (ej. b1a…), pega aquí la URL que termina en /exec y el código abajo.'}>
+        <input className="input" style={inputStyle} value={code} onChange={e => onCode(e.target.value)} placeholder="FP1.… o https://script.google.com/…/exec" autoComplete="off" autoCapitalize="off" spellCheck={false} />
       </Field>
-      {needsSecret && (
-        <Field label="Código secreto">
+      {(needsSecret || !!secret) && (
+        <Field label="Código secreto" hint="El código largo que te mostró configurar() (ej. b1a…).">
           <input className="input" style={inputStyle} value={secret} onChange={e => setSecret(e.target.value)} autoComplete="off" autoCapitalize="off" spellCheck={false} />
         </Field>
       )}
+      {isDev && <div role="alert" style={{ fontSize: 12.5, color: 'var(--color-accent-300)', lineHeight: 1.45 }}>Esa es la URL de prueba (/dev). Usa la de la implementación, que termina en /exec.</div>}
       {err && <div role="alert" style={{ fontSize: 12.5, color: 'var(--color-accent-300)', lineHeight: 1.45 }}>{err}</div>}
       <button type="submit" className="btn btn-primary btn-block" disabled={busy || !code.trim()} style={{ height: 44, borderRadius: 12 }}>
         {busy ? <><Spinner size={16} />Conectando…</> : <><Icon name="ph ph-plugs-connected" />Conectar</>}
