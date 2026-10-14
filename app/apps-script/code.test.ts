@@ -73,6 +73,19 @@ describe('Apps Script · datos en Drive', () => {
     expect(g.call('load').inbox.map((i: { merchant: string }) => i.merchant)).toEqual(['Saga']);
   });
 
+  it('el Atajo de Siri usa una sola URL GET (frase dictada o monto sin JSON)', () => {
+    const g = setup();
+    const get = (q: Record<string, string>) => JSON.parse((g.gas.doGet({ parameter: q }) as { text: string }).text);
+    expect(get({ s: 'mal', a: 'voz', t: 'x' })).toMatchObject({ ok: false, code: 'auth' });
+    expect(get({ s: g.secret, a: 'voz', t: '25 soles en Tambo con BBVA' })).toMatchObject({ ok: true, msg: expect.stringContaining('Registrado') });
+    expect(get({ s: g.secret, a: 'gasto', monto: '', comercio: 'Starbucks', tarjeta: 'BBVA' }).ok).toBe(true); // sin monto: queda pendiente
+    expect(get({ s: g.secret, a: 'gasto', monto: '', comercio: '' }).ok).toBe(false);
+    const inbox = g.call('load').inbox;
+    expect(inbox[0]).toMatchObject({ text: '25 soles en Tambo con BBVA', amount: 0 });
+    expect(inbox[1]).toMatchObject({ merchant: 'Starbucks', amount: 0, card: 'BBVA' });
+    expect(get({}).ok).toBe(true); // salud
+  });
+
   it('escribe la hoja de Movimientos solo cuando cambia', () => {
     const g = setup();
     const rows = [['2026-10-13T15:00:00.000Z', 'Plaza Vea', 86.4, 'Mercado y súper', 'BBVA Débito', 'Manual']];

@@ -44,7 +44,7 @@ const until = async (fn, ms = 8000) => { const t = Date.now(); while (Date.now()
   const plan = await p.textContent('main, body');
   assert(plan.includes('S/ 3,000 repartidos'), 'plan con el sueldo real');
   await p.click('text=Crear mis carpetas');
-  await p.fill('input[placeholder="FP1.…"]', code);
+  await p.fill('input[placeholder^="FP1"]', code);
   await p.click('button:has-text("Conectar")');
   await p.waitForSelector('text=Conectado a tu Drive', { timeout: 8000 });
   await shot('e06-conectado');
@@ -107,7 +107,7 @@ const until = async (fn, ms = 8000) => { const t = Date.now(); while (Date.now()
   await p2.fill('input[autocomplete=given-name]', 'X'); await p2.fill('input[inputmode=numeric]', '1000');
   await p2.click('text=Siguiente'); await p2.click('text=Sin tarjetas por ahora');
   await p2.waitForSelector('text=Crear mis carpetas'); await p2.click('text=Crear mis carpetas');
-  await p2.fill('input[placeholder="FP1.…"]', code);
+  await p2.fill('input[placeholder^="FP1"]', code);
   await p2.click('button:has-text("Conectar")');
   assert(await until(() => p2.isVisible('text=Hola, Leo')), 'nuevo teléfono: datos recuperados de Drive');
   await p2.screenshot({ path: `${out}/e15-recuperado.png` });

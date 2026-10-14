@@ -46,7 +46,9 @@ export interface Tx {
   /** Fecha ISO del pago. */
   date: string;
   why: string;
-  source: 'manual' | 'applepay';
+  source: 'manual' | 'applepay' | 'siri';
+  /** Llegó sin monto (Atajo): la app pide completarlo. */
+  pending?: boolean;
 }
 
 export interface Goal { id: GoalId; name: string; saved: number; target: number }

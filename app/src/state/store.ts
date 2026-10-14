@@ -173,7 +173,10 @@ export function useFinanceStore(opts: StoreOptions) {
       pendingAck.current = Array.from(new Set([...pendingAck.current, ...(res.inbox || []).map(i => i.id)]));
       setS(x => ({ ...x, ...next, sync: 'idle', syncError: '', meta: { rev: res.rev, dirty, lastSync: Date.now() } }));
       if (restored) flash('Recuperé tus datos desde Drive', 'ph ph-cloud-check');
-      else if (fresh.length) flash(fresh.length === 1 ? `Apple Pay · ${fresh[0].name} ${fmt(fresh[0].amt)} → ${fresh[0].f ? FM[fresh[0].f].name : 'Por revisar'}` : `${fresh.length} pagos nuevos de Apple Pay`, 'ph ph-apple-logo');
+      else if (fresh.length) {
+        const t = fresh[0], via = t.source === 'siri' ? 'Siri' : 'Apple Pay';
+        flash(fresh.length > 1 ? `${fresh.length} gastos nuevos (${via})` : t.pending ? `${via} · ${t.name}: falta el monto` : `${via} · ${t.name} ${fmt(t.amt)} → ${t.f ? FM[t.f].name : 'Por revisar'}`, t.source === 'siri' ? 'ph ph-microphone' : 'ph ph-apple-logo');
+      }
       if (dirty || pendingAck.current.length) setTimeout(() => void push(), 50);
       return restored;
     } catch (e) {
@@ -276,6 +279,14 @@ export function useFinanceStore(opts: StoreOptions) {
       if (!tx) return;
       set(x => ({ txs: x.txs.map(t => (t.id === tx.id ? { ...t, f: folder, why: `Lo moviste a ${FM[folder].name}. Aprendido para la próxima.` } : t)), sheet: null }));
       flash(`${tx.name} → ${FM[folder].name}. Lo recordaré.`);
+    },
+    removeTx: (id: string) => set(x => ({ txs: x.txs.filter(t => t.id !== id) })),
+    /** Corrige el monto (o completa uno que llegó sin monto por el Atajo). */
+    setTxAmount: (id: string, raw: string) => {
+      const amt = parseAmount(raw);
+      if (!(amt > 0)) { flash('Escribe un monto válido', 'ph ph-warning'); return; }
+      set(x => ({ txs: x.txs.map(t => (t.id === id ? { ...t, amt, pending: undefined, why: t.why.replace(' sin monto: escríbelo abajo.', '.') } : t)) }));
+      flash(`Monto guardado: ${fmt(amt)}`);
     },
     deleteTx: (id: string) => { set(x => ({ txs: x.txs.filter(t => t.id !== id), sheet: null })); flash('Movimiento eliminado'); },
     // ─── Registrar gasto ───

@@ -111,25 +111,61 @@ function CopyRow({ label, value, secret }: { label: string; value: string; secre
   );
 }
 
-/** Pasos para crear la automatización de Atajos que manda cada pago con Apple Pay. */
+/** Atajo "Gasto": Siri pregunta qué gastaste y lo manda al Apps Script con una sola URL. */
 export function ShortcutGuide({ store }: { store: Store }) {
   const c = store.s.conn;
-  if (!c) return <div style={{ fontSize: 13, color: 'var(--color-neutral-400)', lineHeight: 1.5 }}>Primero conecta tu Apps Script: el Atajo envía cada pago ahí.</div>;
+  const [test, setTest] = useState<'idle' | 'busy' | 'ok' | 'fail'>('idle');
+  const [showWallet, setShowWallet] = useState(false);
+  if (!c) return <div style={{ fontSize: 13, color: 'var(--color-neutral-400)', lineHeight: 1.5 }}>Primero conecta tu Apps Script (arriba): el Atajo envía cada gasto ahí.</div>;
+  const base = `${c.url}?s=${encodeURIComponent(c.secret)}`;
+  const vozUrl = `${base}&a=voz&t=`;
+  const walletUrl = `${base}&a=gasto&monto=`;
+  const probar = async () => {
+    setTest('busy');
+    try {
+      const r = await fetch(vozUrl + encodeURIComponent('1 sol en Prueba del Atajo'), { credentials: 'omit' });
+      const j = await r.json() as { ok?: boolean; id?: string };
+      if (!j.ok || !j.id) throw new Error('sin ok');
+      await store.pull();
+      store.removeTx('ap-' + j.id);
+      store.flash('✅ La URL del Atajo funciona');
+      setTest('ok');
+    } catch { setTest('fail'); }
+  };
   const steps = [
-    'Abre Atajos → Automatización → Nueva automatización → Transacción.',
-    'Elige tus tarjetas de Wallet y marca "Ejecutar inmediatamente".',
-    'Agrega la acción "Obtener contenido de URL" y pega la URL de abajo.',
-    'Toca "Mostrar más": Método POST, Cuerpo de la solicitud JSON.',
-    'Agrega los campos de texto: secret (pega el código), action = addTx, amount = Importe, merchant = Comercio, card = Tarjeta (estas tres son variables de la transacción).',
-    'Listo: cada pago con el iPhone llega a la app la próxima vez que la abras.',
+    'Toca "Copiar URL del Atajo" (abajo).',
+    'Abre la app Atajos → pestaña Atajos → botón + (arriba a la derecha). Arriba, ponle de nombre: Gasto.',
+    'Toca "Agregar acción", busca "Solicitar entrada" y agrégala. Toca "Solicitud" y escribe: ¿Qué gastaste?',
+    'Busca "Codificar URL" y agrégala (usa la Entrada proporcionada).',
+    'Busca "Obtener contenido de URL" y agrégala. Toca el campo URL, pega lo que copiaste y, justo al final, toca la variable "URL codificada" en la barra de arriba del teclado.',
+    'Toca OK. Listo: di "Oye Siri, Gasto" y contesta, por ejemplo, "25 soles en Tambo con BBVA". El gasto aparece al abrir la app.',
   ];
   return (
     <div>
+      <div style={{ fontSize: 13, color: 'var(--color-neutral-400)', lineHeight: 1.5, marginBottom: 8 }}>
+        Funciona en cualquier iPhone. Puedes decir el monto, el lugar y la tarjeta: "12 con 50 en Inkafarma con Interbank". Si olvidas el monto, te lo pide la app.
+      </div>
       <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, lineHeight: 1.45, color: 'var(--color-neutral-300)' }}>
         {steps.map(x => <li key={x}>{x}</li>)}
       </ol>
-      <CopyRow label="URL" value={c.url} />
-      <CopyRow label="secret" value={c.secret} secret />
+      <CopyRow label="URL del Atajo (ya incluye tu código secreto)" value={vozUrl} />
+      <button type="button" className="btn btn-secondary btn-block" onClick={() => void probar()} disabled={test === 'busy'} style={{ height: 40, borderRadius: 10, marginTop: 8 }}>
+        {test === 'busy' ? <><Spinner size={14} />Probando…</> : <><Icon name="ph ph-paper-plane-tilt" />Probar la URL</>}
+      </button>
+      {test === 'ok' && <div role="status" style={{ fontSize: 12.5, color: 'var(--color-accent-300)', marginTop: 6 }}>✅ La URL funciona: tu Atajo podrá registrar gastos.</div>}
+      {test === 'fail' && <div role="alert" style={{ fontSize: 12.5, color: 'var(--color-accent-300)', marginTop: 6 }}>No respondió. Revisa que pegaste la nueva versión de Code.gs (Implementar › Administrar implementaciones › Nueva versión).</div>}
+      <div style={{ fontSize: 12, color: 'var(--color-neutral-500)', marginTop: 10, lineHeight: 1.45 }}>
+        Tip: en Ajustes del iPhone › Accesibilidad › Tocar › Toque posterior, elige "Gasto" para abrirlo tocando dos veces la parte de atrás del teléfono.
+      </div>
+      <button type="button" className="link-btn" onClick={() => setShowWallet(v => !v)} style={{ marginTop: 10, fontSize: 12.5 }}>
+        {showWallet ? 'Ocultar' : '¿Tienes iOS 17 o más y ves "Transacción" en Automatización?'}
+      </button>
+      {showWallet && (
+        <div style={{ fontSize: 12.5, color: 'var(--color-neutral-300)', lineHeight: 1.5, marginTop: 6 }}>
+          Automatización → Nueva → Transacción → tus tarjetas → Ejecutar inmediatamente → acción "Obtener contenido de URL" con esta URL y, al final, la variable Importe. Agrega también &amp;comercio= con la variable Comercio.
+          <CopyRow label="URL para Wallet" value={walletUrl} />
+        </div>
+      )}
     </div>
   );
 }

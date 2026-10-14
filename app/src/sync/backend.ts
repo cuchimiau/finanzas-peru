@@ -70,7 +70,7 @@ export async function call<T>(conn: Connection, action: string, payload: Record<
 }
 
 // ─── Contrato de acciones ───
-export interface InboxItem { id: string; amount: unknown; merchant?: string; card?: string; at: string }
+export interface InboxItem { id: string; amount: unknown; merchant?: string; card?: string; text?: string; at: string }
 export interface LoadResponse { rev: number; updatedAt: string | null; state: unknown; inbox: InboxItem[] }
 export interface SaveResponse { rev: number; conflict?: boolean; state?: unknown }
 export interface PingResponse { folderUrl: string; model: string; gemini: boolean }

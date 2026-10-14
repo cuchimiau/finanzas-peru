@@ -8,7 +8,7 @@ import { currentDebts, matchCard, payInfo } from './cards';
 import { buildGeminiRequest, buildSystemPrompt, toGeminiContents } from './advisor';
 import { agoLabel, lastMonthKeys, monthAt, monthCtx, nextDueLabel, whenLabel } from './dates';
 import { fmt, fmt0, parseAmount } from './format';
-import { inboxToTxs, mergeRemote } from '../sync/merge';
+import { inboxToTxs, mergeRemote, parseSpoken } from '../sync/merge';
 import { encodeConnection, parseConnection } from '../sync/backend';
 import type { Persisted } from '../state/persisted';
 
@@ -147,7 +147,7 @@ describe('sincronización', () => {
     const inbox = [
       { id: 'a', amount: 'S/ 16,90', merchant: 'Starbucks Miraflores', card: 'BBVA Visa', at: OCT12.toISOString() },
       { id: 'b', amount: 25, merchant: 'Comercio raro', card: '', at: 'no-es-fecha' },
-      { id: 'c', amount: 0, merchant: 'X', at: OCT12.toISOString() },
+      { id: 'c', amount: 0, merchant: '', at: OCT12.toISOString() },
     ];
     const out = inboxToTxs(inbox, cards, []);
     expect(out.map(t => [t.id, t.amt, t.f, t.pay, t.source])).toEqual([['ap-a', 16.9, 'restaurantes', 'c1', 'applepay'], ['ap-b', 25, 'libre', 'c1', 'applepay']]);
@@ -237,5 +237,31 @@ describe('editar presupuesto moviendo dinero', () => {
     expect(nb.restaurantes).toBe(100);
     expect(nb.emergencia).toBe(b.emergencia + 60);
     expect(sumBudgets(nb)).toBe(2600);
+  });
+});
+
+describe('frases dictadas a Siri', () => {
+  const cards = [card({}), card({ id: 'c2', name: 'Interbank Débito', kind: 'debit' })];
+  it.each([
+    ['25 soles en Tambo con BBVA', 25, 'Tambo', 'BBVA Visa'],
+    ['s/ 12.50 Inkafarma', 12.5, 'Inkafarma', ''],
+    ['Gasté 40 en taxi', 40, 'Taxi', ''],
+    ['25 con 50 en Wong con interbank', 25.5, 'Wong', 'Interbank Débito'],
+    ['pagué 1,250 de alquiler con yape', 1250, 'Alquiler', 'yape'],
+    ['almuerzo en Pardos', 0, 'Almuerzo Pardos', ''],
+  ])('"%s"', (txt, amt, merchant, cardName) => {
+    expect(parseSpoken(txt, cards)).toEqual({ amt, merchant, card: cardName });
+  });
+  it('llega como movimiento; sin monto queda pendiente', () => {
+    const out = inboxToTxs([
+      { id: 'v1', amount: 0, text: '25 soles en Tambo con BBVA', at: OCT12.toISOString() },
+      { id: 'v2', amount: 0, text: 'almuerzo en Pardos', at: OCT12.toISOString() },
+      { id: 'w1', amount: '', merchant: 'Starbucks', card: 'BBVA', at: OCT12.toISOString() },
+    ], cards, []);
+    expect(out.map(t => [t.amt, t.name, t.pay, t.source, !!t.pending, t.f])).toEqual([
+      [25, 'Tambo', 'c1', 'siri', false, 'mercado'],
+      [0, 'Almuerzo Pardos', 'cash', 'siri', true, 'restaurantes'],
+      [0, 'Starbucks', 'c1', 'applepay', true, 'restaurantes'],
+    ]);
   });
 });

@@ -48,11 +48,13 @@ function Recat({ store }: { store: Store }) {
       <div className="row-sub">{(viaApplePay(tx) ? 'Apple Pay · ' : '') + (p.card || !viaApplePay(tx) ? p.label + ' · ' : '') + whenLabel(tx.date)}</div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '2px 0 8px', gap: 12 }}>
         <span style={{ fontSize: 20, fontWeight: 500 }}>{tx.name}</span>
-        <span className="tnum" style={{ fontSize: 20 }}>−{fmt(tx.amt)}</span>
+        <span className="tnum" style={{ fontSize: 20 }}>{tx.pending ? 'S/ ?' : '−' + fmt(tx.amt)}</span>
       </div>
       <div style={{ fontSize: 13, color: 'var(--color-neutral-400)', lineHeight: 1.45, marginBottom: 14, display: 'flex', gap: 8 }}>
         <Icon name="ph ph-sparkle" style={{ color: 'var(--color-accent-300)', fontSize: 16 }} /><span>{tx.why}</span>
       </div>
+      <AmountEdit key={tx.id + tx.amt} store={store} id={tx.id} amt={tx.amt} pending={!!tx.pending} />
+      <div style={{ fontSize: 12, color: 'var(--color-neutral-500)', margin: '4px 0 6px' }}>Carpeta</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {FOLDERS.filter(isFlow).map(f => (
           <button key={f.id} className={'option' + (tx.f === f.id ? ' on' : '')} aria-pressed={tx.f === f.id} style={{ height: 44 }} onClick={() => store.recategorize(f.id)}>
@@ -64,6 +66,19 @@ function Recat({ store }: { store: Store }) {
         <Icon name="ph ph-trash" />Eliminar movimiento
       </button>
     </>
+  );
+}
+
+function AmountEdit({ store, id, amt, pending }: { store: Store; id: string; amt: number; pending: boolean }) {
+  const [v, setV] = useState(amt ? String(amt) : '');
+  return (
+    <form onSubmit={e => { e.preventDefault(); store.setTxAmount(id, v); }} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12, padding: 10, borderRadius: 12, background: 'var(--color-bg)', border: pending ? '1px solid var(--color-accent-700)' : '1px solid transparent' }}>
+      <span style={{ fontSize: 13, color: pending ? 'var(--color-accent-300)' : 'var(--color-neutral-400)', flex: 1 }}>{pending ? 'Falta el monto' : 'Monto'}</span>
+      <span style={{ color: 'var(--color-neutral-500)' }}>S/</span>
+      <input className="input" inputMode="decimal" value={v} onChange={e => setV(e.target.value.replace(/[^0-9.,]/g, ''))} placeholder="0.00" autoFocus={pending}
+        aria-label="Monto" style={{ width: 96, height: 38, borderRadius: 9, fontSize: 15, textAlign: 'right' }} />
+      <button type="submit" className="btn btn-primary" disabled={!v || parseAmount(v) === amt} style={{ height: 38, borderRadius: 9, padding: '0 12px' }}>Guardar</button>
+    </form>
   );
 }
 
@@ -240,7 +255,7 @@ function Settings({ store }: { store: Store }) {
         <ConnectForm store={store} />
       </Section>
 
-      <Section title="Pagos con Apple Pay (Atajo)">
+      <Section title="Registrar gastos con Siri (Atajo)">
         <ShortcutGuide store={store} />
       </Section>
 

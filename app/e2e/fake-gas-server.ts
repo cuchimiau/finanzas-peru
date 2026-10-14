@@ -25,6 +25,10 @@ http.createServer((req, res) => {
   const cors = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
   if (req.url === '/__code') { res.writeHead(200, cors); res.end(JSON.stringify({ code, secret: g.props.get('APP_SECRET'), url: URL })); return; }
   if (req.url === '/__state') { res.writeHead(200, cors); res.end(JSON.stringify({ data: JSON.parse(g.fileText('datos.json') || 'null'), inbox: JSON.parse(g.fileText('bandeja.json') || '[]'), sheets: Array.from(g.sheets.values()) })); return; }
+  if (req.method === 'GET' && req.url?.includes('/exec?')) {
+    const q = Object.fromEntries(new globalThis.URL(req.url, 'http://x').searchParams);
+    res.writeHead(200, cors); res.end((g.gas.doGet({ parameter: q }) as { text: string }).text); return;
+  }
   let raw = '';
   req.on('data', c => (raw += c));
   req.on('end', () => {

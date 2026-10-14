@@ -24,8 +24,23 @@ const MAX_TOOL_ROUNDS = 3;
 
 // ─── Entrada HTTP ───
 
-function doGet() {
-  return json_({ ok: true, app: 'finanzas-peru', hint: 'Usa POST desde la app.' });
+/**
+ * GET para el Atajo de Siri / Wallet (una sola URL, sin JSON):
+ *   …/exec?s=SECRETO&a=voz&t=25 soles en Tambo con BBVA
+ *   …/exec?s=SECRETO&a=gasto&monto=16,90&comercio=Starbucks&tarjeta=BBVA
+ */
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (!p.a) return json_({ ok: true, app: 'finanzas-peru', hint: 'Usa POST desde la app.' });
+  const secret = PropertiesService.getScriptProperties().getProperty('APP_SECRET');
+  if (!secret || !safeEqual_(String(p.s || ''), secret)) return json_({ ok: false, code: 'auth', error: 'Código secreto incorrecto.' });
+  try {
+    if (p.a === 'voz') return json_(addTx_({ text: p.t }));
+    if (p.a === 'gasto') return json_(addTx_({ amount: p.monto, merchant: p.comercio, card: p.tarjeta }));
+    return json_({ ok: false, code: 'bad_request', error: 'Acción desconocida: ' + p.a });
+  } catch (err) {
+    return json_({ ok: false, code: err.code || 'server', error: err.userMessage || String(err) });
+  }
 }
 
 function doPost(e) {
@@ -45,6 +60,7 @@ function doPost(e) {
       case 'load': return json_(load_());
       case 'save': return json_(save_(req));
       case 'addTx': return json_(addTx_(req));
+      case 'voz': return json_(addTx_({ text: req.text }));
       case 'ask': return json_(ask_(req));
       default: return json_({ ok: false, code: 'bad_request', error: 'Acción desconocida: ' + req.action });
     }
@@ -89,9 +105,11 @@ function save_(req) {
   });
 }
 
+/** Deja un pago en la bandeja. Puede venir sin monto (la app pide completarlo) o como frase dictada. */
 function addTx_(req) {
+  const text = String(req.text || '').trim().slice(0, 200);
   const amount = parseAmount_(req.amount);
-  if (!(amount > 0)) throw userError_('Monto inválido: ' + req.amount, 'bad_request');
+  if (!text && !(amount > 0) && !String(req.merchant || '').trim()) throw userError_('No llegó ni monto, ni comercio, ni texto.', 'bad_request');
   return withLock_(function () {
     const inbox = readJson_(INBOX_FILE, []);
     const item = {
@@ -99,11 +117,12 @@ function addTx_(req) {
       amount: amount,
       merchant: String(req.merchant || '').slice(0, 80),
       card: String(req.card || '').slice(0, 60),
+      text: text,
       at: new Date().toISOString(),
     };
     inbox.push(item);
     writeJson_(INBOX_FILE, inbox.slice(-500));
-    return { ok: true, id: item.id };
+    return { ok: true, id: item.id, msg: '✅ Registrado en Finanzas Perú' };
   });
 }
 
