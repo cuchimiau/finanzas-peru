@@ -42,7 +42,8 @@ En iPhone, una app instalada en la pantalla de inicio no puede iniciar sesión c
 ### 4. Registrar gastos con Siri (Atajo, sirve para cualquier iPhone)
 1. Pega en script.google.com la versión nueva de `Code.gs` (Implementar › Administrar implementaciones › ✏️ › Nueva versión).
 2. En la app, entra a **Ajustes › Registrar gastos con Siri** y toca **Copiar URL del Atajo**.
-3. En la app Atajos, crea un atajo nuevo llamado **Gasto** con estas tres acciones:
+3. **Con Siri (Apple Intelligence):** toca **Copiar** en *Prompt para Siri*, abre Atajos › **+** y pídele a Siri que lo cree con ese texto. Después revisa que la URL de "Obtener contenido de URL" termine en `&a=voz&t=` seguida de la variable **URL codificada**.
+   **A mano:** en la app Atajos, crea un atajo nuevo llamado **Gasto** con estas tres acciones:
    - **Solicitar entrada**, con la pregunta "¿Qué gastaste?".
    - **Codificar URL**.
    - **Obtener contenido de URL**: pega la URL que copiaste y, al final, inserta la variable **URL codificada**.

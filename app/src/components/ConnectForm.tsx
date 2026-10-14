@@ -111,11 +111,23 @@ function CopyRow({ label, value, secret }: { label: string; value: string; secre
   );
 }
 
+/** Texto para pedirle a Siri (Apple Intelligence) que arme el Atajo "Gasto" con la URL ya puesta. */
+export function siriPrompt(vozUrl: string) {
+  return [
+    'Crea un atajo llamado "Gasto" con estas 3 acciones, en este orden:',
+    '1. "Solicitar entrada" de tipo Texto, con la pregunta "¿Qué gastaste?".',
+    '2. "Codificar URL" sobre la Entrada proporcionada.',
+    `3. "Obtener contenido de URL" con método GET. La URL es exactamente este texto: ${vozUrl} y justo al final, sin espacios, va la variable "URL codificada" del paso 2.`,
+    'No agregues otras acciones ni cambies la URL.',
+  ].join('\n');
+}
+
 /** Atajo "Gasto": Siri pregunta qué gastaste y lo manda al Apps Script con una sola URL. */
 export function ShortcutGuide({ store }: { store: Store }) {
   const c = store.s.conn;
   const [test, setTest] = useState<'idle' | 'busy' | 'ok' | 'fail'>('idle');
   const [showWallet, setShowWallet] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   if (!c) return <div style={{ fontSize: 13, color: 'var(--color-neutral-400)', lineHeight: 1.5 }}>Primero conecta tu Apps Script (arriba): el Atajo envía cada gasto ahí.</div>;
   const base = `${c.url}?s=${encodeURIComponent(c.secret)}`;
   const vozUrl = `${base}&a=voz&t=`;
@@ -145,9 +157,25 @@ export function ShortcutGuide({ store }: { store: Store }) {
       <div style={{ fontSize: 13, color: 'var(--color-neutral-400)', lineHeight: 1.5, marginBottom: 8 }}>
         Funciona en cualquier iPhone. Puedes decir el monto, el lugar y la tarjeta: "12 con 50 en Inkafarma con Interbank". Si olvidas el monto, te lo pide la app.
       </div>
-      <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, lineHeight: 1.45, color: 'var(--color-neutral-300)' }}>
-        {steps.map(x => <li key={x}>{x}</li>)}
+      <div style={{ fontSize: 13.5, fontWeight: 500, marginTop: 4 }}>Opción rápida: que Siri lo arme</div>
+      <ol style={{ margin: '6px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, lineHeight: 1.45, color: 'var(--color-neutral-300)' }}>
+        <li>Toca "Copiar" en "Prompt para Siri" (abajo).</li>
+        <li>Abre Atajos → botón + y pídele a Siri que lo cree: pega el texto en el campo de Apple Intelligence (o díselo).</li>
+        <li>Revisa la acción "Obtener contenido de URL": la URL debe terminar en &amp;a=voz&amp;t= seguida de la burbuja azul "URL codificada", con método GET.</li>
+        <li>Toca "Probar la URL" aquí, y luego di "Oye Siri, Gasto" → "25 soles en Tambo".</li>
       </ol>
+      <CopyRow label="Prompt para Siri (incluye tu URL y tu código secreto)" value={siriPrompt(vozUrl)} />
+      <div style={{ fontSize: 12, color: 'var(--color-neutral-500)', marginTop: 6, lineHeight: 1.45 }}>
+        No compartas este texto: trae tu código secreto. Si se filtra, ejecuta rotarSecreto() en el Apps Script y vuelve a conectar.
+      </div>
+      <button type="button" className="link-btn" onClick={() => setShowManual(v => !v)} style={{ marginTop: 10, fontSize: 12.5 }}>
+        {showManual ? 'Ocultar pasos a mano' : 'Prefiero armarlo a mano'}
+      </button>
+      {showManual && (
+        <ol style={{ margin: '6px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, lineHeight: 1.45, color: 'var(--color-neutral-300)' }}>
+          {steps.map(x => <li key={x}>{x}</li>)}
+        </ol>
+      )}
       <CopyRow label="URL del Atajo (ya incluye tu código secreto)" value={vozUrl} />
       <button type="button" className="btn btn-secondary btn-block" onClick={() => void probar()} disabled={test === 'busy'} style={{ height: 40, borderRadius: 10, marginTop: 8 }}>
         {test === 'busy' ? <><Spinner size={14} />Probando…</> : <><Icon name="ph ph-paper-plane-tilt" />Probar la URL</>}
