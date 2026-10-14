@@ -58,6 +58,20 @@ export function Home({ store, d }: { store: Store; d: Derived }) {
         </div>
       )}
 
+      {s.txs.some(t => t.dup) && (
+        <div className="accent-card" style={{ padding: '12px 14px' }}>
+          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="ph ph-copy" style={{ color: 'var(--color-accent-300)' }} />¿Duplicado?</div>
+          <div style={{ fontSize: 12.5, color: 'var(--color-neutral-400)', marginBottom: 4 }}>Mismo monto y casi a la misma hora que otro gasto.</div>
+          {s.txs.filter(t => t.dup).slice(0, 5).map(t => (
+            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 13.5 }}>
+              <span className="row-main">{t.name} {fmt(t.amt)} <span style={{ color: 'var(--color-neutral-500)' }}>≈ {t.dup}</span></span>
+              <button type="button" className="link-btn" onClick={() => { store.removeTx(t.id); store.flash('Duplicado borrado'); }} style={{ color: 'var(--color-accent-300)' }}>Borrar</button>
+              <button type="button" className="link-btn" onClick={() => store.keepTx(t.id)} style={{ color: 'var(--color-neutral-400)' }}>Mantener</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div {...pressable(() => store.openSheet('optimize'))} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1px solid var(--color-accent-800)' }}>
         <Icon name="ph ph-magic-wand" style={{ fontSize: 20, color: 'var(--color-accent-300)' }} />
         <div className="row-main">

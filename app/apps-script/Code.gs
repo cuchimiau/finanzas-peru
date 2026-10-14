@@ -25,7 +25,7 @@ const MAX_TOOL_ROUNDS = 3;
 // ─── Entrada HTTP ───
 
 /**
- * GET para el Atajo de Siri / Wallet (una sola URL, sin JSON):
+ * GET para el Atajo de Siri (una sola URL, sin JSON). Wallet y Yape usan POST con action addTx y kind.
  *   …/exec?s=SECRETO&a=voz&t=25 soles en Tambo con BBVA
  *   …/exec?s=SECRETO&a=gasto&monto=16,90&comercio=Starbucks&tarjeta=BBVA
  */
@@ -107,7 +107,8 @@ function save_(req) {
 
 /** Deja un pago en la bandeja. Puede venir sin monto (la app pide completarlo) o como frase dictada. */
 function addTx_(req) {
-  const text = String(req.text || '').trim().slice(0, 200);
+  // Una constancia de Yape leída de la imagen es más larga que una frase dictada.
+  const text = String(req.text || '').trim().slice(0, /^(yape|plin)$/.test(String(req.kind || '')) ? 1500 : 200);
   const amount = parseAmount_(req.amount);
   if (!text && !(amount > 0) && !String(req.merchant || '').trim()) throw userError_('No llegó ni monto, ni comercio, ni texto.', 'bad_request');
   return withLock_(function () {
@@ -118,6 +119,7 @@ function addTx_(req) {
       merchant: String(req.merchant || '').slice(0, 80),
       card: String(req.card || '').slice(0, 60),
       text: text,
+      kind: /^(yape|plin|wallet)$/.test(String(req.kind || '')) ? String(req.kind) : '',
       at: new Date().toISOString(),
     };
     inbox.push(item);
@@ -331,7 +333,9 @@ function safeEqual_(a, b) {
 /** "S/ 1,234.50" · "16,90" · "16.9" · 16.9 → número. */
 function parseAmount_(raw) {
   if (typeof raw === 'number') return isFinite(raw) ? Math.round(Math.abs(raw) * 100) / 100 : 0;
-  let s = String(raw == null ? '' : raw).replace(/[^0-9.,-]/g, '');
+  // Solo el primer número: así "S/. 16.90" no se lee como ".16.90".
+  const m = String(raw == null ? '' : raw).match(/\d[\d.,]*/);
+  let s = (m ? m[0] : '').replace(/[.,]+$/, '');
   if (s.indexOf(',') >= 0 && s.indexOf('.') >= 0) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
   else if (s.indexOf(',') >= 0) s = /,\d{1,2}$/.test(s) ? s.replace(',', '.') : s.replace(/,/g, '');
   const n = parseFloat(s);

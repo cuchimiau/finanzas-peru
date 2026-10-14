@@ -73,6 +73,19 @@ describe('Apps Script · datos en Drive', () => {
     expect(g.call('load').inbox.map((i: { merchant: string }) => i.merchant)).toEqual(['Saga']);
   });
 
+  it('Wallet y Yape: montos con "S/." o "PEN" y el tipo de origen', () => {
+    const g = setup();
+    g.call('addTx', { amount: 'S/. 16.90', merchant: 'TAMBO MIRAFLORES', card: 'Interbank Visa', kind: 'wallet' });
+    g.call('addTx', { amount: 'PEN 1,234.50', merchant: 'Saga' });
+    g.call('addTx', { text: '¡Yapeaste!\nS/ 25\nJuan Pérez', kind: 'yape' });
+    g.call('addTx', { text: 'x', kind: 'raro' });
+    g.call('addTx', { text: 'S/ 9\n' + 'texto largo '.repeat(60) + 'Nro. de operación 123456', kind: 'yape' });
+    const inbox = g.call('load').inbox;
+    expect(inbox.map((i: { amount: number }) => i.amount).slice(0, 2)).toEqual([16.9, 1234.5]);
+    expect(inbox.map((i: { kind: string }) => i.kind)).toEqual(['wallet', '', 'yape', '', 'yape']);
+    expect(inbox[4].text).toContain('operación 123456');
+  });
+
   it('el Atajo de Siri usa una sola URL GET (frase dictada o monto sin JSON)', () => {
     const g = setup();
     const get = (q: Record<string, string>) => JSON.parse((g.gas.doGet({ parameter: q }) as { text: string }).text);

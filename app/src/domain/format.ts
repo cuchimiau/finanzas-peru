@@ -18,10 +18,11 @@ export const fmt0 = (n: number) => {
 /** Porcentaje acotado a [0, 100] como valor CSS. */
 export const pct = (a: number, b: number) => (b > 0 ? Math.max(0, Math.min(100, (a / b) * 100)) : 0) + '%';
 
-/** Lee un monto escrito a mano o enviado por el Atajo: "S/ 1,234.50", "16,90", "16.9". */
+/** Lee un monto escrito a mano o enviado por el Atajo: "S/ 1,234.50", "S/. 16.90", "PEN 16,90", "16.9". */
 export function parseAmount(raw: unknown): number {
   if (typeof raw === 'number') return Number.isFinite(raw) ? Math.round(raw * 100) / 100 : 0;
-  let s = String(raw ?? '').replace(/[^0-9.,-]/g, '');
+  // Solo el primer número: así "S/. 16.90" no se lee como ".16.90".
+  let s = (String(raw ?? '').match(/\d[\d.,]*/)?.[0] ?? '').replace(/[.,]+$/, '');
   if (s.includes(',') && s.includes('.')) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
   else if (s.includes(',')) s = /,\d{1,2}$/.test(s) ? s.replace(',', '.') : s.replace(/,/g, '');
   const n = parseFloat(s);

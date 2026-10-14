@@ -8,7 +8,7 @@ import { currentDebts, matchCard, payInfo } from './cards';
 import { buildGeminiRequest, buildSystemPrompt, toGeminiContents } from './advisor';
 import { agoLabel, lastMonthKeys, monthAt, monthCtx, nextDueLabel, whenLabel } from './dates';
 import { fmt, fmt0, parseAmount } from './format';
-import { inboxToTxs, mergeRemote, parseSpoken } from '../sync/merge';
+import { inboxToTxs, mergeRemote, parseSpoken, parseYape } from '../sync/merge';
 import { nextMonthPlan, restOfMonth } from './optimize';
 import { FM } from './data';
 import { encodeConnection, parseConnection } from '../sync/backend';
@@ -317,5 +317,41 @@ describe('optimizar el mes', () => {
     const s0 = simulate([debts[1]], 100, 'avalanche');
     expect(s0.months).toBe(5);
     expect(s0.interest).toBe(0);
+  });
+});
+
+describe('Wallet y Yape', () => {
+  it('montos con prefijo de moneda', () => {
+    expect(parseAmount('S/. 16.90')).toBe(16.9);
+    expect(parseAmount('PEN 1,234.50')).toBe(1234.5);
+    expect(parseAmount('S/ 1.234,50')).toBe(1234.5);
+    expect(parseAmount('16,90')).toBe(16.9);
+    expect(parseAmount('S/.')).toBe(0);
+  });
+
+  it('lee constancias de Yape y Plin', () => {
+    const yape = '¡Yapeaste!\nS/ 25\nJuan Pér*\n14 oct. 2026 - 06:30 pm\nCÓDIGO DE SEGURIDAD\n123\nDatos de la transacción\nNro. de operación\n01234567';
+    expect(parseYape(yape)).toEqual({ amt: 25, merchant: 'Juan Pér', op: '01234567' });
+    expect(parseYape('Yapeaste a Bodega Don Lucho\nS/ 12.50\nNro. de operación: 99887766')).toEqual({ amt: 12.5, merchant: 'Bodega Don Lucho', op: '99887766' });
+    expect(parseYape('¡Pago exitoso!\nS/ 40.00\nEnviado a\nMaría López\nNúmero de operación 55512345')).toMatchObject({ amt: 40, merchant: 'María López', op: '55512345' });
+    expect(parseYape('captura borrosa')).toMatchObject({ amt: 0 });
+  });
+
+  it('constancia de Yape → gasto con Yape, una sola vez por número de operación', () => {
+    const text = '¡Yapeaste!\nS/ 18\nPollería El Rey\nNro. de operación 4455667';
+    const a = inboxToTxs([{ id: 'i1', amount: 0, text, kind: 'yape', at: '2026-10-14T18:00:00Z' }], [], []);
+    expect(a).toHaveLength(1);
+    expect(a[0]).toMatchObject({ id: 'yp-4455667', amt: 18, pay: 'yape', source: 'yape', name: 'Pollería El Rey', f: 'restaurantes' });
+    expect(inboxToTxs([{ id: 'i2', amount: 0, text, kind: 'yape', at: '2026-10-14T18:05:00Z' }], [], a)).toHaveLength(0);
+  });
+
+  it('marca posible duplicado: mismo monto a ±30 min', () => {
+    const siri = inboxToTxs([{ id: 's1', amount: 0, text: '25 soles en Tambo', at: '2026-10-14T18:00:00Z' }], [], []);
+    const w = inboxToTxs([
+      { id: 'w1', amount: 'S/ 25.00', merchant: 'TAMBO MIRAFLORES', card: '', kind: 'wallet', at: '2026-10-14T18:10:00Z' },
+      { id: 'w2', amount: 'S/ 25.00', merchant: 'Wong', card: '', kind: 'wallet', at: '2026-10-14T20:00:00Z' },
+    ], [], siri);
+    expect(w[0].dup).toBe('Tambo');
+    expect(w[1].dup).toBeUndefined();
   });
 });

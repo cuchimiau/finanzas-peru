@@ -10,7 +10,7 @@ Una app para tu iPhone que reparte tu sueldo en carpetas (presupuesto base cero)
 iPhone · app instalada (GitHub Pages)  ──►  Apps Script en TU cuenta de Google
   guarda una copia en el teléfono           ├─ Drive › Finanzas Perú › datos.json + hoja "Movimientos"
   (abre sin señal)                          ├─ Gemini (tu clave queda en el script, no en el teléfono)
-Atajo de iPhone (Wallet → Transacción) ──►  └─ bandeja.json (pagos de Apple Pay pendientes)
+Atajos: Siri · Wallet · Yape ──────────►  └─ bandeja.json (pagos de Apple Pay pendientes)
 ```
 
 En iPhone, una app instalada en la pantalla de inicio no puede iniciar sesión con Google de forma confiable. Por eso la app no inicia sesión: habla con un Apps Script que corre en tu propia cuenta y se protege con un código secreto.
@@ -49,7 +49,17 @@ En iPhone, una app instalada en la pantalla de inicio no puede iniciar sesión c
    - **Obtener contenido de URL**: pega la URL que copiaste y, al final, inserta la variable **URL codificada**.
 4. Di *"Oye Siri, Gasto"* → *"25 soles en Tambo con BBVA"*. Si no dices el monto, la app te lo pide.
 
-**Con iOS 17 o posterior** también puedes usar la automatización **Transacción** de Wallet. La URL está en la misma sección de Ajustes.
+### 5. Pagos con Wallet, automáticos
+En iOS 18 o posterior, el disparador se llama **Wallet** (en iOS 17 se llamaba "Transacción").
+1. En **Ajustes › Registrar solo cada pago con Wallet**, copia el prompt y pídele a Siri en Atajos que cree **"Pago Wallet"**. El atajo hace un POST con JSON: `secret`, `action: addTx`, `kind: wallet`, `amount`, `merchant` y `card`.
+2. Entra a **Automatización › + › Wallet**, elige tus tarjetas, marca **Ejecutar inmediatamente** y elige "Pago Wallet".
+
+Si el mismo gasto llega también por Siri (mismo monto, ±30 min), Inicio lo muestra como **¿Duplicado?**.
+
+### 6. Yape y Plin con 2 toques
+iOS no deja leer notificaciones de otras apps. En su lugar:
+1. En **Ajustes › Registrar Yape o Plin**, copia el prompt para que Siri cree **"Registrar Yape"**. Aparece en la hoja de Compartir: extrae el texto de la imagen y lo manda con `kind: yape`.
+2. Después de yapear, entra a **Compartir › Registrar Yape**. El número de operación evita registrar la misma constancia dos veces.
 
 ## Qué hace la app
 
@@ -82,7 +92,7 @@ En iPhone, una app instalada en la pantalla de inicio no puede iniciar sesión c
 cd app
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 33 pruebas: dominio, paridad con el prototipo, sincronización y el Apps Script (Code.gs) con Google simulado
+npm test           # 54 pruebas: dominio, paridad con el prototipo, sincronización y el Apps Script (Code.gs) con Google simulado
 npm run build      # BASE_PATH=/<repo>/ para GitHub Pages
 ```
 

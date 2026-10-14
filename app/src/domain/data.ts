@@ -52,9 +52,11 @@ export interface Tx {
   /** Fecha ISO del pago. */
   date: string;
   why: string;
-  source: 'manual' | 'applepay' | 'siri';
+  source: 'manual' | 'applepay' | 'siri' | 'yape';
   /** Llegó sin monto (Atajo): la app pide completarlo. */
   pending?: boolean;
+  /** Posible duplicado: nombre del gasto parecido (mismo monto, ±30 min) que ya estaba registrado. */
+  dup?: string;
 }
 
 export interface Goal { id: GoalId; name: string; saved: number; target: number }
@@ -112,7 +114,7 @@ export const GM = Object.fromEntries(GROUPS.map(g => [g.id, g])) as Record<Group
 export const KEYWORDS: [RegExp, FolderId][] = [
   [/uber|cabify|indrive|didi|metropolitano|grifo|primax|repsol|pecsa|corredor|peaje|estacionamiento/i, 'transporte'],
   [/plaza vea|wong|tottus|metro|vivanda|makro|mass\b|mercado|bodega|tambo|oxxo|mini market|minimarket/i, 'mercado'],
-  [/bembos|kfc|starbucks|pardos|norky|chifa|cevich|pollo|rappi|pedidosya|café|cafe|pizza|restaurante|mcdonald|burger|popeyes|tanta|juan valdez/i, 'restaurantes'],
+  [/bembos|kfc|starbucks|pardos|norky|chifa|cevich|pollo|poller|rappi|pedidosya|café|cafe|pizza|restaurante|mcdonald|burger|popeyes|tanta|juan valdez/i, 'restaurantes'],
   [/netflix|spotify|disney|\bmax\b|hbo|youtube|icloud|apple\.com|prime video|amazon prime|crunchyroll|chatgpt|google one/i, 'suscripciones'],
   [/inkafarma|mifarma|clínica|clinica|doctor|farmacia|dental|boticas|laboratorio|oftalm/i, 'salud'],
   [/cineplanet|cinemark|teleticket|joinnus|\bbar\b|discoteca|concierto|steam|playstation/i, 'ocio'],
@@ -136,9 +138,9 @@ export const SUGGESTIONS = [
 ];
 
 export const SOURCES: Record<SourceId, Source> = {
-  applepay: { name: 'Pagos con Apple Pay', sub: 'Atajo de iPhone · Wallet', icon: 'ph ph-apple-logo', how: 'Una automatización de Atajos envía monto, comercio y tarjeta cada vez que pagas con el iPhone. Llegan a la app al abrirla.' },
+  applepay: { name: 'Pagos con Apple Pay', sub: 'Atajo de iPhone · Wallet', icon: 'ph ph-apple-logo', how: 'La automatización "Wallet" de Atajos envía monto, comercio y tarjeta cada vez que pagas acercando el iPhone. Llegan a la app al abrirla. Guía en Ajustes.' },
   correo: { name: 'Alertas de consumo por correo', sub: 'Tarjeta física o compras en línea', icon: 'ph ph-envelope-simple', how: 'Leer los correos de "consumo realizado" de tu banco.', soon: true },
-  yape: { name: 'Constancias de Yape y Plin', sub: 'Por ahora: regístralos con + · Yape', icon: 'ph ph-device-mobile', how: 'Compartir la constancia desde Yape o Plin para registrarla sola.', soon: true },
+  yape: { name: 'Constancias de Yape y Plin', sub: 'Compartir → Registrar Yape', icon: 'ph ph-device-mobile', how: 'Después de yapear, toca Compartir en la constancia y elige el atajo "Registrar Yape": lee la imagen en tu iPhone y manda monto y nombre. Guía en Ajustes.' },
   eecc: { name: 'Estado de cuenta mensual', sub: 'PDF de tu tarjeta', icon: 'ph ph-file-text', how: 'Subir el PDF al cierre para cuadrar cuotas, intereses y comisiones.', soon: true },
   open: { name: 'Conexión directa al banco', sub: 'Finanzas Abiertas · SBS', icon: 'ph ph-bank', how: 'La SBS está definiendo el reglamento de Finanzas Abiertas. Cuando esté vigente, podrás conectar tu banco directo.', soon: true },
 };

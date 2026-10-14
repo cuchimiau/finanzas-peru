@@ -14,6 +14,9 @@ import {
   type Connection, type LoadResponse, type PingResponse, type SaveResponse,
 } from '../sync/backend';
 import { byDateDesc, inboxToTxs, mergeRemote } from '../sync/merge';
+
+const SOURCE_LABEL: Record<Tx['source'], string> = { manual: 'A mano', applepay: 'Apple Pay', siri: 'Siri', yape: 'Yape' };
+const SHEET_SOURCE: Record<Tx['source'], string> = { manual: 'Manual', applepay: 'Apple Pay (Atajo)', siri: 'Siri (Atajo)', yape: 'Yape (constancia)' };
 import { PERSISTED_KEYS, isPersisted, migrate, pickPersisted, type ChatMsg, type Persisted } from './persisted';
 
 export type { ChatMsg } from './persisted';
@@ -187,8 +190,8 @@ export function useFinanceStore(opts: StoreOptions) {
       setS(x => ({ ...x, ...next, sync: 'idle', syncError: '', meta: { rev: res.rev, dirty, lastSync: Date.now() } }));
       if (restored) flash('Recuperé tus datos desde Drive', 'ph ph-cloud-check');
       else if (fresh.length) {
-        const t = fresh[0], via = t.source === 'siri' ? 'Siri' : 'Apple Pay';
-        flash(fresh.length > 1 ? `${fresh.length} gastos nuevos (${via})` : t.pending ? `${via} · ${t.name}: falta el monto` : `${via} · ${t.name} ${fmt(t.amt)} → ${folderName(t.f)}`, t.source === 'siri' ? 'ph ph-microphone' : 'ph ph-apple-logo');
+        const t = fresh[0], via = SOURCE_LABEL[t.source];
+        flash(fresh.length > 1 ? `${fresh.length} gastos nuevos (${[...new Set(fresh.map(x => SOURCE_LABEL[x.source]))].join(', ')})${fresh.some(x => x.dup) ? ' · revisa duplicados' : ''}` : t.dup ? `${via} · ${t.name}: ¿duplicado de ${t.dup}?` : t.pending ? `${via} · ${t.name}: falta el monto` : `${via} · ${t.name} ${fmt(t.amt)} → ${folderName(t.f)}`, t.source === 'siri' ? 'ph ph-microphone' : t.source === 'yape' ? 'ph ph-device-mobile' : 'ph ph-apple-logo');
       }
       if (dirty || pendingAck.current.length) setTimeout(() => void push(), 50);
       return restored;
@@ -300,6 +303,8 @@ export function useFinanceStore(opts: StoreOptions) {
       flash(`${tx.name} → ${FM[folder].name}. Lo recordaré.`);
     },
     removeTx: (id: string) => set(x => ({ txs: x.txs.filter(t => t.id !== id) })),
+    /** "No es duplicado": quita el aviso y lo deja como está. */
+    keepTx: (id: string) => set(x => ({ txs: x.txs.map(t => (t.id === id ? { ...t, dup: undefined } : t)) })),
     /** Corrige el monto (o completa uno que llegó sin monto por el Atajo). */
     setTxAmount: (id: string, raw: string) => {
       const amt = parseAmount(raw);
@@ -440,7 +445,7 @@ export function useFinanceStore(opts: StoreOptions) {
 /** Filas para la hoja "Movimientos" en Drive. */
 function sheetRows(p: Persisted): (string | number)[][] {
   const cardName = (pay: string) => pay === 'cash' ? 'Efectivo' : pay === 'yape' ? 'Yape' : pay === 'applepay' ? 'Apple Pay' : p.cards.find(c => c.id === pay)?.name || 'Tarjeta';
-  return p.txs.map(t => [t.date, t.name, t.amt, folderName(t.f), cardName(t.pay), t.source === 'applepay' ? 'Apple Pay (Atajo)' : 'Manual']);
+  return p.txs.map(t => [t.date, t.name, t.amt, folderName(t.f), cardName(t.pay), SHEET_SOURCE[t.source]]);
 }
 
 export type Store = ReturnType<typeof useFinanceStore>;
