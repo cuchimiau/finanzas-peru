@@ -28,13 +28,19 @@ export function Home({ store, d }: { store: Store; d: Derived }) {
 
       {mo.known ? (
         <div>
-          <div style={{ fontSize: 13, color: 'var(--color-neutral-400)' }}>Puedes gastar hoy</div>
-          <div className="tnum" style={{ fontSize: 52, fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1.05, marginTop: 4 }}>{fmt(mo.perDay)}</div>
+          <div style={{ fontSize: 13, color: 'var(--color-neutral-400)' }}>{mo.todayLeft >= 0 ? 'Te queda para hoy' : 'Hoy te pasaste'}</div>
+          <div className="tnum" style={{ fontSize: 52, fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1.05, marginTop: 4, color: mo.todayLeft < 0 ? 'var(--color-accent-300)' : undefined }}>
+            {mo.todayLeft < 0 && <Icon name="ph ph-warning-circle" style={{ fontSize: 34, marginRight: 6, verticalAlign: 'middle' }} />}{fmt(Math.abs(mo.todayLeft))}
+          </div>
           <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 6, lineHeight: 1.45 }}>
+            {mo.todaySpent > 0
+              ? (mo.todayLeft >= 0 ? `De ${fmt(mo.perDay)} para hoy · gastaste ${fmt(mo.todaySpent)}` : `Gastaste ${fmt(mo.todaySpent)} de ${fmt(mo.perDay)}. Desde mañana: ${fmt(mo.nextPerDay)} por día`)
+              : `Tienes ${fmt(mo.perDay)} por día`}
+            <br />
             {mo.salaryPending && mo.payday && mo.payday > m.now.getDate()
               ? `${fmt0(mo.free)} disponibles hasta tu sueldo del ${mo.payday} · ${mo.days === 1 ? 'último día' : `${mo.days} días`}`
               : `${fmt0(Math.min(mo.free, d.flexLeft))} para gastar · ${m.daysLeft === 1 ? 'último día del mes' : `${m.daysLeft} días para fin de mes`}`}
-            {mo.reservedTotal > 0 && <><br />Ya separé {fmt0(mo.reservedTotal)} para {mo.reserved.map(r => r.name).join(', ')}.</>}
+            {mo.reservedTotal > 0 && <><br /><button type="button" className="link-btn" onClick={() => store.openSheet('close')} style={{ fontSize: 13, color: 'var(--color-neutral-400)', textAlign: 'left' }}>Ya separé {fmt0(mo.reservedTotal)} para {mo.reserved.map(r => r.name).join(', ')} · cambiar ›</button></>}
           </div>
         </div>
       ) : (
@@ -80,6 +86,17 @@ export function Home({ store, d }: { store: Store; d: Derived }) {
           {s.txs.filter(t => t.pending).slice(0, 5).map(t => (
             <button key={t.id} type="button" className="link-btn" onClick={() => store.openRecat(t.id)} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', padding: '6px 0', fontSize: 13.5, color: 'var(--color-text)' }}>
               <span>{t.name}</span><span style={{ color: 'var(--color-accent-300)' }}>Escribir monto ›</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {s.txs.some(t => t.needsFolder) && (
+        <div className="accent-card" style={{ padding: '12px 14px' }}>
+          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="ph ph-folder-simple-plus" style={{ color: 'var(--color-accent-300)' }} />Elige la carpeta</div>
+          {s.txs.filter(t => t.needsFolder).slice(0, 5).map(t => (
+            <button key={t.id} type="button" className="link-btn" onClick={() => store.openRecat(t.id)} style={{ display: 'flex', justifyContent: 'space-between', width: '100%', padding: '6px 0', fontSize: 13.5, color: 'var(--color-text)' }}>
+              <span>{t.name} {fmt(t.amt)}</span><span style={{ color: 'var(--color-accent-300)' }}>Elegir ›</span>
             </button>
           ))}
         </div>

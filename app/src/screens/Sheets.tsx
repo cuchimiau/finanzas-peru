@@ -190,7 +190,7 @@ function CardForm({ store }: { store: Store }) {
   const { s } = store;
   const existing = s.cards.find(c => c.id === s.cardId);
   const [c, setC] = useState<Card>(() => existing ?? emptyCard());
-  const [txt, setTxt] = useState({ bal: num(existing?.bal ?? 0), limit: num(existing?.limit ?? 0), tcea: existing ? num(Math.round(existing.tcea * 1000) / 10) : '', min: num(existing?.min ?? 0), dueDay: String(existing?.dueDay || 5) });
+  const [txt, setTxt] = useState({ bal: num(existing?.bal ?? 0), limit: num(existing?.limit ?? 0), tcea: existing ? num(Math.round(existing.tcea * 1000) / 10) : '', min: num(existing?.min ?? 0), dueDay: existing?.dueDay && (existing.dueConfirmed || existing.dueDay !== 5) ? String(existing.dueDay) : '' });
   const [err, setErr] = useState('');
   const credit = c.kind === 'credit', loan = c.kind === 'loan', debt = credit || loan;
   const field = (k: keyof typeof txt) => ({ value: txt[k], onChange: (e: React.ChangeEvent<HTMLInputElement>) => setTxt(t => ({ ...t, [k]: e.target.value.replace(/[^0-9.,]/g, '') })) });
@@ -202,12 +202,12 @@ function CardForm({ store }: { store: Store }) {
     if (credit && bal > 0 && !(tcea > 0 && tcea < 5)) { setErr('Escribe la TCEA en % (aparece en tu estado de cuenta, ej. 58).'); return; }
     if (loan && bal > 0 && !(min > 0)) { setErr('Escribe cuánto pagas al mes (la cuota).'); return; }
     if (loan && tcea >= 5) { setErr('El interés anual parece muy alto. Escríbelo en %, ej. 25.'); return; }
-    if (debt && (dueDay < 1 || dueDay > 31)) { setErr('El día de pago va de 1 a 31.'); return; }
+    if (debt && (dueDay < 1 || dueDay > 31)) { setErr('Escribe el día del mes en que vence el pago (1 a 31). Lo ves en tu estado de cuenta o en la app del banco.'); return; }
     // El saldo se cuenta desde hoy: los cargos que lleguen después se suman solos.
     const balChanged = !existing || existing.bal !== bal;
     store.saveCard({
       ...c, name: name.slice(0, 30), applePay: loan ? false : c.applePay,
-      bal: debt ? bal : 0, limit: credit ? parseAmount(txt.limit) : 0, tcea: debt ? tcea : 0, min: debt ? min : 0, dueDay: debt ? dueDay : 0,
+      bal: debt ? bal : 0, limit: credit ? parseAmount(txt.limit) : 0, tcea: debt ? tcea : 0, min: debt ? min : 0, dueDay: debt ? dueDay : 0, dueConfirmed: debt ? true : undefined,
       cuotas: debt ? c.cuotas : '', balDate: balChanged ? new Date().toISOString() : c.balDate,
     });
   };
@@ -232,7 +232,7 @@ function CardForm({ store }: { store: Store }) {
           <Field label="Línea de crédito (S/)"><input className="input" style={inputStyle} inputMode="decimal" {...field('limit')} placeholder="0" /></Field>
           <Field label="TCEA (%)" hint="En tu estado de cuenta."><input className="input" style={inputStyle} inputMode="decimal" {...field('tcea')} placeholder="58" /></Field>
           <Field label="Pago mínimo (S/)"><input className="input" style={inputStyle} inputMode="decimal" {...field('min')} placeholder="0" /></Field>
-          <Field label="Día de pago"><input className="input" style={inputStyle} inputMode="numeric" {...field('dueDay')} placeholder="5" /></Field>
+          <Field label="Día de pago"><input className="input" style={inputStyle} inputMode="numeric" {...field('dueDay')} placeholder="Ej. 15" /></Field>
         </div>
       )}
       {loan && (
@@ -240,7 +240,7 @@ function CardForm({ store }: { store: Store }) {
           <Field label="Cuánto debes hoy (S/)"><input className="input" style={inputStyle} inputMode="decimal" {...field('bal')} placeholder="0" /></Field>
           <Field label="Cuota mensual (S/)"><input className="input" style={inputStyle} inputMode="decimal" {...field('min')} placeholder="0" /></Field>
           <Field label="Interés anual (%)" hint="Déjalo en 0 si no te cobra intereses."><input className="input" style={inputStyle} inputMode="decimal" {...field('tcea')} placeholder="0" /></Field>
-          <Field label="Día de pago"><input className="input" style={inputStyle} inputMode="numeric" {...field('dueDay')} placeholder="5" /></Field>
+          <Field label="Día de pago"><input className="input" style={inputStyle} inputMode="numeric" {...field('dueDay')} placeholder="Ej. 15" /></Field>
         </div>
       )}
       {debt && (

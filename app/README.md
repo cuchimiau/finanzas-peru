@@ -51,7 +51,7 @@ En iPhone, una app instalada en la pantalla de inicio no puede iniciar sesión c
 
 ### 5. Pagos con Wallet, automáticos
 En iOS 18 o posterior, el disparador se llama **Wallet** (en iOS 17 se llamaba "Transacción").
-1. En **Ajustes › Registrar solo cada pago con Wallet**, copia el prompt y pídele a Siri en Atajos que cree **"Pago Wallet"**. El atajo pide tus carpetas (`GET …&a=carpetas`), te deja elegir una y hace un POST con JSON: `secret`, `action: addTx`, `kind: wallet`, `amount`, `merchant`, `card` y `folder`.
+1. En **Ajustes › Registrar solo cada pago con Wallet**, copia el prompt y pídele a Siri en Atajos que cree **"Pago Wallet"**. Primero registra el pago (POST `addTx` con `resp: id`, que responde solo el id) y después te deja elegir la carpeta (`GET …&a=carpetas`) y la manda con `setFolder`. Si no eliges, la app te pide la carpeta en Inicio.
 2. Entra a **Automatización › + › Wallet**, elige tus tarjetas, marca **Ejecutar inmediatamente** y elige "Pago Wallet".
 
 Si el mismo gasto llega también por Siri (mismo monto, ±30 min), Inicio lo muestra como **¿Duplicado?**.
@@ -72,7 +72,8 @@ iOS no deja leer notificaciones de otras apps. En su lugar:
   - Para el resto del mes: cuánto puedes gastar por día, qué carpetas se van a pasar y cuánto puedes ahorrar todavía. Ese ahorro va a la deuda más cara o al fondo de emergencia.
   - Para el **próximo mes**: un plan con tu gasto real + 10%.
 - **Dinero real, sin suposiciones:** al empezar el mes escribes cuánto tienes de verdad, si ya te pagaron y qué pagos fijos te faltan antes del sueldo.
-  - Hasta que te paguen, **Puedes gastar hoy** = (lo que tienes − lo que separaste) ÷ días hasta tu día de pago.
+  - Hasta que te paguen, lo que puedes gastar por día = (lo que tienes − lo que separaste) ÷ días hasta tu día de pago. Las deudas se separan solo si vencen antes de tu sueldo; cada una tiene su día de pago, que puedes corregir.
+  - **Te queda para hoy** baja con cada gasto del día. Si te pasas, te dice cuánto tendrás por día desde mañana.
   - El sueldo recién suma cuando tocas **Ya me pagaron**.
   - Si el mes pasado no tiene movimientos, no se inventan sobrantes.
 - **Métricas:** gráfico de lo que tienes vs lo que gastaste por carpeta. **Metas** que puedes crear, editar y borrar: cada una tiene su carpeta de Ahorro.

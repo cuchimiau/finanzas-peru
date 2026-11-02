@@ -257,7 +257,13 @@ export function CloseSheet({ store, d }: { store: Store; d: Derived }) {
   const hasPrev = prevTxs.length > 0;
   const [which, setWhich] = useState<'base' | 'opt'>('base');
   const fixed = FOLDERS.filter(f => f.grp === 'nec' && !FLEX_IDS.includes(f.id) && (s.budgets[f.id] || 0) > 0);
-  const [reserve, setReserve] = useState<string[]>(sameCash ? s.cash.reserve ?? [] : []);
+  const debtCards = s.cards.filter(c => c.kind !== 'debit' && c.min > 0 && d.debts.some(x => x.id === c.id));
+  const today = new Date().getDate();
+  const [dues, setDues] = useState<Record<string, string>>(() => Object.fromEntries(debtCards.map(c => [c.id, c.dueDay && (c.dueConfirmed || c.dueDay !== 5) ? String(c.dueDay) : ''])));
+  // Por defecto se separa la cuota solo si vence antes de tu sueldo (la que pagas con el sueldo, no).
+  const dueBeforePay = (c: { id: string }) => { const dd = Number(dues[c.id]), pd = Number(payday); return dd >= today && pd > 0 && dd < pd; };
+  const [reserve, setReserve] = useState<string[]>(() => sameCash && s.cash.reserve ? s.cash.reserve
+    : debtCards.filter(c => c.dueConfirmed && c.dueDay >= today && s.profile.payday && c.dueDay < s.profile.payday).map(c => 'card-' + c.id));
   const [err, setErr] = useState('');
   const plan = hasPrev ? nextMonthPlan(s.template, prevTxs, 1, salary, minDebt, d.debts, gap) : null;
   const spent = prevTxs.reduce((a, t) => a + t.amt, 0);
@@ -268,6 +274,9 @@ export function CloseSheet({ store, d }: { store: Store; d: Derived }) {
     if (opening.trim() === '' || !(o >= 0)) { setErr('Escribe cuánto dinero tienes hoy (puede ser 0).'); return; }
     if (paid === 'si' && !(parseAmount(salAmt) > 0)) { setErr('Escribe cuánto te pagaron.'); return; }
     if (paid === 'no' && !(pd >= 1 && pd <= 31)) { setErr('Escribe el día del mes en que te pagan (1 a 31).'); return; }
+    const badDue = debtCards.find(c => reserve.includes('card-' + c.id) && !(Number(dues[c.id]) >= 1 && Number(dues[c.id]) <= 31));
+    if (badDue) { setErr(`Escribe el día en que vence ${badDue.name} (1 a 31).`); return; }
+    debtCards.forEach(c => { const dd = Math.round(Number(dues[c.id])); if (dd >= 1 && dd <= 31 && (dd !== c.dueDay || !c.dueConfirmed)) store.setCardDue(c.id, dd); });
     const now = new Date();
     store.startMonth(
       newMonth ? (which === 'opt' && plan ? plan.budgets : s.template) : null,
@@ -299,7 +308,7 @@ export function CloseSheet({ store, d }: { store: Store; d: Derived }) {
         <Segmented label="Sueldo" value={paid} onChange={v => { setPaid(v); setErr(''); }} options={[['no', 'Todavía no'], ['si', 'Sí, ya me pagaron']]} />
       </div>
       {paid === 'no' ? (
-        <Field label="¿Qué día del mes te pagan?" hint="Hasta ese día, 'Puedes gastar hoy' usa solo el dinero que tienes.">
+        <Field label="¿Qué día del mes te pagan?" hint="Hasta ese día, lo que puedes gastar por día sale solo del dinero que tienes.">
           <input className="input tnum" style={inputStyle} inputMode="numeric" value={payday} onChange={e => { setPayday(e.target.value.replace(/\D/g, '').slice(0, 2)); setErr(''); }} placeholder="Ej. 30" aria-label="Día de pago" />
         </Field>
       ) : null}
@@ -317,7 +326,31 @@ export function CloseSheet({ store, d }: { store: Store; d: Derived }) {
               );
             })}
           </div>
-          <div className="row-sub" style={{ marginTop: 6 }}>Lo que marques se separa y no cuenta para "Puedes gastar hoy". Lo que pagas con tu próximo sueldo, déjalo sin marcar.</div>
+          <div className="row-sub" style={{ marginTop: 6 }}>Lo que marques se separa y no cuenta para tu gasto del día. Lo que pagas con tu próximo sueldo, déjalo sin marcar.</div>
+        </div>
+      )}
+      {paid === 'no' && debtCards.length > 0 && (
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--color-neutral-400)', marginBottom: 6 }}>Tus deudas: ¿qué día vence cada una y la pagas antes de tu sueldo?</div>
+          {debtCards.map(c => {
+            const on = reserve.includes('card-' + c.id), before = dueBeforePay(c);
+            return (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderTop: '1px solid var(--color-divider)' }}>
+                <button type="button" role="checkbox" aria-checked={on} aria-label={`Separar cuota de ${c.name}`} className={'option ghost' + (on ? ' on' : '')} style={{ width: 30, height: 30, padding: 0, borderRadius: 8, flex: 'none' }}
+                  onClick={() => setReserve(r => (on ? r.filter(x => x !== 'card-' + c.id) : [...r, 'card-' + c.id]))}>{on ? '✓' : ''}</button>
+                <div className="row-main">
+                  <div style={{ fontSize: 13.5 }}>{c.name} · {fmt0(c.min)}</div>
+                  <div className="row-sub">{dues[c.id] ? (before ? 'Vence antes de tu sueldo' : 'Vence después de tu sueldo: la pagas con él') : 'Escribe el día en que vence'}</div>
+                </div>
+                <span className="row-sub">vence el</span>
+                <input className="input tnum" inputMode="numeric" aria-label={`Día de pago de ${c.name}`} value={dues[c.id]} placeholder="?"
+                  onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 2); setDues(x => ({ ...x, [c.id]: v })); setErr(''); }}
+                  onBlur={() => { const dd = Number(dues[c.id]), pd = Number(payday); if (dd >= 1 && pd > 0) setReserve(r => { const id = 'card-' + c.id, should = dd >= today && dd < pd; return should ? (r.includes(id) ? r : [...r, id]) : r.filter(x => x !== id); }); }}
+                  style={{ width: 52, height: 36, borderRadius: 9, textAlign: 'center', fontSize: 14 }} />
+              </div>
+            );
+          })}
+          <div className="row-sub" style={{ marginTop: 6 }}>Marcada = se separa de tu dinero de hoy. La que vence después de tu sueldo se paga con él y no te quita gasto ahora.</div>
         </div>
       )}
       {paid === 'no' ? null : (

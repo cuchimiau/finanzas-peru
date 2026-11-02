@@ -39,6 +39,8 @@ export interface Card {
   tcea: number;
   min: number;
   dueDay: number;
+  /** El día de pago lo escribiste tú (antes se ponía 5 por defecto). */
+  dueConfirmed?: boolean;
   cuotas: string;
 }
 
@@ -57,6 +59,8 @@ export interface Tx {
   source: 'manual' | 'applepay' | 'siri' | 'yape';
   /** Llegó sin monto (Atajo): la app pide completarlo. */
   pending?: boolean;
+  /** Pago de Wallet que llegó sin carpeta elegida: la app te pide elegirla. */
+  needsFolder?: boolean;
   /** Posible duplicado: nombre del gasto parecido (mismo monto, ±30 min) que ya estaba registrado. */
   dup?: string;
 }

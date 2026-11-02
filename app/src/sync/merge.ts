@@ -44,13 +44,21 @@ export function parseSpoken(raw: string, cards: Card[]): { amt: number; merchant
 export function parseYape(raw: string): { amt: number; merchant: string; op: string } {
   const lines = raw.split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
   const op = raw.match(/operaci[oó]n\s*:?\s*(?:n[°ºo.]*\s*)?(\d{5,})/i)?.[1] ?? '';
+  // Monto: "S/ 2.50", "S/2.50", "5/ 2.50" (la S leída como 5) o "S/" sola con el número en la línea siguiente.
+  // Si no hay "S/", el primer número con decimales; nunca los dígitos sueltos del código de seguridad.
   let amt = 0, amtLine = -1;
-  lines.some((l, i) => {
-    const m = l.match(new RegExp(String.raw`s\/\.?\s*` + NUM, 'i')) || (/^\d{1,5}(?:[.,]\d{1,2})?$/.test(l) ? [l, l] : null);
-    if (m) { amt = parseAmount(m[1]); amtLine = i; }
-    return !!m;
-  });
-  const SKIP = /yape|plin|pago exitoso|constancia|fecha|hora|c[oó]digo|seguridad|operaci[oó]n|transacci[oó]n|destino|celular|compartir|^s\/|\d{1,2}:\d{2}|\d{1,2}\s*(?:de\s+)?(ene|feb|mar|abr|may|jun|jul|ago|set|sep|oct|nov|dic)/i;
+  const CUR = String.raw`[s5$]\/\.?`;
+  const DEC = /^(?:s\/\.?\s*)?(\d{1,5}[.,]\d{2})$/i;
+  for (let i = 0; i < lines.length && amtLine < 0; i++) {
+    const same = lines[i].match(new RegExp(CUR + String.raw`\s*` + NUM, 'i'));
+    if (same) { amt = parseAmount(same[1]); amtLine = i; break; }
+    if (new RegExp('^' + CUR + '$', 'i').test(lines[i]) && lines[i + 1] && /^\d{1,5}(?:[.,]\d{1,2})?$/.test(lines[i + 1])) { amt = parseAmount(lines[i + 1]); amtLine = i + 1; }
+  }
+  if (amtLine < 0) {
+    const i = lines.findIndex(l => DEC.test(l));
+    if (i >= 0) { amt = parseAmount(lines[i].match(DEC)![1]); amtLine = i; }
+  }
+  const SKIP = /yape|plin|pago exitoso|constancia|fecha|hora|c[oó]digo|seguridad|operaci[oó]n|transacci[oó]n|destino|celular|compartir|nro\.|ayuda|^[s5$]\/|\*{3}|^[\d\s.,|:]+$|a\.\s?m\.|p\.\s?m\.|\d{1,2}:\d{2}|\d{1,2}\s*(?:de\s+)?(ene|feb|mar|abr|may|jun|jul|ago|set|sep|oct|nov|dic)/i;
   let merchant = '';
   for (let i = 0; i < lines.length && !merchant; i++) {
     const m = lines[i].match(/(?:yapeaste a|enviado a|pagaste a|para)\s*:?\s*(.*)$/i);
@@ -80,6 +88,7 @@ export function inboxToTxs(inbox: InboxItem[], cards: Card[], existing: Tx[]): T
   const seen = new Set(existing.map(t => t.id));
   const out: Tx[] = [];
   for (const it of inbox) {
+    if (it.kind === 'fix') continue;
     const isYape = (it.kind === 'yape' || it.kind === 'plin') && !!it.text;
     const yp = isYape ? parseYape(it.text!) : null;
     // Una constancia compartida dos veces trae el mismo número de operación: se registra una sola vez.
@@ -106,11 +115,27 @@ export function inboxToTxs(inbox: InboxItem[], cards: Card[], existing: Tx[]): T
     out.push({
       id, name, amt, date, pay, source, pending: amt <= 0 || undefined, dup: dup?.name,
       f: chosen || learned || g.id || 'libre',
+      needsFolder: source === 'applepay' && !chosen && !learned && !g.confident ? true : undefined,
       why: (amt <= 0 ? `${via} sin monto: escríbelo abajo. ` : `${via}. `) + (chosen ? 'Carpeta elegida en el Atajo.' : learned ? 'Carpeta: la que usaste la última vez.'
         : g.confident ? 'Carpeta por el tipo de comercio.' : 'No reconocí el comercio y lo puse en Libre: tócalo para cambiarlo.'),
     });
   }
   return out;
+}
+
+/**
+ * Carpeta elegida en el Atajo después de registrar el pago (Wallet): se aplica al movimiento,
+ * salvo que ya lo hayas movido tú a mano.
+ */
+export function applyFixes(inbox: InboxItem[], txs: Tx[]): Tx[] {
+  const fixes = inbox.filter(i => i.kind === 'fix' && i.ref);
+  if (!fixes.length) return txs;
+  return txs.map(t => {
+    const fx = fixes.filter(i => 'ap-' + i.ref === t.id).pop();
+    const f = fx && folderByName(fx.folder);
+    if (!f || t.why.startsWith('Lo moviste')) return t;
+    return { ...t, f, needsFolder: undefined, why: t.why.replace(/ (Carpeta|No reconocí).*$/, '') + ' Carpeta elegida en el Atajo.' };
+  });
 }
 
 /**

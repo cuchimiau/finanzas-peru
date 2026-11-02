@@ -58,5 +58,5 @@ export const hasDebt = (cards: Card[]) => cards.some(c => (c.kind === 'credit' |
 export const newCardId = () => 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 export const emptyCard = (): Card => ({
-  id: newCardId(), name: '', kind: 'credit', applePay: true, limit: 0, bal: 0, balDate: new Date().toISOString(), tcea: 0, min: 0, dueDay: 5, cuotas: '',
+  id: newCardId(), name: '', kind: 'credit', applePay: true, limit: 0, bal: 0, balDate: new Date().toISOString(), tcea: 0, min: 0, dueDay: 0, cuotas: '',
 });

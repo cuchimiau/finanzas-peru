@@ -18,7 +18,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await p.click('text=Ir a mis finanzas'); await p.waitForTimeout(400);
 
   // Sin dato real: no inventa
-  ok((await main()).includes('¿Cuánto dinero tienes hoy?') && !(await main()).includes('Puedes gastar hoy'), 'sin dinero real no muestra "Puedes gastar hoy"');
+  ok((await main()).includes('¿Cuánto dinero tienes hoy?') && !(await main()).includes('Te queda para hoy'), 'sin dinero real no muestra cuánto gastar hoy');
   await shot('m1-sin-dato');
   await p.click('text=Escribir mi dinero de hoy');
   await p.fill('[aria-label="Dinero que tienes hoy"]', '850');
@@ -27,7 +27,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await shot('m2-hoja');
   await p.click('.sheet button[type=submit]'); await p.waitForTimeout(400);
   const m = await main();
-  ok(m.includes('Puedes gastar hoy') && m.includes('hasta tu sueldo del 30'), 'muestra gasto por día hasta el sueldo');
+  ok(m.includes('Te queda para hoy') && m.includes('hasta tu sueldo del 30'), 'muestra gasto por día hasta el sueldo');
   ok(m.includes('Sueldo pendiente') && m.includes('tienes S/ 850'), 'sueldo pendiente y dinero real S/ 850');
   ok(m.includes('Ya separé S/ 650 para Alquiler') && m.includes('S/ 200 disponibles'), 'solo reserva el pago fijo que marcaste');
   await shot('m3-inicio');

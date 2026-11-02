@@ -9,7 +9,7 @@ import { buildGeminiRequest, buildSystemPrompt, toGeminiContents } from './advis
 import { agoLabel, lastMonthKeys, monthAt, monthCtx, nextDueLabel, whenLabel } from './dates';
 import { fmt, fmt0, parseAmount } from './format';
 import { realMoney } from './money';
-import { inboxToTxs, mergeRemote, parseSpoken, parseYape } from '../sync/merge';
+import { applyFixes, inboxToTxs, mergeRemote, parseSpoken, parseYape } from '../sync/merge';
 import { nextMonthPlan, restOfMonth } from './optimize';
 import { FM } from './data';
 import { encodeConnection, parseConnection } from '../sync/backend';
@@ -336,6 +336,12 @@ describe('Wallet y Yape', () => {
     expect(parseYape('Yapeaste a Bodega Don Lucho\nS/ 12.50\nNro. de operación: 99887766')).toEqual({ amt: 12.5, merchant: 'Bodega Don Lucho', op: '99887766' });
     expect(parseYape('¡Pago exitoso!\nS/ 40.00\nEnviado a\nMaría López\nNúmero de operación 55512345')).toMatchObject({ amt: 40, merchant: 'María López', op: '55512345' });
     expect(parseYape('captura borrosa')).toMatchObject({ amt: 0 });
+    // Constancia real (nov 2026) en 3 formas en que el iPhone puede leer la imagen.
+    const real = { amt: 2.5, merchant: 'Madeleyne Cas', op: '05858288' };
+    expect(parseYape('¡Yapeaste!\nCompartir\nS/\n2.50\nMadeleyne Cas*\n02 nov. 2026 | 8:19 a.m.\nCÓDIGO DE SEGURIDAD\n2\n8\n8\nDATOS DE LA TRANSACCIÓN\nNro. de celular\n*** *** 881\nDestino\nYape\nNro. de operación\n05858288\nNuevo Yapeo\nNecesito ayuda')).toEqual(real);
+    expect(parseYape('yape\n¡Yapeaste! Compartir\nS/2.50\nMadeleyne Cas*\n02 nov. 2026 8:19 a.m.\nCÓDIGO DE SEGURIDAD 2 8 8\nNro. de celular *** *** 881\nDestino Yape\nNro. de operación 05858288')).toEqual(real);
+    expect(parseYape('¡Yapeaste!\nCÓDIGO DE SEGURIDAD\n2 8 8\n2.50\nMadeleyne Cas*\nNro. de operación\n05858288')).toEqual(real);
+    expect(parseYape('¡Yapeaste!\n5/ 2.50\nMadeleyne Cas*')).toMatchObject({ amt: 2.5, merchant: 'Madeleyne Cas' });
   });
 
   it('constancia de Yape → gasto con Yape, una sola vez por número de operación', () => {
@@ -355,6 +361,22 @@ describe('Wallet y Yape', () => {
     expect(w).toMatchObject({ f: 'restaurantes', why: expect.stringContaining('elegida en el Atajo') });
     expect(s1).toMatchObject({ f: 'mercado', amt: 12, source: 'siri' });
     expect(x.f).toBe('libre');
+  });
+
+  it('Wallet sin carpeta pide elegirla; la carpeta elegida después en el Atajo se aplica (salvo que la hayas movido tú)', () => {
+    const [w, known] = inboxToTxs([
+      { id: 'w9', amount: 'S/ 12.00', merchant: 'KIOSKO RARO', kind: 'wallet', at: '2026-11-02T18:00:00Z' },
+      { id: 'w8', amount: 'S/ 9.00', merchant: 'TAMBO', kind: 'wallet', at: '2026-11-02T17:00:00Z' },
+    ], [], []);
+    expect(w.needsFolder).toBe(true);
+    expect(known.needsFolder).toBeUndefined(); // Tambo se reconoce: mercado
+    const fixed = applyFixes([{ id: 'x', amount: 0, kind: 'fix', ref: 'w9', folder: 'Comer fuera', at: '' }], [w, known]);
+    expect(fixed[0]).toMatchObject({ f: 'restaurantes', why: expect.stringContaining('elegida en el Atajo') });
+    expect(fixed[0].needsFolder).toBeUndefined();
+    expect(fixed[1]).toBe(known);
+    const moved = { ...w, f: 'ocio', why: 'Lo moviste a Salidas y ocio. Aprendido para la próxima.' };
+    expect(applyFixes([{ id: 'x', amount: 0, kind: 'fix', ref: 'w9', folder: 'Comer fuera', at: '' }], [moved])[0].f).toBe('ocio');
+    expect(inboxToTxs([{ id: 'x', amount: 0, kind: 'fix', ref: 'w9', folder: 'Comer fuera', at: '' }], [], [])).toHaveLength(0);
   });
 
   it('marca posible duplicado: mismo monto a ±30 min', () => {
@@ -382,17 +404,34 @@ describe('Dinero real del mes', () => {
     expect(r).toMatchObject({ known: false, perDay: 0, real: 0 });
   });
 
-  it('antes del sueldo: dinero real menos fijos y cuotas que vencen antes, entre los días hasta el pago', () => {
-    const r = realMoney({ cash: { ...base, reserve: ['vivienda', 'servicios'] }, txs, incomes: [], budgets, cards: [card], payday: 30, flexLeft: 500, now });
+  it('antes del sueldo: dinero real menos fijos y cuotas que marcaste, entre los días hasta el pago', () => {
+    const r = realMoney({ cash: { ...base, reserve: ['vivienda', 'servicios', 'card-c1'] }, txs, incomes: [], budgets, cards: [card], payday: 30, flexLeft: 500, now });
     expect(r.real).toBe(800); // 850 − 50 (el gasto de ayer ya estaba en los 850)
     expect(r.salaryPending).toBe(true);
-    expect(r.reserved.map(x => x.name)).toEqual(['Alquiler', 'Luz, agua, celular', 'Cuota BBVA']);
+    expect(r.reserved.map(x => x.name)).toEqual(['Alquiler', 'Luz, agua, celular', 'Cuota BBVA (vence el 15)']);
     expect(r.days).toBe(28);
-    expect(r.perDay).toBeCloseTo((800 - 500) / 28, 5);
-    // Si no marcaste pagos fijos (los pagas con el próximo sueldo), no se reservan.
-    const none = realMoney({ cash: base, txs, incomes: [], budgets, cards: [], payday: 30, flexLeft: 500, now });
+    // Los 50 de hoy (mercado) se descuentan de lo de hoy, no se reparten en 28 días.
+    expect(r.perDay).toBeCloseTo((800 - 500 + 50) / 28, 5);
+    expect(r.todaySpent).toBe(50);
+    expect(r.todayLeft).toBeCloseTo((350 / 28) - 50, 5);
+    expect(r.nextPerDay).toBeCloseTo(300 / 27, 5);
+    // Cuota que pagas con el sueldo (no marcada) y fijos no marcados: no se reservan.
+    const none = realMoney({ cash: base, txs, incomes: [], budgets, cards: [card], payday: 30, flexLeft: 500, now });
     expect(none.reservedTotal).toBe(0);
-    expect(none.perDay).toBeCloseTo(800 / 28, 5);
+    expect(none.perDay).toBeCloseTo(850 / 28, 5);
+  });
+
+  it('un gasto de hoy baja "te queda hoy" sol por sol; pagar algo reservado no', () => {
+    const c0 = { ...base, reserve: ['vivienda', 'card-c1'] };
+    const r0 = realMoney({ cash: c0, txs: [], incomes: [], budgets, cards: [card], payday: 30, flexLeft: 500, now });
+    const r1 = realMoney({ cash: c0, txs: [tx('cafe', 20, 'restaurantes', at(2, 9))], incomes: [], budgets, cards: [card], payday: 30, flexLeft: 500, now });
+    expect(r0.todayLeft - r1.todayLeft).toBeCloseTo(20, 5);
+    const rent = realMoney({ cash: c0, txs: [tx('alq', 300, 'vivienda', at(2, 9))], incomes: [], budgets, cards: [card], payday: 30, flexLeft: 500, now });
+    expect(rent.todayLeft).toBeCloseTo(r0.todayLeft, 5);
+    // Lo pagado a deudas descuenta la cuota reservada.
+    const paid = realMoney({ cash: c0, txs: [tx('bbva', 100, 'deudas', at(2, 9))], incomes: [], budgets, cards: [card], payday: 30, flexLeft: 500, now });
+    expect(paid.reserved.some(x => x.id === 'card-c1')).toBe(false);
+    expect(paid.todayLeft).toBeCloseTo(r0.todayLeft, 5);
   });
 
   it('el sueldo cuenta solo cuando llega, y no se suma dos veces si ya estaba en el monto inicial', () => {
@@ -400,7 +439,7 @@ describe('Dinero real del mes', () => {
     expect(paid.real).toBe(3400);
     expect(paid.days).toBe(29);
     expect(paid.reserved.map(x => x.name)).toEqual(['Alquiler', 'Luz, agua, celular', 'Pago de deudas']);
-    expect(paid.perDay).toBeCloseTo(500 / 29, 5); // nunca más de lo libre en carpetas de gasto
+    expect(paid.perDay).toBeCloseTo((500 + 50) / 29, 5); // nunca más de lo libre en carpetas de gasto
     const inOpening = realMoney({ cash: { ...base, salary: { amt: 2600, date: at(2, 7), inOpening: true } }, txs, incomes: [], budgets, cards: [], payday: 30, flexLeft: 500, now });
     expect(inOpening.real).toBe(800);
   });
@@ -408,6 +447,7 @@ describe('Dinero real del mes', () => {
   it('suma ingresos extra posteriores y no pasa del dinero real', () => {
     const r = realMoney({ cash: { ...base, opening: 100 }, txs, incomes: [{ id: 'i', name: 'Venta', amt: 60, date: at(2, 9), f: 'libre' }], budgets: { ...budgets, vivienda: 0, servicios: 0 }, cards: [], payday: 30, flexLeft: 500, now });
     expect(r.real).toBe(110);
-    expect(r.perDay).toBeCloseTo(110 / 28, 5);
+    expect(r.perDay).toBeCloseTo(160 / 28, 5);
   });
 });
+

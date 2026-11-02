@@ -66,6 +66,11 @@ export function Debts({ store, d }: { store: Store; d: Derived }) {
                       {debt.limit > 0 && <div style={{ fontSize: 11.5, color: 'var(--color-neutral-500)' }}>de {fmt0(debt.limit)}</div>}
                     </div>
                   </div>
+                  {(() => { const card = s.cards.find(c => c.id === debt.id); return card && !card.dueConfirmed && (card.dueDay === 5 || !card.dueDay) ? (
+                    <div className="hint-card" style={{ marginTop: 10, fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Icon name="ph ph-warning" style={{ color: 'var(--color-accent-300)' }} />¿Vence de verdad el día {card.dueDay || '?'}? Tócala y escribe tu día de pago.
+                    </div>
+                  ) : null; })()}
                   <Track w={pct(debt.bal, debt.limit || debt.bal)} color={debt.limit && debt.bal / debt.limit > 0.4 ? 'var(--color-accent-400)' : 'var(--color-neutral-300)'} height={4} style={{ margin: '12px 0 10px' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--color-neutral-400)' }}>
                     <span>{debt.kind === 'loan' ? 'Cuota' : 'Mínimo'} {fmt0(debt.min)} · tu pago {payL}</span>

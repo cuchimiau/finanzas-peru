@@ -1,6 +1,6 @@
 // Dinero real del mes: lo que de verdad tienes, sin suponer que ya te pagaron.
 import { FOLDERS, type Budgets, type Card, type FolderId, type Income, type Tx } from './data';
-import { daysInMonth, monthCtx, monthKeyOf } from './dates';
+import { daysInMonth, monthCtx, monthKeyOf, sameDay } from './dates';
 
 /** Carpetas de gasto variable (el resto de necesidades se consideran pagos fijos por reservar). */
 export const FLEX_IDS: FolderId[] = ['mercado', 'transporte', 'restaurantes', 'ocio', 'libre'];
@@ -45,7 +45,14 @@ export interface RealMoney {
   reservedTotal: number;
   /** Lo que puedes usar sin tocar lo reservado. */
   free: number;
+  /** Lo que te tocaba para hoy al empezar el día. */
   perDay: number;
+  /** Gastado hoy (sin contar pagos reservados). */
+  todaySpent: number;
+  /** Lo que te queda hoy (negativo si te pasaste). */
+  todayLeft: number;
+  /** Por día desde mañana con lo que queda. */
+  nextPerDay: number;
 }
 
 const after = (iso: string, from: string) => new Date(iso).getTime() >= new Date(from).getTime();
@@ -85,19 +92,30 @@ export function realMoney(o: {
   const reserved: Reserved[] = FOLDERS.filter(f => f.grp === 'nec' && !FLEX_IDS.includes(f.id) && fixedIds(f.id))
     .map(f => ({ id: f.id, name: f.name, amt: Math.max(0, (o.budgets[f.id] || 0) - spentIn(f.id)) }))
     .filter(r => r.amt > 0);
-  // Cuotas: antes del sueldo solo las que vencen antes del pago; después, lo que falta del Pago de deudas.
-  if (beforePay) {
-    o.cards.filter(c => c.kind !== 'debit' && c.min > 0 && c.dueDay >= day && c.dueDay < payday!)
-      .forEach(c => reserved.push({ id: 'card-' + c.id, name: 'Cuota ' + c.name, amt: c.min }));
+  // Cuotas de deudas: antes del sueldo solo las que marcaste (por defecto, las que vencen antes del pago);
+  // después, lo que falta del Pago de deudas. Lo que ya pagaste este mes en esa carpeta se descuenta.
+  let debtPaid = spentIn('deudas');
+  if (beforePay || salaryPending) {
+    o.cards.filter(c => c.kind !== 'debit' && c.min > 0 && (o.cash.reserve ?? []).includes('card-' + c.id)).forEach(c => {
+      const covered = Math.min(debtPaid, c.min); debtPaid -= covered;
+      if (c.min - covered > 0) reserved.push({ id: 'card-' + c.id, name: 'Cuota ' + c.name + (c.dueDay ? ` (vence el ${c.dueDay})` : ''), amt: c.min - covered });
+    });
   } else {
-    const debtLeft = Math.max(0, (o.budgets.deudas || 0) - spentIn('deudas'));
+    const debtLeft = Math.max(0, (o.budgets.deudas || 0) - debtPaid);
     if (debtLeft > 0) reserved.push({ id: 'deudas', name: 'Pago de deudas', amt: debtLeft });
   }
   const reservedTotal = reserved.reduce((a, r) => a + r.amt, 0);
   const free = Math.max(0, real - reservedTotal);
   const usable = beforePay || salaryPending ? free : Math.min(free, o.flexLeft);
+  // Hoy: lo que gastaste hoy fuera de lo reservado (pagar el alquiler o una cuota no te quita el gasto del día).
+  const reservedIds = new Set<string>(FOLDERS.filter(f => f.grp === 'nec' && !FLEX_IDS.includes(f.id) && fixedIds(f.id)).map(f => f.id).concat('deudas'));
+  const todaySpent = known ? counted.filter(t => sameDay(new Date(t.date), now) && !(t.f && reservedIds.has(t.f))).reduce((a, t) => a + t.amt, 0) : 0;
+  const nDays = Math.max(1, days);
+  const todayBase = known ? (usable + todaySpent) / nDays : 0;
+  const todayLeft = todayBase - todaySpent;
+  const nextPerDay = known ? usable / Math.max(1, nDays - 1) : 0;
   return {
     known, opening, salaryIn, extraIn, total, spent, byFolder, real, salaryPending, payday, days: Math.max(1, days),
-    reserved, reservedTotal, free, perDay: known ? usable / Math.max(1, days) : 0,
+    reserved, reservedTotal, free, perDay: todayBase, todaySpent, todayLeft, nextPerDay,
   };
 }

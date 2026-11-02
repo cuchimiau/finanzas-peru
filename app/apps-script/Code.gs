@@ -61,7 +61,12 @@ function doPost(e) {
       case 'ping': return json_(ping_());
       case 'load': return json_(load_());
       case 'save': return json_(save_(req));
-      case 'addTx': return json_(addTx_(req));
+      case 'addTx': {
+        const r = addTx_(req);
+        // El Atajo de Wallet pide solo el id (texto) para luego mandar la carpeta con setFolder.
+        return req.resp === 'id' ? ContentService.createTextOutput(r.id).setMimeType(ContentService.MimeType.TEXT) : json_(r);
+      }
+      case 'setFolder': return json_(setFolder_(req));
       case 'voz': return json_(addTx_({ text: req.text }));
       case 'ask': return json_(ask_(req));
       default: return json_({ ok: false, code: 'bad_request', error: 'Acción desconocida: ' + req.action });
@@ -128,6 +133,18 @@ function addTx_(req) {
     inbox.push(item);
     writeJson_(INBOX_FILE, inbox.slice(-500));
     return { ok: true, id: item.id, msg: '✅ Registrado en Finanzas Perú' };
+  });
+}
+
+/** El Atajo eligió la carpeta después de registrar el pago: la app la aplica al abrirse. */
+function setFolder_(req) {
+  const ref = String(req.id || '').trim().slice(0, 60), folder = String(req.folder || '').trim().slice(0, 60);
+  if (!ref || !folder) throw userError_('Falta el id del pago o la carpeta.', 'bad_request');
+  return withLock_(function () {
+    const inbox = readJson_(INBOX_FILE, []);
+    inbox.push({ id: Utilities.getUuid(), kind: 'fix', ref: ref, folder: folder, amount: 0, merchant: '', card: '', text: '', at: new Date().toISOString() });
+    writeJson_(INBOX_FILE, inbox.slice(-500));
+    return { ok: true, msg: '✅ Carpeta: ' + folder };
   });
 }
 

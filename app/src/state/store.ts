@@ -14,7 +14,7 @@ import {
   BackendError, call, loadConnection, saveConnection,
   type Connection, type LoadResponse, type PingResponse, type SaveResponse,
 } from '../sync/backend';
-import { byDateDesc, inboxToTxs, mergeRemote } from '../sync/merge';
+import { applyFixes, byDateDesc, inboxToTxs, mergeRemote } from '../sync/merge';
 
 const SOURCE_LABEL: Record<Tx['source'], string> = { manual: 'A mano', applepay: 'Apple Pay', siri: 'Siri', yape: 'Yape' };
 const SHEET_SOURCE: Record<Tx['source'], string> = { manual: 'Manual', applepay: 'Apple Pay (Atajo)', siri: 'Siri (Atajo)', yape: 'Yape (constancia)' };
@@ -188,12 +188,14 @@ export function useFinanceStore(opts: StoreOptions) {
       } else if (!isPersisted(res.state)) dirty = true; // Drive vacío: subir lo local
       const fresh = inboxToTxs(res.inbox || [], next.cards, next.txs);
       if (fresh.length) { next = { ...next, txs: [...fresh, ...next.txs].sort(byDateDesc) }; dirty = true; }
+      const fixed = applyFixes(res.inbox || [], next.txs);
+      if (fixed !== next.txs && fixed.some((t, i) => t !== next.txs[i])) { next = { ...next, txs: fixed }; dirty = true; }
       pendingAck.current = Array.from(new Set([...pendingAck.current, ...(res.inbox || []).map(i => i.id)]));
       setS(x => ({ ...x, ...next, sync: 'idle', syncError: '', meta: { rev: res.rev, dirty, lastSync: Date.now() } }));
       if (restored) flash('Recuperé tus datos desde Drive', 'ph ph-cloud-check');
       else if (fresh.length) {
         const t = fresh[0], via = SOURCE_LABEL[t.source];
-        flash(fresh.length > 1 ? `${fresh.length} gastos nuevos (${[...new Set(fresh.map(x => SOURCE_LABEL[x.source]))].join(', ')})${fresh.some(x => x.dup) ? ' · revisa duplicados' : ''}` : t.dup ? `${via} · ${t.name}: ¿duplicado de ${t.dup}?` : t.pending ? `${via} · ${t.name}: falta el monto` : `${via} · ${t.name} ${fmt(t.amt)} → ${folderName(t.f)}`, t.source === 'siri' ? 'ph ph-microphone' : t.source === 'yape' ? 'ph ph-device-mobile' : 'ph ph-apple-logo');
+        flash(fresh.length > 1 ? `${fresh.length} gastos nuevos (${[...new Set(fresh.map(x => SOURCE_LABEL[x.source]))].join(', ')})${fresh.some(x => x.dup) ? ' · revisa duplicados' : ''}` : t.dup ? `${via} · ${t.name}: ¿duplicado de ${t.dup}?` : t.pending ? `${via} · ${t.name}: falta el monto` : t.needsFolder ? `${via} · ${t.name} ${fmt(t.amt)}: elige la carpeta` : `${via} · ${t.name} ${fmt(t.amt)} → ${folderName(t.f)}`, t.source === 'siri' ? 'ph ph-microphone' : t.source === 'yape' ? 'ph ph-device-mobile' : 'ph ph-apple-logo');
       }
       if (dirty || pendingAck.current.length) setTimeout(() => void push(), 50);
       return restored;
@@ -302,7 +304,7 @@ export function useFinanceStore(opts: StoreOptions) {
     recategorize: (folder: FolderId) => {
       const st = ref.current, tx = st.txs.find(t => t.id === st.rcId);
       if (!tx) return;
-      set(x => ({ txs: x.txs.map(t => (t.id === tx.id ? { ...t, f: folder, why: `Lo moviste a ${FM[folder].name}. Aprendido para la próxima.` } : t)), sheet: null }));
+      set(x => ({ txs: x.txs.map(t => (t.id === tx.id ? { ...t, f: folder, needsFolder: undefined, why: `Lo moviste a ${FM[folder].name}. Aprendido para la próxima.` } : t)), sheet: null }));
       flash(`${tx.name} → ${FM[folder].name}. Lo recordaré.`);
     },
     removeTx: (id: string) => set(x => ({ txs: x.txs.filter(t => t.id !== id) })),
@@ -405,6 +407,7 @@ export function useFinanceStore(opts: StoreOptions) {
       set(x => ({ cards: x.cards.some(y => y.id === c.id) ? x.cards.map(y => (y.id === c.id ? c : y)) : [...x.cards, c], sheet: null }));
       flash(`${c.name} guardada`);
     },
+    setCardDue: (id: string, dueDay: number) => set(x => ({ cards: x.cards.map(c => (c.id === id ? { ...c, dueDay, dueConfirmed: true } : c)) })),
     deleteCard: (id: string) => { set(x => ({ cards: x.cards.filter(c => c.id !== id), sheet: null })); flash('Tarjeta eliminada'); },
     // ─── Metas ───
     /**

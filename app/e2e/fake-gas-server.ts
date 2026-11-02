@@ -33,6 +33,7 @@ http.createServer((req, res) => {
   req.on('data', c => (raw += c));
   req.on('end', () => {
     res.writeHead(200, cors);
-    try { res.end(JSON.stringify(g.post(JSON.parse(raw || '{}')))); } catch (e) { res.end(JSON.stringify({ ok: false, error: String(e) })); }
+    // Como Apps Script: responde el texto tal cual (JSON o texto plano, p. ej. el id para el Atajo de Wallet).
+    try { res.end((g.gas.doPost({ postData: { contents: raw || '{}' } }) as { text: string }).text); } catch (e) { res.end(JSON.stringify({ ok: false, error: String(e) })); }
   });
 }).listen(PORT, () => console.log(`[gas] ${URL}`));
