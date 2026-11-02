@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { FM, FOLDERS, GROUPS, LOCKED_FOLDERS, folderName, type Budgets, type Folder, type GroupId } from '../domain/data';
-import { fmt, fmt0 } from '../domain/format';
-import { MONTH_LONG } from '../domain/dates';
+import { fmt, fmt0, parseAmount } from '../domain/format';
+import { MONTH_LONG, monthKey } from '../domain/dates';
 import { goalViews, sumBudgets, txsOfMonth } from '../domain/plan';
+import { FLEX_IDS } from '../domain/money';
 import { nextMonthPlan, restOfMonth, type NextMonthPlan } from '../domain/optimize';
 import type { Derived } from '../state/selectors';
 import { minPayments } from '../domain/cards';
@@ -235,26 +236,132 @@ function NextMonthView({ plan, base, actionLabel, onApply, secondary }: { store:
 }
 
 /** Cierre de mes: resumen del mes que terminó y plan para empezar el nuevo. */
+const todayInput = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const money = (v: string) => v.replace(/[^0-9.,]/g, '').slice(0, 10);
+
+/**
+ * Inicio de mes (o corregir tu dinero real): cuánto tienes hoy, si ya te pagaron y con qué plan empiezas.
+ * No supone nada: si el mes pasado no tiene movimientos, no muestra sobrantes inventados.
+ */
 export function CloseSheet({ store, d }: { store: Store; d: Derived }) {
   const { s } = store;
+  const cur = monthKey(new Date());
+  const newMonth = s.monthKey !== cur;
+  const sameCash = s.cash.key === cur;
   const { gap, minDebt, salary } = useOptimizeData(store, d);
-  const prevTxs = txsOfMonth(s.txs, s.monthKey);
+  const [opening, setOpening] = useState(sameCash && s.cash.opening !== null ? String(s.cash.opening) : '');
+  const [paid, setPaid] = useState<'no' | 'si'>(sameCash && s.cash.salary ? 'si' : 'no');
+  const [salAmt, setSalAmt] = useState(sameCash && s.cash.salary ? String(s.cash.salary.amt) : salary ? String(salary) : '');
+  const [payday, setPayday] = useState(s.profile.payday ? String(s.profile.payday) : '');
+  const prevTxs = newMonth ? txsOfMonth(s.txs, s.monthKey) : [];
+  const hasPrev = prevTxs.length > 0;
+  const [which, setWhich] = useState<'base' | 'opt'>('base');
+  const fixed = FOLDERS.filter(f => f.grp === 'nec' && !FLEX_IDS.includes(f.id) && (s.budgets[f.id] || 0) > 0);
+  const [reserve, setReserve] = useState<string[]>(sameCash ? s.cash.reserve ?? [] : []);
+  const [err, setErr] = useState('');
+  const plan = hasPrev ? nextMonthPlan(s.template, prevTxs, 1, salary, minDebt, d.debts, gap) : null;
   const spent = prevTxs.reduce((a, t) => a + t.amt, 0);
-  const saved = FOLDERS.filter(f => f.grp === 'aho' || f.grp === 'deu').reduce((a, f) => a + (s.budgets[f.id] || 0), 0);
-  const over = FOLDERS.filter(f => f.grp === 'nec' || f.grp === 'des').map(f => ({ f, sp: prevTxs.filter(t => t.f === f.id).reduce((a, t) => a + t.amt, 0), b: s.budgets[f.id] || 0 })).filter(x => x.sp > x.b + 0.5);
-  const plan = nextMonthPlan(s.template, prevTxs, 1, salary, minDebt, d.debts, gap);
-  const label = `${MONTH_LONG[Number(s.monthKey.slice(5, 7)) - 1]} ${s.monthKey.slice(0, 4)}`;
+  const label = `${MONTH_LONG[Number(s.monthKey.slice(5, 7)) - 1]}`;
+
+  const submit = () => {
+    const o = parseAmount(opening), pd = Math.round(Number(payday));
+    if (opening.trim() === '' || !(o >= 0)) { setErr('Escribe cuánto dinero tienes hoy (puede ser 0).'); return; }
+    if (paid === 'si' && !(parseAmount(salAmt) > 0)) { setErr('Escribe cuánto te pagaron.'); return; }
+    if (paid === 'no' && !(pd >= 1 && pd <= 31)) { setErr('Escribe el día del mes en que te pagan (1 a 31).'); return; }
+    const now = new Date();
+    store.startMonth(
+      newMonth ? (which === 'opt' && plan ? plan.budgets : s.template) : null,
+      { key: cur, opening: o, openedAt: now.toISOString(), salary: paid === 'si' ? { amt: parseAmount(salAmt), date: now.toISOString(), inOpening: true } : null, reserve: paid === 'no' ? reserve : [] },
+      pd >= 1 && pd <= 31 ? pd : s.profile.payday ?? null,
+    );
+  };
+
   return (
-    <div>
-      <div className="eyebrow">Cierre de mes</div>
-      <div style={{ fontSize: 22, fontWeight: 500, margin: '4px 0 10px' }}>Así te fue en {label}</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        <div className="tile"><div className="row-sub">Gastaste</div><div className="tnum" style={{ fontSize: 20, fontWeight: 500 }}>{fmt0(spent)}</div></div>
-        <div className="tile"><div className="row-sub">Ahorro y deudas</div><div className="tnum" style={{ fontSize: 20, fontWeight: 500 }}>{fmt0(saved)}</div></div>
+    <form onSubmit={e => { e.preventDefault(); submit(); }} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div>
+        <div className="eyebrow">{newMonth ? 'Mes nuevo' : 'Tu dinero real'}</div>
+        <div style={{ fontSize: 22, fontWeight: 500, marginTop: 4 }}>{newMonth ? `Empecemos ${MONTH_LONG[new Date().getMonth()]} con tus números reales` : '¿Cuánto tienes de verdad?'}</div>
+        <div className="row-sub" style={{ marginTop: 6, lineHeight: 1.45 }}>La app no da por hecho que ya te pagaron ni calcula sobrantes que no registraste: parte de lo que tú le digas.</div>
       </div>
-      {over.length > 0 && <div className="hint-card" style={{ marginTop: 10, fontSize: 12.5, lineHeight: 1.5 }}>Te pasaste en: {over.map(x => `${x.f.name} (${fmt0(x.sp)} de ${fmt0(x.b)})`).join(', ')}.</div>}
-      <NextMonthView store={store} plan={plan} base={s.template} actionLabel="Empezar el mes con este plan" onApply={() => store.startMonth(plan.budgets)}
-        secondary={<button className="btn btn-ghost btn-block" onClick={() => store.startMonth(s.template)} style={{ height: 40, marginTop: 4 }}>Empezar con mi plan base de siempre</button>} />
-    </div>
+
+      {newMonth && (hasPrev ? (
+        <div className="hint-card" style={{ fontSize: 12.5, lineHeight: 1.5 }}>En {label} registraste {prevTxs.length} gastos por {fmt0(spent)}.</div>
+      ) : (
+        <div className="hint-card" style={{ fontSize: 12.5, lineHeight: 1.5 }}>No registraste gastos en {label}, así que no hay resumen ni sobrantes: empezamos de cero con tu dinero de hoy.</div>
+      ))}
+
+      <Field label="¿Cuánto dinero tienes hoy? (S/)" hint="Suma tus cuentas y el efectivo. Lo puedes corregir cuando quieras en Ajustes.">
+        <input className="input tnum" style={inputStyle} inputMode="decimal" autoFocus value={opening} onChange={e => { setOpening(money(e.target.value)); setErr(''); }} placeholder="Ej. 850" aria-label="Dinero que tienes hoy" />
+      </Field>
+
+      <div>
+        <div style={{ fontSize: 12, color: 'var(--color-neutral-400)', marginBottom: 5 }}>¿Ya te pagaron el sueldo de este mes?</div>
+        <Segmented label="Sueldo" value={paid} onChange={v => { setPaid(v); setErr(''); }} options={[['no', 'Todavía no'], ['si', 'Sí, ya me pagaron']]} />
+      </div>
+      {paid === 'no' ? (
+        <Field label="¿Qué día del mes te pagan?" hint="Hasta ese día, 'Puedes gastar hoy' usa solo el dinero que tienes.">
+          <input className="input tnum" style={inputStyle} inputMode="numeric" value={payday} onChange={e => { setPayday(e.target.value.replace(/\D/g, '').slice(0, 2)); setErr(''); }} placeholder="Ej. 30" aria-label="Día de pago" />
+        </Field>
+      ) : null}
+      {paid === 'no' && fixed.length > 0 && (
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--color-neutral-400)', marginBottom: 6 }}>¿Qué pagos fijos te faltan pagar con este dinero antes de tu sueldo?</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {fixed.map(f => {
+              const on = reserve.includes(f.id);
+              return (
+                <button type="button" key={f.id} role="checkbox" aria-checked={on} className={'option ghost' + (on ? ' on' : '')} style={{ padding: '7px 11px', borderRadius: 10, fontSize: 13 }}
+                  onClick={() => setReserve(r => (on ? r.filter(x => x !== f.id) : [...r, f.id]))}>
+                  {on ? '✓ ' : ''}{f.name} · {fmt0(s.budgets[f.id])}
+                </button>
+              );
+            })}
+          </div>
+          <div className="row-sub" style={{ marginTop: 6 }}>Lo que marques se separa y no cuenta para "Puedes gastar hoy". Lo que pagas con tu próximo sueldo, déjalo sin marcar.</div>
+        </div>
+      )}
+      {paid === 'no' ? null : (
+        <Field label="¿Cuánto te pagaron? (S/)" hint="Ya está incluido en el dinero de hoy: no se suma dos veces.">
+          <input className="input tnum" style={inputStyle} inputMode="decimal" value={salAmt} onChange={e => { setSalAmt(money(e.target.value)); setErr(''); }} aria-label="Sueldo recibido" />
+        </Field>
+      )}
+
+      {newMonth && (
+        <div>
+          <div style={{ fontSize: 12, color: 'var(--color-neutral-400)', marginBottom: 5 }}>Plan de carpetas para este mes</div>
+          {plan ? (
+            <>
+              <Segmented label="Plan" value={which} onChange={setWhich} options={[['base', 'Mi plan de siempre'], ['opt', 'Ajustado a lo que gasté']]} />
+              {which === 'opt' && (
+                <div style={{ marginTop: 8, fontSize: 12.5, lineHeight: 1.5, color: 'var(--color-neutral-300)' }}>
+                  {plan.notes.map(n => <div key={n}>{n}</div>)}
+                  {plan.changes.slice(0, 8).map(c => <div key={c.id} className="tnum">{folderName(c.id)}: {fmt0(c.from)} → <b style={{ color: 'var(--color-accent-300)' }}>{fmt0(c.to)}</b></div>)}
+                </div>
+              )}
+            </>
+          ) : <div className="row-sub">Usaremos tu plan de siempre ({fmt0(sumBudgets(s.template))}). Lo ajustas en Carpetas › Editar plan.</div>}
+        </div>
+      )}
+
+      {err && <div role="alert" style={{ fontSize: 12.5, color: 'var(--color-accent-300)' }}>{err}</div>}
+      <button type="submit" className="btn btn-primary btn-block" style={{ height: 46, borderRadius: 12 }}>{newMonth ? 'Empezar el mes' : 'Guardar'}</button>
+    </form>
+  );
+}
+
+/** "Ya me pagaron": el sueldo real (monto y fecha) recién suma desde ahora. */
+export function PaidSheet({ store }: { store: Store }) {
+  const { s } = store;
+  const [amt, setAmt] = useState(s.income ? String(parseIncome(s.income)) : '');
+  const [date, setDate] = useState(todayInput());
+  return (
+    <form onSubmit={e => { e.preventDefault(); const [y, mo, dd] = date.split('-').map(Number); const now = new Date(); store.markPaid(parseAmount(amt), new Date(y, mo - 1, dd, now.getHours(), now.getMinutes()).toISOString()); }} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ fontSize: 20, fontWeight: 500 }}>¡Te pagaron!</div>
+      <Field label="¿Cuánto llegó a tu cuenta? (S/)" hint="El monto real, después de descuentos.">
+        <input className="input tnum" style={inputStyle} inputMode="decimal" autoFocus value={amt} onChange={e => setAmt(money(e.target.value))} aria-label="Sueldo recibido" />
+      </Field>
+      <Field label="Fecha"><input className="input" type="date" style={inputStyle} value={date} max={todayInput()} onChange={e => setDate(e.target.value || todayInput())} /></Field>
+      <button type="submit" className="btn btn-primary btn-block" style={{ height: 46, borderRadius: 12 }}>Registrar sueldo</button>
+    </form>
   );
 }

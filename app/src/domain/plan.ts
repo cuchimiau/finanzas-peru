@@ -76,7 +76,7 @@ export const essentials = (b: Budgets) => FOLDERS.filter(f => f.grp === 'nec').r
 
 export interface GoalView extends Goal { icon: string; monthly: number; auto: boolean; foot: string }
 
-const GOAL_ICON: Record<GoalId, string> = { emergencia: 'ph ph-lifebuoy', inversion: 'ph ph-trend-up', viaje: 'ph ph-mountains' };
+const goalIcon = (id: GoalId) => 'ph ph-' + (FM[id]?.icon || 'piggy-bank');
 
 /** Metas con su aporte mensual (= presupuesto de su carpeta) y fecha estimada. */
 export function goalViews(b: Budgets, goals: Goal[], now = new Date()): GoalView[] {
@@ -90,7 +90,7 @@ export function goalViews(b: Budgets, goals: Goal[], now = new Date()): GoalView
     if (target > 0 && left === 0) foot = '¡Meta cumplida! Puedes pasar el aporte a otra meta.';
     else if (g.id === 'emergencia') foot = 'Meta: 3 meses de gastos esenciales. Tu CTS es un respaldo adicional.' + (m ? ' Lo completas en ' + monthAt(m, now) + '.' : '');
     else foot = m ? `Llegas a ${fmt0(target)} en ${monthAt(m, now)}.` : 'Sin aporte mensual: a este ritmo no llegas.';
-    return { ...g, target, icon: GOAL_ICON[g.id], monthly, auto, foot };
+    return { ...g, target, icon: goalIcon(g.id), monthly, auto, foot };
   });
 }
 

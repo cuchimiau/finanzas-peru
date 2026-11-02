@@ -1,5 +1,6 @@
 import { DEFAULT_FOLDERS, type Budgets, type Card, type Folder, type Goal, type Income, type Prios, type Profile, type Tx } from '../domain/data';
 import { monthKey } from '../domain/dates';
+import { emptyCash, type CashMonth } from '../domain/money';
 import type { Strategy } from '../domain/debts';
 import type { Move } from '../domain/plan';
 
@@ -27,9 +28,11 @@ export interface Persisted {
   incomes: Income[];
   /** Mes al que corresponde `budgets` ("2026-10"). */
   monthKey: string;
+  /** Dinero real del mes: lo que tenías al empezar y si ya te pagaron. */
+  cash: CashMonth;
 }
 
-export const PERSISTED_KEYS = ['phase', 'profile', 'income', 'prios', 'budgets', 'txs', 'cards', 'goals', 'strat', 'messages', 'folders', 'template', 'incomes', 'monthKey'] as const satisfies readonly (keyof Persisted)[];
+export const PERSISTED_KEYS = ['phase', 'profile', 'income', 'prios', 'budgets', 'txs', 'cards', 'goals', 'strat', 'messages', 'folders', 'template', 'incomes', 'monthKey', 'cash'] as const satisfies readonly (keyof Persisted)[];
 
 export const pickPersisted = (s: Persisted): Persisted => {
   const out = { v: 2 } as Persisted;
@@ -58,5 +61,9 @@ export function migrate(p: Persisted): Persisted {
     template: p.template && typeof p.template === 'object' ? { ...budgets, ...p.template } : { ...budgets },
     incomes: Array.isArray(p.incomes) ? p.incomes : [],
     monthKey: typeof p.monthKey === 'string' ? p.monthKey : monthKey(new Date()),
+    // Sin dato de dinero real: no se inventa, se pregunta.
+    cash: p.cash && typeof p.cash === 'object' && typeof p.cash.key === 'string' ? p.cash : emptyCash(monthKey(new Date())),
+    // Una meta sin su carpeta de ahorro no tiene a dónde ir su aporte: se quita.
+    goals: p.goals.filter(g => fixed.some(f => f.id === g.id)),
   };
 }

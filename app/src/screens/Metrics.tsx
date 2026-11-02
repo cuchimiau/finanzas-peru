@@ -4,6 +4,7 @@ import { lastMonthKeys, monthShort } from '../domain/dates';
 import { payInfo, viaApplePay } from '../domain/cards';
 import { essentials, goalViews, grossFromNet, isFlow, spendByMonth } from '../domain/plan';
 import { Icon, SparkleButton, Track, pressable } from '../components/common';
+import { MoneyChart } from '../components/MoneyChart';
 import type { Derived } from '../state/selectors';
 import type { Store } from '../state/store';
 
@@ -16,7 +17,7 @@ export function Metrics({ store, d }: { store: Store; d: Derived }) {
   const ef = goals.find(g => g.id === 'emergencia');
   const use = limits ? Math.round((d.debtTotal / limits) * 100) : 0;
   const kpis = [
-    { label: 'Tasa de ahorro', value: income ? Math.round(((b.emergencia + b.inversion + b.viaje) / income) * 100) + '%' : '0%', note: d.debts.length ? 'Meta 10% mientras pagas deudas' : 'Meta 20% del sueldo', hi: false },
+    { label: 'Tasa de ahorro', value: income ? Math.round((FOLDERS.filter(f => f.grp === 'aho').reduce((a, f) => a + (b[f.id] || 0), 0) / income) * 100) + '%' : '0%', note: d.debts.length ? 'Meta 10% mientras pagas deudas' : 'Meta 20% del sueldo', hi: false },
     { label: 'Deuda / sueldo', value: dti + '%', note: dti > 20 ? 'Alto: bájalo de 20%' : 'Saludable', hi: dti > 20 },
     { label: 'Fondo de emergencia', value: (ess && ef ? ef.saved / ess : 0).toFixed(1) + ' meses', note: 'de 3 meses de esenciales', hi: false },
     { label: 'Uso de crédito', value: limits ? use + '%' : '—', note: limits ? 'Ideal por debajo de 30%' : 'Sin líneas registradas', hi: use > 30 },
@@ -57,6 +58,14 @@ export function Metrics({ store, d }: { store: Store; d: Derived }) {
   return (
     <div className="rise" style={{ padding: '8px 20px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div className="page-title">Métricas</div>
+
+      {d.money.known ? (
+        <MoneyChart total={d.money.total} byFolder={d.money.byFolder} onOpen={id => store.openFolder(id)}
+          note={d.money.salaryPending ? 'Tu sueldo aún no está sumado: entra cuando toques "Ya me pagaron".' : undefined} />
+      ) : (
+        <MoneyChart total={d.income} byFolder={Object.fromEntries(FOLDERS.map(f => [f.id, d.monthTxs.filter(t => t.f === f.id).reduce((a, t) => a + t.amt, 0)]))} onOpen={id => store.openFolder(id)}
+          note="Calculado con tu sueldo del plan. Escribe tu dinero real en Inicio para ver lo que de verdad tienes." />
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {kpis.map(k => (
@@ -127,7 +136,7 @@ export function Metrics({ store, d }: { store: Store; d: Derived }) {
           <span style={{ fontSize: 13, fontWeight: 500 }}>Ingresos del mes</span>
           <span className="tnum" style={{ fontSize: 14 }}>{fmt0(d.salary + d.extraIncome)}</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--color-neutral-400)', padding: '8px 0 4px' }}><span>Sueldo</span><span className="tnum">{fmt0(d.salary)}</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--color-neutral-400)', padding: '8px 0 4px' }}><span>Sueldo{d.money.known ? (d.money.salaryPending ? ' (pendiente)' : ' (recibido)') : ''}</span><span className="tnum">{fmt0(s.cash.salary?.amt ?? d.salary)}</span></div>
         {d.monthIncomes.map(i => (
           <div key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, padding: '6px 0', borderTop: '1px solid var(--color-divider)' }}>
             <Icon name="ph ph-arrow-circle-down" style={{ color: 'var(--color-accent-300)' }} />
@@ -160,6 +169,10 @@ export function Metrics({ store, d }: { store: Store; d: Derived }) {
           )}
         </div>
       ))}
+
+      <button type="button" className="btn btn-secondary btn-block" onClick={() => store.openGoal(null)} style={{ height: 44, borderRadius: 12 }}>
+        <Icon name="ph ph-plus" />Nueva meta
+      </button>
 
       <div className="accent-card" style={{ background: 'linear-gradient(165deg, var(--color-accent-900), transparent)' }}>
         <div className="eyebrow">Ingresos extra que vienen</div>

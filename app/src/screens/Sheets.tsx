@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FM, FOLDERS, SOURCES, SOURCE_IDS, folderName, type Card, type Goal } from '../domain/data';
+import { FM, FOLDERS, SOURCES, SOURCE_IDS, type Card, type Goal } from '../domain/data';
 import { fmt, fmt0, parseAmount } from '../domain/format';
 import { agoLabel, whenLabel } from '../domain/dates';
 import { emptyCard, payChoices, payInfo, viaApplePay } from '../domain/cards';
@@ -8,9 +8,9 @@ import { Field, Icon, Segmented, SourceCard, inputStyle } from '../components/co
 import { ConnectForm, ShortcutGuide } from '../components/ConnectForm';
 import type { Store } from '../state/store';
 import type { Derived } from '../state/selectors';
-import { CloseSheet, FolderForm, OptimizeSheet, PlanEditor } from './PlanSheets';
+import { CloseSheet, FolderForm, OptimizeSheet, PaidSheet, PlanEditor } from './PlanSheets';
 
-const TITLES = { recat: 'Movimiento', connect: 'Cómo leemos tus gastos', add: 'Registrar', card: 'Deuda o tarjeta', goal: 'Meta', settings: 'Ajustes', folder: 'Carpeta', plan: 'Editar plan', optimize: 'Optimizar', close: 'Cierre de mes' };
+const TITLES = { recat: 'Movimiento', connect: 'Cómo leemos tus gastos', add: 'Registrar', card: 'Deuda o tarjeta', goal: 'Meta', settings: 'Ajustes', folder: 'Carpeta', plan: 'Editar plan', optimize: 'Optimizar', close: 'Tu dinero del mes', paid: 'Ya me pagaron' };
 
 export function SheetHost({ store, d }: { store: Store; d: Derived }) {
   const { s } = store;
@@ -38,6 +38,7 @@ export function SheetHost({ store, d }: { store: Store; d: Derived }) {
         {s.sheet === 'plan' && <PlanEditor store={store} />}
         {s.sheet === 'optimize' && <OptimizeSheet store={store} d={d} />}
         {s.sheet === 'close' && <CloseSheet store={store} d={d} />}
+        {s.sheet === 'paid' && <PaidSheet store={store} />}
       </div>
     </>
   );
@@ -258,27 +259,39 @@ function CardForm({ store }: { store: Store }) {
 
 function GoalForm({ store }: { store: Store }) {
   const { s } = store;
-  const g0 = s.goals.find(g => g.id === s.goalId);
+  const g0 = s.goalId ? s.goals.find(g => g.id === s.goalId) : undefined;
   const [name, setName] = useState(g0?.name ?? '');
   const [saved, setSaved] = useState(num(g0?.saved ?? 0));
   const [target, setTarget] = useState(num(g0?.target ?? 0));
-  if (!g0) return null;
-  const isEf = g0.id === 'emergencia';
+  const [monthly, setMonthly] = useState(num(g0 ? s.budgets[g0.id] || 0 : 0));
+  const [err, setErr] = useState('');
+  const isEf = g0?.id === 'emergencia';
   const auto = essentials(s.budgets) * 3;
   const save = () => {
-    const g: Goal = { ...g0, name: name.trim().slice(0, 30) || g0.name, saved: parseAmount(saved), target: parseAmount(target) };
-    store.saveGoal(g);
+    const n = name.trim().slice(0, 30);
+    if (!n) { setErr('Ponle un nombre a tu meta.'); return; }
+    if (!isEf && !(parseAmount(target) > 0)) { setErr('Escribe cuánto quieres juntar.'); return; }
+    const g: Goal = { id: g0?.id ?? 'g' + Date.now().toString(36), name: n, saved: parseAmount(saved), target: parseAmount(target) };
+    store.saveGoal(g, parseAmount(monthly));
   };
+  const amt = (set: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => { set(e.target.value.replace(/[^0-9.,]/g, '')); setErr(''); };
   return (
     <form onSubmit={e => { e.preventDefault(); save(); }} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ fontSize: 20, fontWeight: 500 }}>Editar meta</div>
-      <Field label="Nombre"><input className="input" style={inputStyle} value={name} onChange={e => setName(e.target.value)} /></Field>
-      <Field label="Lo que ya tienes ahorrado (S/)"><input className="input" style={inputStyle} inputMode="decimal" value={saved} onChange={e => setSaved(e.target.value.replace(/[^0-9.,]/g, ''))} placeholder="0" /></Field>
+      <div style={{ fontSize: 20, fontWeight: 500 }}>{g0 ? 'Editar meta' : 'Nueva meta'}</div>
+      <Field label="Nombre"><input className="input" style={inputStyle} value={name} onChange={e => { setName(e.target.value); setErr(''); }} placeholder="Ej. Laptop, Viaje a Cusco" autoFocus={!g0} /></Field>
       <Field label="Meta (S/)" hint={isEf ? `Déjalo vacío para usar 3 meses de gastos esenciales (${fmt0(auto)}).` : undefined}>
-        <input className="input" style={inputStyle} inputMode="decimal" value={target} onChange={e => setTarget(e.target.value.replace(/[^0-9.,]/g, ''))} placeholder={isEf ? String(auto) : '0'} />
+        <input className="input" style={inputStyle} inputMode="decimal" value={target} onChange={amt(setTarget)} placeholder={isEf ? String(auto) : 'Ej. 3000'} aria-label="Monto de la meta" />
       </Field>
-      <div className="row-sub">El aporte mensual es el presupuesto de la carpeta "{folderName(g0.id)}" ({fmt0(s.budgets[g0.id])}). Cámbialo en Carpetas.</div>
-      <button type="submit" className="btn btn-primary btn-block" style={{ height: 46, borderRadius: 12 }}>Guardar</button>
+      <Field label="Lo que ya tienes ahorrado (S/)"><input className="input" style={inputStyle} inputMode="decimal" value={saved} onChange={amt(setSaved)} placeholder="0" aria-label="Ya ahorrado" /></Field>
+      <Field label="Aporte mensual (S/)" hint="Es el presupuesto de su carpeta de Ahorro. Si sube, la diferencia sale de Libre y luego de lo no gastado en tus deseos.">
+        <input className="input" style={inputStyle} inputMode="decimal" value={monthly} onChange={amt(setMonthly)} placeholder="0" aria-label="Aporte mensual" />
+      </Field>
+      {err && <div role="alert" style={{ fontSize: 12.5, color: 'var(--color-accent-300)' }}>{err}</div>}
+      <button type="submit" className="btn btn-primary btn-block" style={{ height: 46, borderRadius: 12 }}>{g0 ? 'Guardar' : 'Crear meta'}</button>
+      {g0 && !isEf && (
+        <button type="button" className="btn btn-ghost btn-block" style={{ height: 40, color: 'var(--color-accent-300)' }}
+          onClick={() => { if (confirm(`¿Borrar la meta ${g0.name}? Su aporte mensual vuelve a Libre.`)) store.deleteGoal(g0.id); }}>Borrar meta</button>
+      )}
     </form>
   );
 }
@@ -309,6 +322,19 @@ function Settings({ store }: { store: Store }) {
                 onClick={() => { if (confirm(`¿Rehacer tu plan con ${fmt0(Number(income))}?`)) store.rebuildPlan(income); }}>Rehacer plan</button>
             </div>
           </Field>
+        </div>
+      </Section>
+
+      <Section title="Tu dinero del mes">
+        <div style={{ fontSize: 13, color: 'var(--color-neutral-300)', lineHeight: 1.5 }}>
+          {s.cash.opening === null ? 'Aún no escribiste cuánto tienes este mes.'
+            : <>Empezaste con <b className="tnum">{fmt0(s.cash.opening)}</b>. {s.cash.salary ? `Sueldo recibido: ${fmt0(s.cash.salary.amt)}.` : `Sueldo pendiente${s.profile.payday ? ` (día ${s.profile.payday})` : ''}.`}</>}
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+          <button type="button" className="btn btn-secondary" style={{ height: 38, borderRadius: 10 }} onClick={() => store.openSheet('close')}>{s.cash.opening === null ? 'Escribir mi dinero de hoy' : 'Corregir dinero y día de pago'}</button>
+          {s.cash.opening !== null && (s.cash.salary
+            ? <button type="button" className="btn btn-ghost" style={{ height: 38, borderRadius: 10 }} onClick={() => store.undoPaid()}>Aún no me pagan</button>
+            : <button type="button" className="btn btn-ghost" style={{ height: 38, borderRadius: 10 }} onClick={() => store.openSheet('paid')}>Ya me pagaron</button>)}
         </div>
       </Section>
 

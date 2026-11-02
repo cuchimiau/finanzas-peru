@@ -7,8 +7,8 @@ import { HOT_MARGIN, folderView, planIncome, txsOfMonth, type FolderView } from 
 import { monthAt } from '../domain/dates';
 import { parseIncome, type State } from './store';
 
-/** Carpetas de gasto variable que alimentan "Puedes gastar hoy". */
-export const FLEX_IDS: FolderId[] = ['mercado', 'transporte', 'restaurantes', 'ocio', 'libre'];
+import { FLEX_IDS, realMoney } from '../domain/money';
+export { FLEX_IDS };
 
 export interface TxView {
   id: string; name: string; amtL: string; sub: string; srcIcon: string; icon: string; folderName: string; tagColor: string;
@@ -55,6 +55,7 @@ export function derive(s: State, now = new Date()) {
   const lastApplePay = s.txs.find(t => t.source === 'applepay');
   const monthIncomes = s.incomes.filter(i => monthKeyOf(i.date) === m.key);
   const extraIncome = monthIncomes.reduce((a, i) => a + i.amt, 0);
+  const money = realMoney({ cash: s.cash, txs: s.txs, incomes: s.incomes, budgets: s.budgets, cards: s.cards, payday: s.profile.payday ?? null, flexLeft, now });
 
   const txView = (t: Tx): TxView => {
     const f = t.f ? FM[t.f] : null, p = payInfo(t.pay, s.cards);
@@ -68,7 +69,7 @@ export function derive(s: State, now = new Date()) {
 
   return {
     m, income, monthTxs, views, VM, flex, flexLeft, spent, saved, hot, groupRows, debts, debtTotal, sims,
-    creditTxs, creditMonth, folderCount, lastApplePay, txView, monthIncomes, extraIncome, salary: parseIncome(s.income),
+    creditTxs, creditMonth, folderCount, lastApplePay, txView, monthIncomes, extraIncome, salary: parseIncome(s.income), money,
     debtFreeL: debts.length ? 'Libre en ' + endL(sims.avalanche.months) : 'Sin deudas',
   };
 }

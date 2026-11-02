@@ -5,12 +5,13 @@ import { monthCtx } from './dates';
 import { simulate } from './debts';
 import { currentDebts } from './cards';
 import { folderView, goalViews, planIncome, txsOfMonth } from './plan';
+import type { RealMoney } from './money';
 
 export const ADVISOR_TOOL_NAME = 'proponer_ajuste';
 
 export interface ChatTurn { role: 'user' | 'assistant'; text: string }
 
-export interface AdvisorContext { name: string; budgets: Budgets; txs: Tx[]; cards: Card[]; goals: Goal[]; incomes?: Income[]; salary?: number; now?: Date }
+export interface AdvisorContext { name: string; budgets: Budgets; txs: Tx[]; cards: Card[]; goals: Goal[]; incomes?: Income[]; salary?: number; now?: Date; money?: RealMoney }
 
 /** Pedido que viaja al Apps Script (acción "ask"). */
 export interface GeminiRequest {
@@ -46,6 +47,12 @@ export const advisorTool = () => ({
   },
 });
 
+function moneyLine(mo?: RealMoney): string {
+  if (!mo || !mo.known) return 'la persona aún no dijo cuánto dinero tiene hoy; no supongas que ya cobró.';
+  const pend = mo.salaryPending ? `sueldo de este mes AÚN NO recibido${mo.payday ? ` (llega el día ${mo.payday}, faltan ${mo.days} días)` : ''}` : 'sueldo de este mes ya recibido';
+  return `tiene hoy S/ ${mo.real.toFixed(0)} (empezó con S/ ${mo.opening.toFixed(0)}, gastó S/ ${mo.spent.toFixed(0)} desde entonces); ${pend}; reservado para pagos fijos S/ ${mo.reservedTotal.toFixed(0)}; puede gastar ~S/ ${mo.perDay.toFixed(2)} por día. Usa este dinero real, no el sueldo del plan, para decir cuánto puede gastar.`;
+}
+
 export function buildSystemPrompt(ctx: AdvisorContext): string {
   const now = ctx.now ?? new Date();
   const m = monthCtx(now);
@@ -76,6 +83,7 @@ Metas:
 ${goalsL}
 Movimientos sin categorizar este mes: ${uncategorized}.
 Ingresos extra este mes: ${(ctx.incomes || []).filter(i => i.date.slice(0, 7) === m.key).map(i => `${i.name} S/ ${i.amt}`).join(', ') || 'ninguno'}${ctx.salary ? ` (sueldo base S/ ${ctx.salary})` : ''}.
+Dinero real: ${moneyLine(ctx.money)}
 Si te piden optimizar el fin de mes: calcula lo que sobra en deseos según el ritmo de gasto y propón moverlo a la deuda de mayor interés o al fondo de emergencia con ${ADVISOR_TOOL_NAME}; nunca recortes necesidades.`;
 }
 

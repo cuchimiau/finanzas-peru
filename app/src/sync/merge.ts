@@ -1,4 +1,4 @@
-import type { Card, Tx } from '../domain/data';
+import { FOLDERS, type Card, type FolderId, type Tx } from '../domain/data';
 import { matchCard } from '../domain/cards';
 import { parseAmount } from '../domain/format';
 import { guessFolder, learnedFolder } from '../domain/plan';
@@ -60,6 +60,14 @@ export function parseYape(raw: string): { amt: number; merchant: string; op: str
   return { amt, merchant: merchant.replace(/[*.]+$/, '').slice(0, 60), op };
 }
 
+const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+/** Carpeta elegida en el Atajo ("Comer fuera", "comer FUERA", "Mercado y super"…) → id, o null. */
+export function folderByName(name: string | undefined): FolderId | null {
+  if (!name || !name.trim()) return null;
+  const n = norm(name);
+  return FOLDERS.find(f => norm(f.name) === n)?.id ?? FOLDERS.find(f => f.id === n)?.id ?? null;
+}
+
 const DUP_MS = 30 * 60 * 1000;
 /** Gasto ya registrado con el mismo monto y a ±30 min (p. ej. lo dictaste a Siri y además llegó de Wallet). */
 function findDup(t: Tx, pool: Tx[]): Tx | undefined {
@@ -94,10 +102,11 @@ export function inboxToTxs(inbox: InboxItem[], cards: Card[], existing: Tx[]): T
     const date = Number.isNaN(new Date(it.at).getTime()) ? new Date().toISOString() : new Date(it.at).toISOString();
     const via = yp ? 'Constancia de Yape' : spoken ? 'Registrado con Siri' : 'Llegó por Apple Pay';
     const dup = findDup({ id, amt, date } as Tx, [...existing, ...out]);
+    const chosen = folderByName(it.folder);
     out.push({
       id, name, amt, date, pay, source, pending: amt <= 0 || undefined, dup: dup?.name,
-      f: learned || g.id || 'libre',
-      why: (amt <= 0 ? `${via} sin monto: escríbelo abajo. ` : `${via}. `) + (learned ? 'Carpeta: la que usaste la última vez.'
+      f: chosen || learned || g.id || 'libre',
+      why: (amt <= 0 ? `${via} sin monto: escríbelo abajo. ` : `${via}. `) + (chosen ? 'Carpeta elegida en el Atajo.' : learned ? 'Carpeta: la que usaste la última vez.'
         : g.confident ? 'Carpeta por el tipo de comercio.' : 'No reconocí el comercio y lo puse en Libre: tócalo para cambiarlo.'),
     });
   }

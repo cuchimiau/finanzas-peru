@@ -89,7 +89,7 @@ export function loadGas(opts: { folderIds?: string[]; webAppUrl?: string | null;
       },
     },
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: () => {} }) },
-    ContentService: { MimeType: { JSON: 'application/json' }, createTextOutput: (t: string) => ({ text: t, setMimeType() { return this; } }) },
+    ContentService: { MimeType: { JSON: 'application/json', TEXT: 'text/plain' }, createTextOutput: (t: string) => ({ text: t, setMimeType() { return this; } }) },
     ScriptApp: { getService: () => ({ getUrl: () => opts.webAppUrl ?? null }) },
     Utilities: {
       getUuid: () => crypto.randomUUID(),

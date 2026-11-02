@@ -86,6 +86,22 @@ describe('Apps Script · datos en Drive', () => {
     expect(inbox[4].text).toContain('operación 123456');
   });
 
+  it('el Atajo pide tus carpetas (gasto primero, Libre al final de los gastos) y manda la elegida', () => {
+    const g = setup();
+    const get = (q: Record<string, string>) => (g.gas.doGet({ parameter: q }) as { text: string }).text;
+    expect(get({ s: g.secret, a: 'carpetas' })).toBe('Libre');
+    const folders = [
+      { id: 'emergencia', name: 'Fondo de emergencia', grp: 'aho' }, { id: 'libre', name: 'Libre', grp: 'des' },
+      { id: 'restaurantes', name: 'Comer fuera', grp: 'des' }, { id: 'deudas', name: 'Pago de deudas', grp: 'deu' },
+      { id: 'mercado', name: 'Mercado y súper', grp: 'nec' },
+    ];
+    g.call('save', { baseRev: 0, state: { ...state(0), folders } });
+    expect(get({ s: g.secret, a: 'carpetas' }).split('\n')).toEqual(['Mercado y súper', 'Comer fuera', 'Libre', 'Fondo de emergencia', 'Pago de deudas']);
+    expect(JSON.parse(get({ s: 'mal', a: 'carpetas' }))).toMatchObject({ ok: false, code: 'auth' });
+    g.call('addTx', { amount: '25', merchant: 'Tambo', folder: ' Comer fuera ' });
+    expect(g.call('load').inbox[0].folder).toBe('Comer fuera');
+  });
+
   it('el Atajo de Siri usa una sola URL GET (frase dictada o monto sin JSON)', () => {
     const g = setup();
     const get = (q: Record<string, string>) => JSON.parse((g.gas.doGet({ parameter: q }) as { text: string }).text);

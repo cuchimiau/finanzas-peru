@@ -7,7 +7,7 @@ import type { Store } from '../state/store';
 const cap = (x: string) => x[0].toUpperCase() + x.slice(1);
 
 export function Home({ store, d }: { store: Store; d: Derived }) {
-  const { s } = store, m = d.m;
+  const { s } = store, m = d.m, mo = d.money;
   const hotPct = d.hot ? Math.round(d.hot.r * 100) : 0;
   const askHot = () => d.hot && store.ask(`${d.hot.name} va al ${hotPct}% y apenas llevo ${m.pctL} del mes. Propón un ajuste sin tocar mi ahorro ni el pago de tarjetas.`);
   const peek = d.flex.slice().sort((a, b) => b.r - a.r).slice(0, 4);
@@ -26,26 +26,53 @@ export function Home({ store, d }: { store: Store; d: Derived }) {
         </div>
       </div>
 
-      <div>
-        <div style={{ fontSize: 13, color: 'var(--color-neutral-400)' }}>Puedes gastar hoy</div>
-        <div className="tnum" style={{ fontSize: 52, fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1.05, marginTop: 4 }}>{fmt(d.flexLeft / m.daysLeft)}</div>
-        <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 6 }}>{fmt0(d.flexLeft)} libres en tus carpetas de gasto · {m.daysLeft === 1 ? 'último día del mes' : `${m.daysLeft} días para fin de mes`}</div>
-      </div>
+      {mo.known ? (
+        <div>
+          <div style={{ fontSize: 13, color: 'var(--color-neutral-400)' }}>Puedes gastar hoy</div>
+          <div className="tnum" style={{ fontSize: 52, fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1.05, marginTop: 4 }}>{fmt(mo.perDay)}</div>
+          <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 6, lineHeight: 1.45 }}>
+            {mo.salaryPending && mo.payday && mo.payday > m.now.getDate()
+              ? `${fmt0(mo.free)} disponibles hasta tu sueldo del ${mo.payday} · ${mo.days === 1 ? 'último día' : `${mo.days} días`}`
+              : `${fmt0(Math.min(mo.free, d.flexLeft))} para gastar · ${m.daysLeft === 1 ? 'último día del mes' : `${m.daysLeft} días para fin de mes`}`}
+            {mo.reservedTotal > 0 && <><br />Ya separé {fmt0(mo.reservedTotal)} para {mo.reserved.map(r => r.name).join(', ')}.</>}
+          </div>
+        </div>
+      ) : (
+        <div className="accent-card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 17, fontWeight: 500 }}>¿Cuánto dinero tienes hoy?</div>
+          <div style={{ fontSize: 13, color: 'var(--color-neutral-300)', lineHeight: 1.45, marginTop: 4 }}>Para calcular cuánto puedes gastar por día uso tu dinero real, no supongo que ya te pagaron.</div>
+          <button type="button" className="btn btn-primary btn-block" onClick={() => store.openSheet('close')} style={{ height: 42, borderRadius: 11, marginTop: 10 }}>Escribir mi dinero de hoy</button>
+        </div>
+      )}
 
-      <div style={{ padding: 14, borderRadius: 14, background: 'var(--color-surface)', boxShadow: 'var(--shadow-sm)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 10 }}>
-          <span style={{ color: 'var(--color-neutral-400)' }}>{cap(m.name)} · {d.extraIncome ? `sueldo ${fmt0(d.salary)} + extra ${fmt0(d.extraIncome)}` : `sueldo ${fmt0(d.income)}`}</span>
-          <span style={{ color: 'var(--color-accent-300)' }}>{m.pctL} del mes</span>
+      {mo.known && (
+        <div {...pressable(() => store.openSheet('close'))} style={{ padding: 14, borderRadius: 14, background: 'var(--color-surface)', boxShadow: 'var(--shadow-sm)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 10 }}>
+            <span style={{ color: 'var(--color-neutral-400)' }}>{cap(m.name)} · tienes <b className="tnum" style={{ color: 'var(--color-text)' }}>{fmt0(mo.real)}</b></span>
+            <span style={{ color: 'var(--color-accent-300)' }}>{m.pctL} del mes</span>
+          </div>
+          <div className="stack-bar" style={{ height: 8, borderRadius: 4, background: 'var(--color-neutral-900)' }}>
+            <div style={{ width: pct(mo.spent, mo.total), background: 'var(--color-neutral-300)' }} />
+            <div style={{ width: pct(Math.max(0, mo.real), mo.total), background: 'var(--color-accent)' }} />
+          </div>
+          <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 12, color: 'var(--color-neutral-400)', flexWrap: 'wrap' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className="dot" style={{ background: 'var(--color-neutral-300)' }} />Gastado {fmt0(mo.spent)}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className="dot" style={{ background: 'var(--color-accent)' }} />Te queda {fmt0(mo.real)}</span>
+            <span>de {fmt0(mo.total)}{mo.salaryIn ? ' (con sueldo)' : ''}{mo.extraIn ? ` · extra ${fmt0(mo.extraIn)}` : ''}</span>
+          </div>
         </div>
-        <div className="stack-bar" style={{ height: 8, borderRadius: 4, background: 'var(--color-neutral-900)' }}>
-          <div style={{ width: pct(d.spent, d.income), background: 'var(--color-neutral-300)' }} />
-          <div style={{ width: pct(d.saved, d.income), background: 'var(--color-accent)' }} />
+      )}
+
+      {mo.known && mo.salaryPending && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, border: '1px dashed var(--color-neutral-700)' }}>
+          <Icon name="ph ph-hourglass-medium" style={{ fontSize: 20, color: 'var(--color-neutral-300)' }} />
+          <div className="row-main">
+            <div className="row-title">Sueldo pendiente{d.salary ? ` · ${fmt0(d.salary)}` : ''}</div>
+            <div className="row-sub">{mo.payday ? `Lo esperas el ${mo.payday}. No lo cuento hasta que llegue.` : 'No lo cuento hasta que llegue.'}</div>
+          </div>
+          <button type="button" className="btn btn-secondary" onClick={() => store.openSheet('paid')} style={{ height: 34, borderRadius: 9, padding: '0 12px', fontSize: 13 }}>Ya me pagaron</button>
         </div>
-        <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 12, color: 'var(--color-neutral-400)' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className="dot" style={{ background: 'var(--color-neutral-300)' }} />Gastado {fmt0(d.spent)}</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className="dot" style={{ background: 'var(--color-accent)' }} />Ahorro y deudas {fmt0(d.saved)}</span>
-        </div>
-      </div>
+      )}
 
       {s.txs.some(t => t.pending) && (
         <div className="accent-card" style={{ padding: '12px 14px' }}>

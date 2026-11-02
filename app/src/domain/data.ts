@@ -9,7 +9,8 @@ export type CoreFolderId =
   | 'emergencia' | 'inversion' | 'viaje' | 'deudas';
 export type SourceId = 'applepay' | 'correo' | 'yape' | 'eecc' | 'open';
 export type PrioId = 'emergencia' | 'invertir' | 'viaje';
-export type GoalId = 'emergencia' | 'inversion' | 'viaje';
+/** Una meta usa el mismo id que su carpeta de ahorro (las de fábrica: 'emergencia', 'inversion', 'viaje'). */
+export type GoalId = string;
 
 export type Budgets = Record<FolderId, number>;
 
@@ -19,7 +20,8 @@ export interface Folder { id: FolderId; name: string; icon: string; grp: GroupId
 export const LOCKED_FOLDERS: FolderId[] = ['libre', 'deudas', 'emergencia'];
 export interface Group { id: GroupId; label: string; color: string }
 
-export interface Profile { name: string }
+/** `payday`: día del mes en que te pagan (null = aún no lo dijiste). */
+export interface Profile { name: string; payday?: number | null }
 
 /** Tarjeta de débito, de crédito, o préstamo / deuda no bancaria (familia, caja, cooperativa, tienda…). */
 export type CardKind = 'debit' | 'credit' | 'loan';

@@ -112,13 +112,25 @@ function CopyRow({ label, value, secret }: { label: string; value: string; secre
 }
 
 /** Texto para pedirle a Siri (Apple Intelligence) que arme el Atajo "Gasto" con la URL ya puesta. */
-export function siriPrompt(vozUrl: string) {
+/** Pasos comunes: pedir tus carpetas al Apps Script y elegir una de la lista. */
+const pickFolder = (carpetasUrl: string, n: number, ask: string) => [
+  `${n}. "Obtener contenido de URL" (Get Contents of URL) con método GET a ${carpetasUrl}`,
+  `${n + 1}. "Dividir texto" (Split Text) del resultado anterior por "Saltos de línea" (New Lines).`,
+  `${n + 2}. "Elegir de la lista" (Choose from List) con el texto dividido y la pregunta "${ask}".`,
+];
+
+/**
+ * Atajo "Gasto" (Siri): pregunta qué gastaste, te deja elegir la carpeta y lo manda con POST JSON
+ * (sin "Codificar URL": así no se rompe con espacios ni tildes).
+ */
+export function siriPrompt(url: string, secret: string, carpetasUrl: string) {
   return [
-    'Crea un atajo llamado "Gasto" con estas 3 acciones, en este orden:',
-    '1. "Solicitar entrada" de tipo Texto, con la pregunta "¿Qué gastaste?".',
-    '2. "Codificar URL" sobre la Entrada proporcionada.',
-    `3. "Obtener contenido de URL" con método GET. La URL es exactamente este texto: ${vozUrl} y justo al final, sin espacios, va la variable "URL codificada" del paso 2.`,
-    'No agregues otras acciones ni cambies la URL.',
+    'Crea un atajo llamado "Gasto" con estas acciones, en este orden:',
+    '1. "Solicitar entrada" (Ask for Input) de tipo Texto, con la pregunta "¿Cuánto y dónde gastaste?".',
+    ...pickFolder(carpetasUrl, 2, '¿En qué carpeta?'),
+    `5. "Obtener contenido de URL" a ${url} con método POST y cuerpo de solicitud JSON con estos campos de texto: secret = ${secret}, action = addTx, text = la Entrada proporcionada del paso 1, folder = el Elemento elegido del paso 4.`,
+    '6. "Mostrar notificación" con el resultado del paso 5.',
+    'No agregues otras acciones.',
   ].join('\n');
 }
 
@@ -136,27 +148,23 @@ function Collapsible({ open, toggle, title, children }: { open: boolean; toggle:
 }
 
 /** Prompt para que Siri arme el atajo que recibe cada pago de Wallet (lo dispara la automatización "Wallet"). */
-export function walletPrompt(url: string, secret: string) {
+export function walletPrompt(url: string, secret: string, carpetasUrl: string) {
   return [
-    'Crea un atajo llamado "Pago Wallet" que reciba como entrada la transacción de Wallet, con una sola acción:',
-    `"Obtener contenido de URL" a ${url} con método POST y cuerpo de solicitud JSON con estos campos de texto:`,
-    `secret = ${secret}`,
-    'action = addTx',
-    'kind = wallet',
-    'amount = el Importe (Amount) de la Entrada del atajo',
-    'merchant = el Comercio (Merchant) de la Entrada del atajo',
-    'card = la Tarjeta o pase (Card or Pass) de la Entrada del atajo',
+    'Crea un atajo llamado "Pago Wallet" que reciba como entrada la transacción de Wallet, con estas acciones:',
+    ...pickFolder(carpetasUrl, 1, '¿Carpeta para el Comercio (Merchant) por el Importe (Amount)?'),
+    `4. "Obtener contenido de URL" a ${url} con método POST y cuerpo de solicitud JSON con estos campos de texto: secret = ${secret}, action = addTx, kind = wallet, amount = el Importe (Amount) de la Entrada del atajo, merchant = el Comercio (Merchant) de la Entrada del atajo, card = la Tarjeta o pase (Card or Pass) de la Entrada del atajo, folder = el Elemento elegido del paso 3.`,
     'No agregues otras acciones.',
   ].join('\n');
 }
 
 /** Prompt para el atajo de la hoja de Compartir que lee una constancia de Yape o Plin. */
-export function yapePrompt(url: string, secret: string) {
+export function yapePrompt(url: string, secret: string, carpetasUrl: string) {
   return [
-    'Crea un atajo llamado "Registrar Yape" que aparezca en la hoja de Compartir y reciba imágenes, con estas acciones:',
+    'Crea un atajo llamado "Registrar Yape" que aparezca en la hoja de Compartir (Share Sheet) y reciba solo imágenes, con estas acciones:',
     '1. "Extraer texto de la imagen" (Extract Text from Image) de la Entrada del atajo.',
-    `2. "Obtener contenido de URL" a ${url} con método POST y cuerpo de solicitud JSON con estos campos de texto: secret = ${secret}, action = addTx, kind = yape, text = el Texto extraído del paso 1.`,
-    '3. "Mostrar notificación" con el resultado del paso 2.',
+    ...pickFolder(carpetasUrl, 2, '¿En qué carpeta va este Yape?'),
+    `5. "Obtener contenido de URL" a ${url} con método POST y cuerpo de solicitud JSON con estos campos de texto: secret = ${secret}, action = addTx, kind = yape, text = el Texto extraído del paso 1, folder = el Elemento elegido del paso 4.`,
+    '6. "Mostrar notificación" con el resultado del paso 5.',
     'No agregues otras acciones.',
   ].join('\n');
 }
@@ -171,6 +179,7 @@ export function ShortcutGuide({ store }: { store: Store }) {
   if (!c) return <div style={{ fontSize: 13, color: 'var(--color-neutral-400)', lineHeight: 1.5 }}>Primero conecta tu Apps Script (arriba): el Atajo envía cada gasto ahí.</div>;
   const base = `${c.url}?s=${encodeURIComponent(c.secret)}`;
   const vozUrl = `${base}&a=voz&t=`;
+  const carpetasUrl = `${base}&a=carpetas`;
   const probar = async () => {
     setTest('busy');
     try {
@@ -200,15 +209,15 @@ export function ShortcutGuide({ store }: { store: Store }) {
       <ol style={{ margin: '6px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, lineHeight: 1.45, color: 'var(--color-neutral-300)' }}>
         <li>Toca "Copiar" en "Prompt para Siri" (abajo).</li>
         <li>Abre Atajos → botón + y pídele a Siri que lo cree: pega el texto en el campo de Apple Intelligence (o díselo).</li>
-        <li>Revisa la acción "Obtener contenido de URL" (Get Contents of URL): debe empezar con tu URL real https://script.google.com/… (sin "…") y terminar en &amp;a=voz&amp;t= seguida de la burbuja azul "URL codificada" (URL Encoded Text).</li>
-        <li>Toca "Probar la URL" aquí, y luego di "Oye Siri, Gasto" → "25 soles en Tambo".</li>
+        <li>Revisa el último "Obtener contenido de URL" (toca ›): Method <b>POST</b>, Request Body <b>JSON</b>, y en text y folder las burbujas azules (Provided Input y Chosen Item). Si faltan campos, agrégalos con "Add new field → Text".</li>
+        <li>Toca ▶︎: te pregunta el gasto ("25 soles en Tambo"), luego la carpeta, y avisa "✅ Registrado".</li>
       </ol>
-      <CopyRow label="Prompt para Siri (incluye tu URL y tu código secreto)" value={siriPrompt(vozUrl)} />
+      <CopyRow label="Prompt para Siri (incluye tu URL y tu código secreto)" value={siriPrompt(c.url, c.secret, carpetasUrl)} />
       <div style={{ fontSize: 12, color: 'var(--color-neutral-500)', marginTop: 6, lineHeight: 1.45 }}>
         No compartas este texto: trae tu código secreto. Si se filtra, ejecuta rotarSecreto() en el Apps Script y vuelve a conectar.
       </div>
       <button type="button" className="link-btn" onClick={() => setShowManual(v => !v)} style={{ marginTop: 10, fontSize: 12.5 }}>
-        {showManual ? 'Ocultar pasos a mano' : 'Prefiero armarlo a mano'}
+        {showManual ? 'Ocultar pasos a mano' : 'Prefiero armarlo a mano (versión simple, sin elegir carpeta)'}
       </button>
       {showManual && (
         <ol style={{ margin: '6px 0 0', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, lineHeight: 1.45, color: 'var(--color-neutral-300)' }}>
@@ -227,12 +236,12 @@ export function ShortcutGuide({ store }: { store: Store }) {
       <Collapsible open={showWallet} toggle={() => setShowWallet(v => !v)} title="Registrar solo cada pago con Wallet">
         <div>Cada vez que pagas acercando el iPhone o el reloj, el gasto llega solo con monto, comercio y tarjeta. En compras por internet no siempre se activa.</div>
         <ol style={OL}>
-          <li>Copia el prompt de abajo. En Atajos → +, pídele a Siri que cree el atajo "Pago Wallet".</li>
-          <li>Revisa "Obtener contenido de URL" (Get Contents of URL): método POST, cuerpo JSON, y en amount, merchant y card las burbujas azules de la Entrada del atajo (Shortcut Input).</li>
+          <li>Copia el prompt de abajo. En Atajos → +, pídele a Siri que cree el atajo "Pago Wallet". Si ya lo tienes, bórralo y créalo de nuevo con este prompt: ahora te deja elegir la carpeta.</li>
+          <li>Revisa el último "Obtener contenido de URL" (Get Contents of URL): método POST, cuerpo JSON, y en amount, merchant, card y folder las burbujas azules (Shortcut Input y Chosen Item).</li>
           <li>Pestaña Automatización (Automation) → + → <b>Wallet</b> → elige tus tarjetas → Ejecutar inmediatamente (Run Immediately) → Siguiente → elige "Pago Wallet".</li>
-          <li>Paga algo con el iPhone y abre la app: el gasto ya está en su carpeta.</li>
+          <li>Al pagar te llega una notificación de Atajos: tócala y elige la carpeta. El gasto queda registrado ahí.</li>
         </ol>
-        <CopyRow label="Prompt para Siri · Pago Wallet (incluye tu código secreto)" value={walletPrompt(c.url, c.secret)} />
+        <CopyRow label="Prompt para Siri · Pago Wallet (incluye tu código secreto)" value={walletPrompt(c.url, c.secret, carpetasUrl)} />
         <CopyRow label="URL (si lo armas a mano)" value={c.url} />
         <CopyRow label="secret" value={c.secret} secret />
         <div style={{ marginTop: 6 }}>Si también dictas el gasto a Siri, la app lo marca como "¿Duplicado?" en Inicio para que borres uno.</div>
@@ -241,10 +250,12 @@ export function ShortcutGuide({ store }: { store: Store }) {
         <div>iPhone no deja que un atajo lea las notificaciones de Yape. Lo más rápido: en la constancia, toca Compartir → "Registrar Yape". El atajo lee la imagen en tu iPhone y manda monto y nombre.</div>
         <ol style={OL}>
           <li>Copia el prompt de abajo y pídele a Siri en Atajos → + que cree "Registrar Yape".</li>
-          <li>En los detalles del atajo (ⓘ), activa "Mostrar en hoja de compartir" (Show in Share Sheet) si Siri no lo hizo.</li>
-          <li>Después de yapear: Compartir → Registrar Yape. Si compartes la misma constancia dos veces, se registra una sola vez.</li>
+          <li><b>Para que aparezca en Compartir:</b> en la primera acción ("Receive … from Nowhere") toca <b>Nowhere</b> y marca <b>Share Sheet</b>; toca el tipo de entrada ("Apps and 18 more") y deja solo <b>Images</b>.</li>
+          <li>Revisa el último "Obtener contenido de URL": Method POST, Request Body JSON con secret, action, kind, text (Extracted Text) y folder (Chosen Item).</li>
+          <li>Después de yapear: Compartir → Registrar Yape. Si no sale en la fila, baja hasta "Editar acciones" o comparte una captura de la constancia desde Fotos. La misma constancia se registra una sola vez.</li>
         </ol>
-        <CopyRow label="Prompt para Siri · Registrar Yape (incluye tu código secreto)" value={yapePrompt(c.url, c.secret)} />
+        <CopyRow label="Prompt para Siri · Registrar Yape (incluye tu código secreto)" value={yapePrompt(c.url, c.secret, carpetasUrl)} />
+        <CopyRow label="URL de tus carpetas (para Elegir de la lista)" value={carpetasUrl} />
       </Collapsible>
     </div>
   );

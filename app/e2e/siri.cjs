@@ -19,7 +19,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await row.locator('button:has-text("Copiar")').click(); await p.waitForTimeout(200);
   const clip = await p.evaluate(() => navigator.clipboard.readText());
   ok(clip.startsWith('Crea un atajo llamado "Gasto"'), 'el prompt se copia');
-  ok(/\/exec\?s=[^&\s]+&a=voz&t= y justo al final/.test(clip), 'el prompt trae la URL con secreto y &a=voz&t=');
+  ok(/\/exec\?s=[^&\s]+&a=carpetas/.test(clip) && clip.includes('método POST') && clip.includes('folder = el Elemento elegido'), 'el prompt pide tus carpetas y manda la elegida por POST');
   ok(!(await p.locator('text=Busca "Codificar URL"').isVisible()), 'pasos a mano ocultos por defecto');
   await p.click('text=Prefiero armarlo a mano');
   ok(await p.locator('text=Busca "Codificar URL"').isVisible(), 'pasos a mano al desplegar');

@@ -51,7 +51,7 @@ En iPhone, una app instalada en la pantalla de inicio no puede iniciar sesión c
 
 ### 5. Pagos con Wallet, automáticos
 En iOS 18 o posterior, el disparador se llama **Wallet** (en iOS 17 se llamaba "Transacción").
-1. En **Ajustes › Registrar solo cada pago con Wallet**, copia el prompt y pídele a Siri en Atajos que cree **"Pago Wallet"**. El atajo hace un POST con JSON: `secret`, `action: addTx`, `kind: wallet`, `amount`, `merchant` y `card`.
+1. En **Ajustes › Registrar solo cada pago con Wallet**, copia el prompt y pídele a Siri en Atajos que cree **"Pago Wallet"**. El atajo pide tus carpetas (`GET …&a=carpetas`), te deja elegir una y hace un POST con JSON: `secret`, `action: addTx`, `kind: wallet`, `amount`, `merchant`, `card` y `folder`.
 2. Entra a **Automatización › + › Wallet**, elige tus tarjetas, marca **Ejecutar inmediatamente** y elige "Pago Wallet".
 
 Si el mismo gasto llega también por Siri (mismo monto, ±30 min), Inicio lo muestra como **¿Duplicado?**.
@@ -71,7 +71,11 @@ iOS no deja leer notificaciones de otras apps. En su lugar:
 - **Optimizar:**
   - Para el resto del mes: cuánto puedes gastar por día, qué carpetas se van a pasar y cuánto puedes ahorrar todavía. Ese ahorro va a la deuda más cara o al fondo de emergencia.
   - Para el **próximo mes**: un plan con tu gasto real + 10%.
-- **Cierre de mes:** el día 1, un resumen del mes anterior y el plan para empezar el nuevo.
+- **Dinero real, sin suposiciones:** al empezar el mes escribes cuánto tienes de verdad, si ya te pagaron y qué pagos fijos te faltan antes del sueldo.
+  - Hasta que te paguen, **Puedes gastar hoy** = (lo que tienes − lo que separaste) ÷ días hasta tu día de pago.
+  - El sueldo recién suma cuando tocas **Ya me pagaron**.
+  - Si el mes pasado no tiene movimientos, no se inventan sobrantes.
+- **Métricas:** gráfico de lo que tienes vs lo que gastaste por carpeta. **Metas** que puedes crear, editar y borrar: cada una tiene su carpeta de Ahorro.
 
 - **Plan base cero:** cada sol tiene carpeta. Al ajustar una carpeta, la diferencia sale de **Libre** o vuelve a Libre. Los mínimos de tus tarjetas siempre caben en el plan.
 - **Puedes gastar hoy:** lo libre en tus carpetas de gasto dividido entre los días que quedan del mes. Usa la fecha real y el mes se reinicia solo.
@@ -92,7 +96,7 @@ iOS no deja leer notificaciones de otras apps. En su lugar:
 cd app
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 54 pruebas: dominio, paridad con el prototipo, sincronización y el Apps Script (Code.gs) con Google simulado
+npm test           # 60 pruebas: dominio, paridad con el prototipo, sincronización y el Apps Script (Code.gs) con Google simulado
 npm run build      # BASE_PATH=/<repo>/ para GitHub Pages
 ```
 

@@ -26,6 +26,7 @@ const MAX_TOOL_ROUNDS = 3;
 
 /**
  * GET para el Atajo de Siri (una sola URL, sin JSON). Wallet y Yape usan POST con action addTx y kind.
+ *   …/exec?s=SECRETO&a=carpetas            → tus carpetas, una por línea (para "Elegir de la lista")
  *   …/exec?s=SECRETO&a=voz&t=25 soles en Tambo con BBVA
  *   …/exec?s=SECRETO&a=gasto&monto=16,90&comercio=Starbucks&tarjeta=BBVA
  */
@@ -36,7 +37,8 @@ function doGet(e) {
   if (!secret || !safeEqual_(String(p.s || ''), secret)) return json_({ ok: false, code: 'auth', error: 'Código secreto incorrecto.' });
   try {
     if (p.a === 'voz') return json_(addTx_({ text: p.t }));
-    if (p.a === 'gasto') return json_(addTx_({ amount: p.monto, merchant: p.comercio, card: p.tarjeta }));
+    if (p.a === 'gasto') return json_(addTx_({ amount: p.monto, merchant: p.comercio, card: p.tarjeta, folder: p.carpeta }));
+    if (p.a === 'carpetas') return ContentService.createTextOutput(folderNames_().join('\n')).setMimeType(ContentService.MimeType.TEXT);
     return json_({ ok: false, code: 'bad_request', error: 'Acción desconocida: ' + p.a });
   } catch (err) {
     return json_({ ok: false, code: err.code || 'server', error: err.userMessage || String(err) });
@@ -120,12 +122,25 @@ function addTx_(req) {
       card: String(req.card || '').slice(0, 60),
       text: text,
       kind: /^(yape|plin|wallet)$/.test(String(req.kind || '')) ? String(req.kind) : '',
+      folder: String(req.folder || '').trim().slice(0, 60),
       at: new Date().toISOString(),
     };
     inbox.push(item);
     writeJson_(INBOX_FILE, inbox.slice(-500));
     return { ok: true, id: item.id, msg: '✅ Registrado en Finanzas Perú' };
   });
+}
+
+/** Nombres de tus carpetas para el Atajo: primero las de gasto (Libre al final), luego ahorro y deudas. */
+function folderNames_() {
+  const data = readJson_(DATA_FILE, null);
+  const folders = (data && data.state && Array.isArray(data.state.folders)) ? data.state.folders : [];
+  const rank = { nec: 0, des: 1, aho: 2, deu: 3 };
+  const list = folders.filter(function (f) { return f && f.name; }).map(function (f, i) {
+    return { name: String(f.name), r: f.id === 'libre' ? 1.5 : (rank[f.grp] !== undefined ? rank[f.grp] : 4), i: i };
+  });
+  list.sort(function (a, b) { return a.r - b.r || a.i - b.i; });
+  return list.length ? list.map(function (x) { return x.name; }) : ['Libre'];
 }
 
 /** Ciclo con Gemini: si pide proponer_ajuste, se le confirma y se devuelve la propuesta a la app. */

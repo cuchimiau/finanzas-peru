@@ -39,7 +39,9 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await p.click('.sheet >> button[role=radio]:has-text("Ingreso")'); await p.fill('.sheet input[inputmode=decimal]', '300'); await p.fill('[aria-label="Lugar"]', 'Bono');
   await shot('p3-ingreso');
   await p.click('text=Guardar ingreso'); await p.waitForTimeout(300);
-  ok((await main()).includes('extra S/ 300'), 'ingreso extra suma al mes');
+  await p.click('nav >> text=Métricas'); await p.waitForTimeout(200);
+  ok(/Bono[\s\S]*\+S\/ 300/.test(await main()), 'ingreso extra suma al mes');
+  await p.click('nav >> text=Inicio');
   await p.click('[aria-label="Registrar gasto"]'); await p.fill('.sheet input[inputmode=decimal]', '45'); await p.fill('[aria-label="Lugar"]', 'Pardos');
   await p.click('.sheet >> button[role=radio]:has-text("Ayer")'); await p.click('text=Guardar gasto'); await p.waitForTimeout(300);
   ok(/Pardos[\s\S]*Ayer/.test(await main()), 'gasto registrado con fecha de ayer');
@@ -64,10 +66,12 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
 
   // Cierre de mes simulado
   await p.evaluate(() => { const k = 'finanzas-peru:v2'; const d = JSON.parse(localStorage.getItem(k)); d.monthKey = '2026-09'; localStorage.setItem(k, JSON.stringify(d)); localStorage.removeItem('finanzas-peru:conexion'); });
-  await p.reload(); await p.waitForSelector('text=Cierre de mes', { timeout: 5000 }); await p.waitForTimeout(300);
+  await p.reload(); await p.waitForSelector('text=Mes nuevo', { timeout: 5000 }); await p.waitForTimeout(300);
+  ok((await sheet()).includes('No registraste gastos en septiembre'), 'mes pasado sin datos: no inventa sobrantes');
+  await p.fill('[aria-label="Dinero que tienes hoy"]', '1200'); await p.fill('[aria-label="Día de pago"]', '28');
   await shot('p7-cierre');
-  await p.click('text=Empezar el mes con este plan'); await p.waitForTimeout(300);
-  ok(!(await p.isVisible('text=Cierre de mes')), 'mes nuevo iniciado');
+  await p.click('.sheet button[type=submit]'); await p.waitForTimeout(300);
+  ok(!(await sheet()) && (await main()).includes('tienes S/ 1,200'), 'mes nuevo iniciado con dinero real');
 
   // Borrar carpeta propia
   await p.click('nav >> text=Carpetas'); await p.click('text=Gimnasio'); await p.click('[aria-label="Editar carpeta"]'); await p.click('.sheet >> text=Borrar'); await p.waitForTimeout(300);
