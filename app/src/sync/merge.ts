@@ -42,23 +42,32 @@ export function parseSpoken(raw: string, cards: Card[]): { amt: number; merchant
  * Devuelve monto (0 si no se ve), destinatario y número de operación (para no registrarla dos veces).
  */
 export function parseYape(raw: string): { amt: number; merchant: string; op: string } {
+  // (Para diagnosticar: el texto leído queda guardado en el movimiento como `ocr`.)
   const lines = raw.split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
   const op = raw.match(/operaci[oó]n\s*:?\s*(?:n[°ºo.]*\s*)?(\d{5,})/i)?.[1] ?? '';
-  // Monto: "S/ 2.50", "S/2.50", "5/ 2.50" (la S leída como 5) o "S/" sola con el número en la línea siguiente.
-  // Si no hay "S/", el primer número con decimales; nunca los dígitos sueltos del código de seguridad.
+  // Monto: "S/ 2.50", "S/2.50", la barra leída como I, | o l ("SI 2", "S| 2.50"), la S leída como 5,
+  // o "S/" sola con el número en la línea siguiente. Si no hay moneda: el primer número con decimales,
+  // o un entero suelto antes del código de seguridad (sus dígitos 2, 8, 8 nunca son el monto).
   let amt = 0, amtLine = -1;
-  const CUR = String.raw`[s5$]\/\.?`;
+  const SLASH = String.raw`[s5$]\/\.?`;
+  const LOOSE = String.raw`[s5$][\/|il!]\.?`;
   const DEC = /^(?:s\/\.?\s*)?(\d{1,5}[.,]\d{2})$/i;
-  for (let i = 0; i < lines.length && amtLine < 0; i++) {
-    const same = lines[i].match(new RegExp(CUR + String.raw`\s*` + NUM, 'i'));
+  const AMT_ONLY = /^\d{1,5}(?:[.,]\d{1,2})?$/;
+  for (let i = 0; i < lines.length; i++) {
+    const same = lines[i].match(new RegExp(SLASH + String.raw`\s*` + NUM, 'i')) || lines[i].match(new RegExp('^' + LOOSE + String.raw`\s*` + NUM + '$', 'i'));
     if (same) { amt = parseAmount(same[1]); amtLine = i; break; }
-    if (new RegExp('^' + CUR + '$', 'i').test(lines[i]) && lines[i + 1] && /^\d{1,5}(?:[.,]\d{1,2})?$/.test(lines[i + 1])) { amt = parseAmount(lines[i + 1]); amtLine = i + 1; }
+    if (new RegExp('^' + LOOSE + '$', 'i').test(lines[i]) && lines[i + 1] && AMT_ONLY.test(lines[i + 1])) { amt = parseAmount(lines[i + 1]); amtLine = i + 1; break; }
   }
   if (amtLine < 0) {
     const i = lines.findIndex(l => DEC.test(l));
     if (i >= 0) { amt = parseAmount(lines[i].match(DEC)![1]); amtLine = i; }
   }
-  const SKIP = /yape|plin|pago exitoso|constancia|fecha|hora|c[oó]digo|seguridad|operaci[oó]n|transacci[oó]n|destino|celular|compartir|nro\.|ayuda|^[s5$]\/|\*{3}|^[\d\s.,|:]+$|a\.\s?m\.|p\.\s?m\.|\d{1,2}:\d{2}|\d{1,2}\s*(?:de\s+)?(ene|feb|mar|abr|may|jun|jul|ago|set|sep|oct|nov|dic)/i;
+  if (amtLine < 0) {
+    const stop = lines.findIndex(l => /c[oó]digo|seguridad/i.test(l));
+    const i = lines.findIndex((l, k) => /^\d{1,5}$/.test(l) && (stop < 0 || k < stop));
+    if (i >= 0) { amt = parseAmount(lines[i]); amtLine = i; }
+  }
+  const SKIP = /yape|plin|pago exitoso|constancia|fecha|hora|c[oó]digo|seguridad|operaci[oó]n|transacci[oó]n|destino|celular|compartir|nro\.|ayuda|^[s5$][\/|il!]\.?\s*\d|^[s5$]\/|\*{3}|^[\d\s.,|:]+$|a\.\s?m\.|p\.\s?m\.|\d{1,2}:\d{2}|\d{1,2}\s*(?:de\s+)?(ene|feb|mar|abr|may|jun|jul|ago|set|sep|oct|nov|dic)/i;
   let merchant = '';
   for (let i = 0; i < lines.length && !merchant; i++) {
     const m = lines[i].match(/(?:yapeaste a|enviado a|pagaste a|para)\s*:?\s*(.*)$/i);
@@ -99,10 +108,11 @@ export function inboxToTxs(inbox: InboxItem[], cards: Card[], existing: Tx[]): T
     const rawName = (yp ? yp.merchant : spoken ? spoken.merchant : (it.merchant || '')).trim().slice(0, 80);
     // Wallet manda "TAMBO MIRAFLORES": se muestra "Tambo Miraflores".
     const niceName = rawName === rawName.toUpperCase() && /[A-ZÁÉÍÓÚÑ]{3}/.test(rawName) ? rawName.toLowerCase().replace(/(^|\s)\S/g, x => x.toUpperCase()) : rawName;
-    if (!rawName && amt <= 0 && !yp) continue;
+    // Un Wallet sin datos igual se registra (la app pide monto y carpeta) para que no se pierda.
+    if (!rawName && amt <= 0 && !yp && it.kind !== 'wallet') continue;
     seen.add(id);
     const source: Tx['source'] = yp ? 'yape' : spoken ? 'siri' : 'applepay';
-    const name = niceName || (yp ? 'Pago con Yape' : spoken ? 'Gasto por Siri' : 'Pago con Apple Pay');
+    const name = niceName || (yp ? 'Pago con Yape' : spoken ? 'Gasto por Siri' : amt > 0 ? 'Pago con Apple Pay' : 'Pago con Apple Pay (sin datos)');
     const cardRaw = yp ? 'yape' : spoken ? spoken.card : it.card || '';
     const pay = cardRaw === 'yape' || cardRaw === 'plin' ? 'yape' : cardRaw === 'efectivo' || cardRaw === 'cash' ? 'cash'
       : spoken && !cardRaw ? 'cash' : matchCard(cardRaw, cards);
@@ -114,6 +124,7 @@ export function inboxToTxs(inbox: InboxItem[], cards: Card[], existing: Tx[]): T
     const chosen = folderByName(it.folder);
     out.push({
       id, name, amt, date, pay, source, pending: amt <= 0 || undefined, dup: dup?.name,
+      ocr: yp ? it.text!.slice(0, 600) : undefined,
       f: chosen || learned || g.id || 'libre',
       needsFolder: source === 'applepay' && !chosen && !learned && !g.confident ? true : undefined,
       why: (amt <= 0 ? `${via} sin monto: escríbelo abajo. ` : `${via}. `) + (chosen ? 'Carpeta elegida en el Atajo.' : learned ? 'Carpeta: la que usaste la última vez.'

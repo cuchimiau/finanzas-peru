@@ -102,6 +102,36 @@ describe('Apps Script · datos en Drive', () => {
     expect(g.call('load').inbox[0].folder).toBe('Comer fuera');
   });
 
+  it('Wallet: registra primero (responde solo el id) y luego manda la carpeta', () => {
+    const g = setup();
+    const out = g.gas.doPost({ postData: { contents: JSON.stringify({ secret: g.secret, action: 'addTx', amount: 'S/ 12.00', merchant: 'TAMBO', kind: 'wallet', resp: 'id' }) } }) as { text: string };
+    expect(out.text).toMatch(/^[\w-]{8,}$/);
+    expect(g.call('setFolder', { id: out.text, folder: 'Mercado y súper' })).toMatchObject({ ok: true, msg: expect.stringContaining('Mercado') });
+    expect(g.call('setFolder', { id: '', folder: 'x' })).toMatchObject({ ok: false });
+    const inbox = g.call('load').inbox;
+    expect(inbox[1]).toMatchObject({ kind: 'fix', ref: out.text, folder: 'Mercado y súper' });
+  });
+
+  it('registra lo que mandan los atajos (sin el secreto) y no pierde un Wallet sin datos', () => {
+    const g = setup();
+    const raw = (body: string, parameter: Record<string, string> = {}) => JSON.parse((g.gas.doPost({ postData: { contents: body }, parameter }) as { text: string }).text);
+    expect(g.call('addTx', { amount: 'S/ 12.00', merchant: 'TAMBO MIRAFLORES CENTRO', card: 'BBVA', kind: 'wallet' })).toMatchObject({ ok: true });
+    expect(g.call('addTx', { kind: 'wallet' })).toMatchObject({ ok: true, empty: true, msg: expect.stringContaining('sin datos') });
+    expect(g.post({ action: 'addTx', secret: 'mal', kind: 'wallet', amount: '5' })).toMatchObject({ ok: false, code: 'auth' });
+    // Atajo con cuerpo "Formulario" en vez de JSON: Apps Script lo entrega en e.parameter.
+    expect(raw('secret=x&action=addTx', { secret: g.secret, action: 'addTx', kind: 'wallet', amount: '7', merchant: 'Kiosko' })).toMatchObject({ ok: true });
+    expect(raw('esto no es json')).toMatchObject({ ok: false, code: 'bad_request' });
+    g.call('save', { baseRev: 0, state: { v: 2, phase: 'app', txs: [] } }); // las llamadas de la app no se anotan
+    const { log, inbox } = g.call('load');
+    expect(log.map((x: { ok: boolean; code: string }) => (x.ok ? 'ok' : x.code))).toEqual(['ok', 'ok', 'auth', 'ok', 'bad_request']);
+    expect(log[0]).toMatchObject({ via: 'POST', action: 'addTx', kind: 'wallet', got: ['amount', 'merchant', 'card'], amount: 12, merchant: 'TAMBO MIRAFLORES CEN' });
+    expect(log[1]).toMatchObject({ empty: true, got: [] });
+    expect(JSON.stringify(log)).not.toContain(g.secret);
+    expect(inbox.map((i: { merchant: string; amount: number }) => i.merchant || i.amount)).toEqual(['TAMBO MIRAFLORES CENTRO', 0, 'Kiosko']);
+    for (let i = 0; i < 35; i++) g.call('addTx', { amount: String(i + 1), merchant: 'x' });
+    expect(g.call('load').log).toHaveLength(30);
+  });
+
   it('el Atajo de Siri usa una sola URL GET (frase dictada o monto sin JSON)', () => {
     const g = setup();
     const get = (q: Record<string, string>) => JSON.parse((g.gas.doGet({ parameter: q }) as { text: string }).text);

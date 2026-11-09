@@ -59,6 +59,8 @@ export interface Tx {
   source: 'manual' | 'applepay' | 'siri' | 'yape';
   /** Llegó sin monto (Atajo): la app pide completarlo. */
   pending?: boolean;
+  /** Texto que el iPhone leyó de la constancia (Yape/Plin), para revisar si algo salió mal. */
+  ocr?: string;
   /** Pago de Wallet que llegó sin carpeta elegida: la app te pide elegirla. */
   needsFolder?: boolean;
   /** Posible duplicado: nombre del gasto parecido (mismo monto, ±30 min) que ya estaba registrado. */

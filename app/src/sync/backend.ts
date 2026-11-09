@@ -71,6 +71,8 @@ export async function call<T>(conn: Connection, action: string, payload: Record<
 
 // ─── Contrato de acciones ───
 export interface InboxItem { id: string; amount: unknown; merchant?: string; card?: string; text?: string; kind?: string; folder?: string; ref?: string; at: string }
-export interface LoadResponse { rev: number; updatedAt: string | null; state: unknown; inbox: InboxItem[] }
+/** Una llamada de un atajo anotada por el Apps Script (registro.json). */
+export interface ShortcutHit { at: string; via: string; action: string; kind: string; ok: boolean; code: string; error: string; empty?: boolean; got: string[]; amount: number; merchant: string }
+export interface LoadResponse { rev: number; updatedAt: string | null; state: unknown; inbox: InboxItem[]; log?: ShortcutHit[] }
 export interface SaveResponse { rev: number; conflict?: boolean; state?: unknown }
 export interface PingResponse { folderUrl: string; model: string; gemini: boolean }

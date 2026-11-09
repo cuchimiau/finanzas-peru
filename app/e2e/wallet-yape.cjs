@@ -22,7 +22,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await p.click('text=Registrar solo cada pago con Wallet'); await p.click('text=Registrar Yape o Plin con 2 toques');
   await p.locator('text=Registrar solo cada pago con Wallet').scrollIntoViewIfNeeded();
   await p.screenshot({ path: `${out}/wallet-guia.png` });
-  await p.locator('div', { hasText: /^Prompt para Siri · Pago Wallet/ }).last().locator('xpath=../..').locator('button:has-text("Copiar")').click();
+  await p.locator('div', { hasText: /^Prompt para Siri · Pago Wallet \(incluye/ }).last().locator('xpath=../..').locator('button:has-text("Copiar")').click();
   const clip = await p.evaluate(() => navigator.clipboard.readText());
   ok(clip.includes(`secret = ${secret}`) && clip.includes(url) && clip.includes('POST'), 'prompt de Wallet con URL, secreto y POST');
   await p.keyboard.press('Escape'); await p.goto('http://localhost:5173/'); await p.waitForTimeout(300);

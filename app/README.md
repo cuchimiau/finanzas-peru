@@ -50,6 +50,7 @@ En iPhone, una app instalada en la pantalla de inicio no puede iniciar sesión c
 4. Di *"Oye Siri, Gasto"* → *"25 soles en Tambo con BBVA"*. Si no dices el monto, la app te lo pide.
 
 ### 5. Pagos con Wallet, automáticos
+El atajo recomendado hace una sola llamada, sin preguntas, y la carpeta se elige en la app una vez por comercio. Si un pago no llega, mira **Ajustes › Últimos envíos de tus atajos**. El Apps Script anota ahí cada llamada (`registro.json`, sin el secreto) y dice si llegó bien, sin datos o con el secreto incorrecto.
 En iOS 18 o posterior, el disparador se llama **Wallet** (en iOS 17 se llamaba "Transacción").
 1. En **Ajustes › Registrar solo cada pago con Wallet**, copia el prompt y pídele a Siri en Atajos que cree **"Pago Wallet"**. Primero registra el pago (POST `addTx` con `resp: id`, que responde solo el id) y después te deja elegir la carpeta (`GET …&a=carpetas`) y la manda con `setFolder`. Si no eliges, la app te pide la carpeta en Inicio.
 2. Entra a **Automatización › + › Wallet**, elige tus tarjetas, marca **Ejecutar inmediatamente** y elige "Pago Wallet".

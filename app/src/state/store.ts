@@ -12,7 +12,7 @@ import { emptyCash, type CashMonth } from '../domain/money';
 import { buildGeminiRequest, type ChatTurn, type GeminiResponse } from '../domain/advisor';
 import {
   BackendError, call, loadConnection, saveConnection,
-  type Connection, type LoadResponse, type PingResponse, type SaveResponse,
+  type Connection, type LoadResponse, type PingResponse, type SaveResponse, type ShortcutHit,
 } from '../sync/backend';
 import { applyFixes, byDateDesc, inboxToTxs, mergeRemote } from '../sync/merge';
 
@@ -36,6 +36,8 @@ export interface State extends Persisted {
   addKind: 'gasto' | 'ingreso'; addDate: string; addF: FolderId | null; editFolderId: FolderId | null;
   toast: string; toastIcon: string; adjustNote: string; draft: string; thinking: boolean;
   conn: Connection | null; sync: SyncStatus; syncError: string;
+  /** Últimas llamadas de los atajos (solo en memoria, se trae de Drive). */
+  hits: ShortcutHit[];
   meta: SyncMeta;
 }
 
@@ -72,7 +74,7 @@ function initialState(reset: boolean): State {
     ...data, step: 0, analyzing: false,
     tab: 'home', folderId: null, sheet: null, rcId: null, cardId: null, goalId: null,
     addAmt: '', addName: '', addPay: 'cash', addKind: 'gasto', addDate: '', addF: null, editFolderId: null, toast: '', toastIcon: 'ph-fill ph-check-circle', adjustNote: '', draft: '', thinking: false,
-    conn, sync: conn ? 'idle' : 'off', syncError: '', meta,
+    conn, sync: conn ? 'idle' : 'off', syncError: '', meta, hits: [],
   };
 }
 
@@ -191,7 +193,7 @@ export function useFinanceStore(opts: StoreOptions) {
       const fixed = applyFixes(res.inbox || [], next.txs);
       if (fixed !== next.txs && fixed.some((t, i) => t !== next.txs[i])) { next = { ...next, txs: fixed }; dirty = true; }
       pendingAck.current = Array.from(new Set([...pendingAck.current, ...(res.inbox || []).map(i => i.id)]));
-      setS(x => ({ ...x, ...next, sync: 'idle', syncError: '', meta: { rev: res.rev, dirty, lastSync: Date.now() } }));
+      setS(x => ({ ...x, ...next, hits: Array.isArray(res.log) ? res.log : x.hits, sync: 'idle', syncError: '', meta: { rev: res.rev, dirty, lastSync: Date.now() } }));
       if (restored) flash('Recuperé tus datos desde Drive', 'ph ph-cloud-check');
       else if (fresh.length) {
         const t = fresh[0], via = SOURCE_LABEL[t.source];
@@ -317,6 +319,7 @@ export function useFinanceStore(opts: StoreOptions) {
       set(x => ({ txs: x.txs.map(t => (t.id === id ? { ...t, amt, pending: undefined, why: t.why.replace(' sin monto: escríbelo abajo.', '.') } : t)) }));
       flash(`Monto guardado: ${fmt(amt)}`);
     },
+    setTxName: (id: string, name: string) => { set(x => ({ txs: x.txs.map(t => (t.id === id ? { ...t, name: name.slice(0, 80) } : t)) })); flash('Nombre guardado'); },
     deleteTx: (id: string) => { set(x => ({ txs: x.txs.filter(t => t.id !== id), sheet: null })); flash('Movimiento eliminado'); },
     // ─── Registrar gasto ───
     setAddAmt: (v: string) => set({ addAmt: v.replace(/[^0-9.,]/g, '').slice(0, 10) }),

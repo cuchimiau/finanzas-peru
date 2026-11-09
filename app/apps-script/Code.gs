@@ -18,6 +18,7 @@ const FOLDER_NAME = 'Finanzas Perú';
 const FOLDER_ID = '1q6xfb8cznmj0l7X_lRGEOLrgbG3HBieH';
 const DATA_FILE = 'datos.json';
 const INBOX_FILE = 'bandeja.json';
+const LOG_FILE = 'registro.json';
 const SHEET_NAME = 'Finanzas Perú – Movimientos';
 const DEFAULT_MODEL = 'gemini-3.8-flash';
 const MAX_TOOL_ROUNDS = 3;
@@ -34,47 +35,75 @@ function doGet(e) {
   const p = (e && e.parameter) || {};
   if (!p.a) return json_({ ok: true, app: 'finanzas-peru', hint: 'Usa POST desde la app.' });
   const secret = PropertiesService.getScriptProperties().getProperty('APP_SECRET');
-  if (!secret || !safeEqual_(String(p.s || ''), secret)) return json_({ ok: false, code: 'auth', error: 'Código secreto incorrecto.' });
+  const fields = p.a === 'voz' ? { text: p.t } : { amount: p.monto, merchant: p.comercio, card: p.tarjeta, folder: p.carpeta };
+  if (!secret || !safeEqual_(String(p.s || ''), secret)) {
+    logHit_('GET', p.a, fields, { ok: false, code: 'auth', error: 'Código secreto incorrecto.' });
+    return json_({ ok: false, code: 'auth', error: 'Código secreto incorrecto.' });
+  }
   try {
-    if (p.a === 'voz') return json_(addTx_({ text: p.t }));
-    if (p.a === 'gasto') return json_(addTx_({ amount: p.monto, merchant: p.comercio, card: p.tarjeta, folder: p.carpeta }));
     if (p.a === 'carpetas') return ContentService.createTextOutput(folderNames_().join('\n')).setMimeType(ContentService.MimeType.TEXT);
-    return json_({ ok: false, code: 'bad_request', error: 'Acción desconocida: ' + p.a });
+    let r;
+    if (p.a === 'voz') r = addTx_(fields);
+    else if (p.a === 'gasto') r = addTx_(fields);
+    else r = { ok: false, code: 'bad_request', error: 'Acción desconocida: ' + p.a };
+    logHit_('GET', p.a, fields, r);
+    return json_(r);
   } catch (err) {
-    return json_({ ok: false, code: err.code || 'server', error: err.userMessage || String(err) });
+    const r = { ok: false, code: err.code || 'server', error: err.userMessage || String(err) };
+    logHit_('GET', p.a, fields, r);
+    return json_(r);
   }
 }
 
 function doPost(e) {
+  // JSON (la app y los atajos) o formulario (si el atajo quedó con "Formulario" en vez de "JSON").
   let req;
+  const raw = (e && e.postData && e.postData.contents) || '';
   try {
-    req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    req = raw && raw.trim().charAt(0) === '{' ? JSON.parse(raw) : null;
   } catch (err) {
-    return json_({ ok: false, code: 'bad_request', error: 'JSON inválido' });
+    req = null;
   }
+  if (!req) {
+    const form = (e && e.parameter) || {};
+    if (!form.secret && !form.action) {
+      logHit_('POST', '?', {}, { ok: false, code: 'bad_request', error: 'Llegó un cuerpo que no es JSON ni formulario.' });
+      return json_({ ok: false, code: 'bad_request', error: 'JSON inválido' });
+    }
+    req = form;
+  }
+  // Solo se anotan las llamadas de los atajos (no las de la app) y los secretos incorrectos.
+  const fromShortcut = req.action === 'addTx' || req.action === 'setFolder' || req.action === 'voz';
   try {
     const props = PropertiesService.getScriptProperties();
     const secret = props.getProperty('APP_SECRET');
     if (!secret) return json_({ ok: false, code: 'config', error: 'Falta ejecutar configurar() en el Apps Script.' });
-    if (!safeEqual_(String(req.secret || ''), secret)) return json_({ ok: false, code: 'auth', error: 'Código secreto incorrecto.' });
+    if (!safeEqual_(String(req.secret || ''), secret)) {
+      logHit_('POST', req.action, req, { ok: false, code: 'auth', error: 'Código secreto incorrecto.' });
+      return json_({ ok: false, code: 'auth', error: 'Código secreto incorrecto.' });
+    }
     switch (req.action) {
       case 'ping': return json_(ping_());
       case 'load': return json_(load_());
       case 'save': return json_(save_(req));
       case 'addTx': {
         const r = addTx_(req);
+        logHit_('POST', 'addTx', req, r);
         // El Atajo de Wallet pide solo el id (texto) para luego mandar la carpeta con setFolder.
         return req.resp === 'id' ? ContentService.createTextOutput(r.id).setMimeType(ContentService.MimeType.TEXT) : json_(r);
       }
-      case 'setFolder': return json_(setFolder_(req));
-      case 'voz': return json_(addTx_({ text: req.text }));
+      case 'setFolder': { const r = setFolder_(req); logHit_('POST', 'setFolder', req, r); return json_(r); }
+      case 'voz': { const r = addTx_({ text: req.text }); logHit_('POST', 'voz', req, r); return json_(r); }
       case 'ask': return json_(ask_(req));
       default: return json_({ ok: false, code: 'bad_request', error: 'Acción desconocida: ' + req.action });
     }
   } catch (err) {
-    if (err && err.userMessage) return json_({ ok: false, code: err.code || 'server', error: err.userMessage });
-    console.error(err && err.stack ? err.stack : err);
-    return json_({ ok: false, code: 'server', error: 'Error en el Apps Script: ' + (err && err.message ? err.message : err) });
+    const r = err && err.userMessage
+      ? { ok: false, code: err.code || 'server', error: err.userMessage }
+      : { ok: false, code: 'server', error: 'Error en el Apps Script: ' + (err && err.message ? err.message : err) };
+    if (!(err && err.userMessage)) console.error(err && err.stack ? err.stack : err);
+    if (fromShortcut) logHit_('POST', req.action, req, r);
+    return json_(r);
   }
 }
 
@@ -88,7 +117,7 @@ function ping_() {
 function load_() {
   const data = readJson_(DATA_FILE, null);
   const inbox = readJson_(INBOX_FILE, []);
-  return { ok: true, rev: data ? data.rev : 0, updatedAt: data ? data.updatedAt : null, state: data ? data.state : null, inbox: inbox };
+  return { ok: true, rev: data ? data.rev : 0, updatedAt: data ? data.updatedAt : null, state: data ? data.state : null, inbox: inbox, log: readJson_(LOG_FILE, []) };
 }
 
 function save_(req) {
@@ -117,7 +146,9 @@ function addTx_(req) {
   // Una constancia de Yape leída de la imagen es más larga que una frase dictada.
   const text = String(req.text || '').trim().slice(0, /^(yape|plin)$/.test(String(req.kind || '')) ? 1500 : 200);
   const amount = parseAmount_(req.amount);
-  if (!text && !(amount > 0) && !String(req.merchant || '').trim()) throw userError_('No llegó ni monto, ni comercio, ni texto.', 'bad_request');
+  const isWallet = String(req.kind || '') === 'wallet';
+  // Un pago de Wallet sin datos se registra igual (la app pide el monto): así no se pierde.
+  if (!text && !(amount > 0) && !String(req.merchant || '').trim() && !isWallet) throw userError_('No llegó ni monto, ni comercio, ni texto.', 'bad_request');
   return withLock_(function () {
     const inbox = readJson_(INBOX_FILE, []);
     const item = {
@@ -132,7 +163,8 @@ function addTx_(req) {
     };
     inbox.push(item);
     writeJson_(INBOX_FILE, inbox.slice(-500));
-    return { ok: true, id: item.id, msg: '✅ Registrado en Finanzas Perú' };
+    const empty = isWallet && !(amount > 0) && !item.merchant;
+    return { ok: true, id: item.id, empty: empty, msg: empty ? '⚠️ Llegó sin datos de la compra: complétalo en la app' : '✅ Registrado en Finanzas Perú' };
   });
 }
 
@@ -146,6 +178,31 @@ function setFolder_(req) {
     writeJson_(INBOX_FILE, inbox.slice(-500));
     return { ok: true, msg: '✅ Carpeta: ' + folder };
   });
+}
+
+/**
+ * Registro de lo que mandan los atajos (últimas 30 llamadas), para saber en qué paso falla uno.
+ * Nunca guarda el secreto; del comercio solo los primeros 20 caracteres.
+ */
+function logHit_(via, action, req, result) {
+  try {
+    const r = req || {};
+    const has = function (k) { return r[k] !== undefined && r[k] !== null && String(r[k]).trim() !== ''; };
+    const entry = {
+      at: new Date().toISOString(), via: via, action: String(action || '?').slice(0, 20), kind: String(r.kind || '').slice(0, 10),
+      ok: !!(result && result.ok), code: result && !result.ok ? String(result.code || '') : '',
+      error: result && !result.ok ? String(result.error || '').slice(0, 120) : '',
+      empty: !!(result && result.empty),
+      got: ['amount', 'merchant', 'card', 'text', 'folder'].filter(has),
+      amount: has('amount') ? parseAmount_(r.amount) : 0,
+      merchant: String(r.merchant || '').slice(0, 20),
+    };
+    withLock_(function () {
+      const log = readJson_(LOG_FILE, []);
+      log.push(entry);
+      writeJson_(LOG_FILE, log.slice(-30));
+    });
+  } catch (e) { /* el registro nunca rompe un pago */ }
 }
 
 /** Nombres de tus carpetas para el Atajo: primero las de gasto (Libre al final), luego ahorro y deudas. */

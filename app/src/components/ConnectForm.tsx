@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { agoLabel } from '../domain/dates';
-import { BackendError, parseConnection } from '../sync/backend';
+import { BackendError, parseConnection, type ShortcutHit } from '../sync/backend';
 import type { Store } from '../state/store';
 import { Field, Icon, Spinner, inputStyle } from './common';
 
@@ -148,7 +148,18 @@ function Collapsible({ open, toggle, title, children }: { open: boolean; toggle:
 }
 
 /** Prompt para que Siri arme el atajo que recibe cada pago de Wallet (lo dispara la automatización "Wallet"). */
-export function walletPrompt(url: string, secret: string, carpetasUrl: string) {
+/** Atajo de la automatización Wallet: una sola llamada, sin preguntas (así nunca se queda esperando un toque). */
+export function walletPrompt(url: string, secret: string) {
+  return [
+    'Crea un atajo llamado "Pago Wallet" que reciba como entrada la transacción de Wallet, con estas acciones:',
+    `1. "Obtener contenido de URL" (Get Contents of URL) a ${url} con método POST y cuerpo de solicitud JSON (no Formulario) con estos campos de texto: secret = ${secret}, action = addTx, kind = wallet, amount = el Importe (Amount) de la Entrada del atajo, merchant = el Comercio (Merchant) de la Entrada del atajo, card = la Tarjeta o pase (Card or Pass) de la Entrada del atajo.`,
+    '2. "Mostrar notificación" con el Contenido de la URL del paso 1.',
+    'No agregues otras acciones ni preguntas.',
+  ].join('\n');
+}
+
+/** Variante opcional: registra primero y después pide la carpeta (necesita tocar la notificación). */
+export function walletFolderPrompt(url: string, secret: string, carpetasUrl: string) {
   return [
     'Crea un atajo llamado "Pago Wallet" que reciba como entrada la transacción de Wallet, con estas acciones en este orden:',
     `1. "Obtener contenido de URL" (Get Contents of URL) a ${url} con método POST y cuerpo de solicitud JSON con estos campos de texto: secret = ${secret}, action = addTx, kind = wallet, resp = id, amount = el Importe (Amount) de la Entrada del atajo, merchant = el Comercio (Merchant) de la Entrada del atajo, card = la Tarjeta o pase (Card or Pass) de la Entrada del atajo.`,
@@ -169,6 +180,36 @@ export function yapePrompt(url: string, secret: string, carpetasUrl: string) {
     '6. "Mostrar notificación" con el resultado del paso 5.',
     'No agregues otras acciones.',
   ].join('\n');
+}
+
+const ORIGIN: Record<string, string> = { wallet: 'Wallet', yape: 'Yape', plin: 'Plin' };
+const hitLabel = (h: ShortcutHit) => {
+  const who = ORIGIN[h.kind] || (h.action === 'voz' || h.via === 'GET' ? 'Siri' : h.action === 'setFolder' ? 'Carpeta' : 'Atajo');
+  if (!h.ok) return { icon: '❌', who, text: h.code === 'auth' ? 'código secreto incorrecto' : h.error || 'error' };
+  if (h.empty) return { icon: '⚠️', who, text: 'sin datos de la compra (¿prueba manual o la automatización no pasó la compra?)' };
+  const parts = [h.amount ? `S/ ${h.amount.toFixed(2)}` : '', h.merchant].filter(Boolean).join(' · ');
+  return { icon: '✅', who, text: parts || 'llegó: ' + h.got.join(', ') };
+};
+
+/** Últimas llamadas que recibió tu Apps Script desde los atajos (se actualiza al abrir la app). */
+export function ShortcutLog({ store }: { store: Store }) {
+  const hits = store.s.hits.slice(-8).reverse();
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontWeight: 500, color: 'var(--color-text)' }}>Últimos envíos de tus atajos</span>
+        <button type="button" className="link-btn" onClick={() => void store.pull()} style={{ fontSize: 12.5 }}>Actualizar</button>
+      </div>
+      {hits.length === 0 && <div className="row-sub" style={{ marginTop: 4 }}>Aún no llegó nada (o falta pegar Code.gs v6 en script.google.com).</div>}
+      {hits.map(h => { const l = hitLabel(h); return (
+        <div key={h.at + h.action} style={{ display: 'flex', gap: 6, padding: '5px 0', borderTop: '1px solid var(--color-divider)', fontSize: 12.5 }}>
+          <span aria-hidden="true">{l.icon}</span>
+          <span style={{ flex: 1 }}><b>{l.who}</b> · {l.text}</span>
+          <span className="muted tnum">{new Date(h.at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit' })}</span>
+        </div>
+      ); })}
+    </div>
+  );
 }
 
 /** Atajo "Gasto": Siri pregunta qué gastaste y lo manda al Apps Script con una sola URL. */
@@ -236,16 +277,28 @@ export function ShortcutGuide({ store }: { store: Store }) {
         Tip: en Ajustes del iPhone › Accesibilidad › Tocar › Toque posterior, elige "Gasto" para abrirlo tocando dos veces la parte de atrás del teléfono.
       </div>
       <Collapsible open={showWallet} toggle={() => setShowWallet(v => !v)} title="Registrar solo cada pago con Wallet">
-        <div>Cada vez que pagas acercando el iPhone o el reloj, el gasto llega solo con monto, comercio y tarjeta. En compras por internet no siempre se activa.</div>
+        <div>Cada vez que pagas acercando el iPhone o el reloj a un POS, el gasto llega solo con monto, comercio y tarjeta. Las compras por internet no disparan la automatización.</div>
         <ol style={OL}>
-          <li>Copia el prompt de abajo. En Atajos → +, pídele a Siri que cree el atajo "Pago Wallet". Si ya lo tienes, bórralo y créalo de nuevo: ahora <b>primero registra el pago</b> y después pregunta la carpeta.</li>
-          <li>Revisa los dos "Obtener contenido de URL" (Get Contents of URL), tocando ›: los dos con Method POST y Request Body JSON. El primero con action = addTx, resp = id, amount, merchant y card (burbujas de Shortcut Input). El último con action = setFolder, id (burbuja Contents of URL del primero) y folder (Chosen Item).</li>
-          <li>Pestaña Automatización (Automation) → + → <b>Wallet</b> → elige tus tarjetas → Ejecutar inmediatamente (Run Immediately) → Siguiente → elige "Pago Wallet".</li>
-          <li>Al pagar te llega una notificación de Atajos: tócala para elegir la carpeta. Si no la tocas, el pago igual se registra y la app te pide la carpeta en Inicio ("Elige la carpeta").</li>
+          <li>Copia el prompt de abajo y pídele a Siri en Atajos → + que cree "Pago Wallet". Si ya lo tienes, <b>bórralo y créalo de nuevo</b>: esta versión no pregunta nada, así la automatización nunca se queda esperando.</li>
+          <li>Revisa "Obtener contenido de URL" (toca ›): Método <b>POST</b>, Cuerpo de la solicitud <b>JSON</b> (no Formulario) y amount, merchant y card con las burbujas azules de la Entrada del atajo.</li>
+          <li>Automatización → + → <b>Wallet</b> → elige tus tarjetas → <b>Ejecutar inmediatamente</b> → Siguiente → "Pago Wallet".</li>
+          <li>La carpeta la eliges en Inicio ("Elige la carpeta") <b>una sola vez por comercio</b>: la próxima compra en el mismo lugar ya llega a su carpeta sola.</li>
         </ol>
-        <CopyRow label="Prompt para Siri · Pago Wallet (incluye tu código secreto)" value={walletPrompt(c.url, c.secret, carpetasUrl)} />
+        <CopyRow label="Prompt para Siri · Pago Wallet (incluye tu código secreto)" value={walletPrompt(c.url, c.secret)} />
         <CopyRow label="URL (si lo armas a mano)" value={c.url} />
         <CopyRow label="secret" value={c.secret} secret />
+        <div style={{ marginTop: 10, fontWeight: 500, color: 'var(--color-text)' }}>¿No llega? Encuéntralo en 3 pasos</div>
+        <ol style={OL}>
+          <li>Abre "Pago Wallet" y toca ▶︎. Toca "Actualizar" abajo: debe aparecer "⚠️ Wallet · sin datos de la compra" (es normal en una prueba a mano). Si no aparece nada, el problema es el POST: método, JSON, URL o secreto.</li>
+          <li>Si la prueba manual llega: revisa la automatización (tarjetas marcadas, Ejecutar inmediatamente, acción "Pago Wallet").</li>
+          <li>Paga acercando el iPhone. Si llega "sin datos", la automatización no le pasa la compra al atajo; si no llega nada, la automatización no se ejecutó.</li>
+        </ol>
+        <ShortcutLog store={store} />
+        <details style={{ marginTop: 10 }}>
+          <summary style={{ cursor: 'pointer' }}>Versión que pregunta la carpeta al pagar (opcional)</summary>
+          <div style={{ marginTop: 6 }}>Registra el pago primero y luego te pide la carpeta con una notificación que debes tocar. Úsala solo si la simple ya te funciona.</div>
+          <CopyRow label="Prompt para Siri · Pago Wallet con carpeta" value={walletFolderPrompt(c.url, c.secret, carpetasUrl)} />
+        </details>
         <div style={{ marginTop: 6 }}>Si también dictas el gasto a Siri, la app lo marca como "¿Duplicado?" en Inicio para que borres uno.</div>
       </Collapsible>
       <Collapsible open={showYape} toggle={() => setShowYape(v => !v)} title="Registrar Yape o Plin con 2 toques">

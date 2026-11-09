@@ -68,6 +68,14 @@ function Recat({ store }: { store: Store }) {
           </button>
         ))}
       </div>
+      <Field label="Nombre"><input className="input" style={{ ...inputStyle, marginTop: 4 }} key={tx.id} defaultValue={tx.name} aria-label="Nombre del movimiento"
+        onBlur={e => { const v = e.target.value.trim(); if (v && v !== tx.name) store.setTxName(tx.id, v); }} /></Field>
+      {tx.ocr && (
+        <details style={{ marginTop: 10, fontSize: 12.5, color: 'var(--color-neutral-400)' }}>
+          <summary style={{ cursor: 'pointer' }}>Texto leído de la constancia</summary>
+          <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11.5, margin: '6px 0 0', padding: 8, borderRadius: 8, background: 'var(--color-bg)' }}>{tx.ocr}</pre>
+        </details>
+      )}
       <button type="button" className="btn btn-ghost" onClick={() => { if (confirm(`¿Eliminar "${tx.name}" (${fmt(tx.amt)})?`)) store.deleteTx(tx.id); }} style={{ marginTop: 14, height: 38, gap: 6, color: 'var(--color-neutral-400)' }}>
         <Icon name="ph ph-trash" />Eliminar movimiento
       </button>

@@ -342,6 +342,14 @@ describe('Wallet y Yape', () => {
     expect(parseYape('yape\n¡Yapeaste! Compartir\nS/2.50\nMadeleyne Cas*\n02 nov. 2026 8:19 a.m.\nCÓDIGO DE SEGURIDAD 2 8 8\nNro. de celular *** *** 881\nDestino Yape\nNro. de operación 05858288')).toEqual(real);
     expect(parseYape('¡Yapeaste!\nCÓDIGO DE SEGURIDAD\n2 8 8\n2.50\nMadeleyne Cas*\nNro. de operación\n05858288')).toEqual(real);
     expect(parseYape('¡Yapeaste!\n5/ 2.50\nMadeleyne Cas*')).toMatchObject({ amt: 2.5, merchant: 'Madeleyne Cas' });
+    // La barra leída como I y montos enteros sin decimales (lo que llegó como "SI 2").
+    const two = { amt: 2, merchant: 'Madeleyne Cas' };
+    expect(parseYape('¡Yapeaste!\nCompartir\nSI 2\nMadeleyne Cas*\n09 nov. 2026 | 4:16 p.m.\nCÓDIGO DE SEGURIDAD\n2\n8\n8\nNro. de operación\n05900001')).toMatchObject(two);
+    expect(parseYape('¡Yapeaste!\nS| 2.50\nMadeleyne Cas*')).toMatchObject({ amt: 2.5, merchant: 'Madeleyne Cas' });
+    expect(parseYape('¡Yapeaste!\nS/\n2\nMadeleyne Cas*\nCÓDIGO DE SEGURIDAD\n2 8 8')).toMatchObject(two);
+    expect(parseYape('¡Yapeaste!\nSl\n15\nBodega Rosita')).toMatchObject({ amt: 15, merchant: 'Bodega Rosita' });
+    expect(parseYape('¡Yapeaste!\n2\nMadeleyne Cas*\nCÓDIGO DE SEGURIDAD\n3\n1\n4')).toMatchObject(two);
+    expect(parseYape('¡Yapeaste!\nMadeleyne Cas*\nCÓDIGO DE SEGURIDAD\n3\n1\n4')).toMatchObject({ amt: 0, merchant: 'Madeleyne Cas' });
   });
 
   it('constancia de Yape → gasto con Yape, una sola vez por número de operación', () => {
