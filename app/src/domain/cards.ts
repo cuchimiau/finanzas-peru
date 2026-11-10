@@ -19,6 +19,9 @@ export const viaApplePay = (t: Pick<Tx, 'pay' | 'source'>) => t.source === 'appl
 export const payIcon = (t: Pick<Tx, 'pay' | 'source'>) =>
   viaApplePay(t) ? 'ph ph-apple-logo' : t.pay === 'yape' ? 'ph ph-device-mobile' : t.pay === 'cash' ? 'ph ph-money' : 'ph ph-credit-card';
 
+/** Desde dónde pagas una deuda: efectivo, Yape o una tarjeta de débito (nunca la misma deuda). */
+export const debtPayChoices = (cards: Card[]) => payChoices(cards).filter(p => !cards.some(c => c.id === p.id && c.kind !== 'debit'));
+
 /** Medios de pago para registrar un gasto a mano. */
 export const payChoices = (cards: Card[]): { id: PayRef; label: string; icon: string }[] => [
   { id: 'cash', label: 'Efectivo', icon: 'ph ph-money' },
@@ -41,12 +44,14 @@ export function matchCard(raw: string, cards: Card[]): PayRef {
   return cards.find(c => c.applePay)?.id || 'applepay';
 }
 
-/** Deudas = tarjetas de crédito: saldo informado + lo cargado después de esa fecha. */
+/** Deudas = tarjetas de crédito y préstamos: saldo informado + lo cargado después de esa fecha − lo pagado. */
 export function currentDebts(cards: Card[], txs: Tx[], now = new Date()): Debt[] {
   return cards.filter(c => c.kind === 'credit' || c.kind === 'loan').map(c => {
     const since = new Date(c.balDate || 0).getTime();
     const charges = txs.filter(t => t.pay === c.id && new Date(t.date).getTime() > since).reduce((a, t) => a + t.amt, 0);
-    return { id: c.id, name: c.name, bal: Math.round((c.bal + charges) * 100) / 100, limit: c.limit, tcea: c.tcea, min: c.min, due: nextDueLabel(c.dueDay, now), cuotas: c.cuotas, kind: c.kind };
+    // Pagos registrados a esta deuda después de la fecha del saldo.
+    const paid = txs.filter(t => t.debtId === c.id && new Date(t.date).getTime() > since).reduce((a, t) => a + t.amt, 0);
+    return { id: c.id, name: c.name, bal: Math.round(Math.max(0, c.bal + charges - paid) * 100) / 100, limit: c.limit, tcea: c.tcea, min: c.min, due: nextDueLabel(c.dueDay, now), cuotas: c.cuotas, kind: c.kind };
   }).filter(d => d.bal > 0.5);
 }
 

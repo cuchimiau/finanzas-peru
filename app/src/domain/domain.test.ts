@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_GOALS, FOLDERS, type Card, type Debt, type Tx } from './data';
 import { simulate, type Strategy } from './debts';
 import { applyMoves, autoCover, buildBudgets, folderView, goalViews, planChange, sanitizeMoves, spendByMonth, suggestSources, sumBudgets, txsOfMonth, type PlanOpts } from './plan';
-import { currentDebts, matchCard, payInfo } from './cards';
+import { currentDebts, debtPayChoices, matchCard, payInfo } from './cards';
 import { buildGeminiRequest, buildSystemPrompt, toGeminiContents } from './advisor';
 import { agoLabel, lastMonthKeys, monthAt, monthCtx, nextDueLabel, whenLabel } from './dates';
 import { fmt, fmt0, parseAmount } from './format';
@@ -493,5 +493,22 @@ describe('Fecha de la constancia de Yape', () => {
     expect(fixed.find(t => t.id === 'b')).toBe(old[1]); // sin texto leído: queda igual
     expect(fixed.find(t => t.id === 'c')).toBe(old[2]); // no es Yape: queda igual
     expect(fixYapeDates(fixed)).toBe(fixed); // ya corregido: no vuelve a cambiar
+  });
+});
+
+describe('Pago de deudas', () => {
+  const card = (id: string, kind: 'credit' | 'loan' | 'debit', bal: number) => ({ id, name: id.toUpperCase(), kind, applePay: true, limit: 3000, bal, balDate: '2026-11-01T00:00:00Z', tcea: 0.6, min: 100, dueDay: 15, cuotas: '' });
+  const pay = (id: string, debtId: string, amt: number, date = '2026-11-08T12:00:00Z') => ({ id, name: 'Pago', amt, f: 'deudas', pay: 'deb', date, why: '', source: 'manual' as const, debtId });
+  const cards = [card('bbva', 'credit', 900), card('tio', 'loan', 500), card('deb', 'debit', 0)];
+
+  it('cada pago baja el saldo de su deuda; los anteriores a la fecha del saldo no cuentan', () => {
+    const d = currentDebts(cards, [pay('p1', 'bbva', 300), pay('p2', 'tio', 100), pay('p0', 'bbva', 50, '2026-10-20T12:00:00Z')]);
+    expect(d.map(x => [x.id, x.bal])).toEqual([['bbva', 600], ['tio', 400]]);
+    // Pagar todo: la deuda desaparece de la lista.
+    expect(currentDebts(cards, [pay('p3', 'tio', 500)]).map(x => x.id)).toEqual(['bbva']);
+  });
+
+  it('se paga desde efectivo, Yape o débito, nunca desde una tarjeta de crédito o préstamo', () => {
+    expect(debtPayChoices(cards).map(c => c.id)).toEqual(['cash', 'yape', 'deb']);
   });
 });

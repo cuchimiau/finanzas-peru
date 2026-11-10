@@ -35,7 +35,9 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   // Atajo con carpeta elegida
   const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ secret, action: 'addTx', amount: 'S/ 30.00', merchant: 'KIOSKO RARO', kind: 'wallet', folder: 'Comer fuera' }) }).then(x => x.json());
   ok(r.ok, 'Wallet con carpeta registra');
-  const list = await (await fetch(`${url}?s=${encodeURIComponent(secret)}&a=carpetas`)).text();
+  // La app guarda en Drive 2 s después de cada cambio: esperar a que las carpetas estén guardadas.
+  let list = '';
+  for (let i = 0; i < 20 && !list.includes('Comer fuera'); i++) { list = await (await fetch(`${url}?s=${encodeURIComponent(secret)}&a=carpetas`)).text(); if (!list.includes('Comer fuera')) await p.waitForTimeout(500); }
   ok(list.split('\n').includes('Comer fuera') && list.split('\n').indexOf('Libre') < list.split('\n').indexOf('Fondo de emergencia'), 'el Atajo recibe tus carpetas en orden');
   await p.goto('http://localhost:5173/'); await p.waitForTimeout(1500);
   ok((await main()).includes('tienes S/ 820'), 'el gasto baja el dinero real');

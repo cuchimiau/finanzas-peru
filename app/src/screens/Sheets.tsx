@@ -9,8 +9,9 @@ import { ConnectForm, ShortcutGuide } from '../components/ConnectForm';
 import type { Store } from '../state/store';
 import type { Derived } from '../state/selectors';
 import { CloseSheet, FolderForm, OptimizeSheet, PaidSheet, PlanEditor } from './PlanSheets';
+import { AllTxSheet, PayDebtSheet } from './MoreSheets';
 
-const TITLES = { recat: 'Movimiento', connect: 'Cómo leemos tus gastos', add: 'Registrar', card: 'Deuda o tarjeta', goal: 'Meta', settings: 'Ajustes', folder: 'Carpeta', plan: 'Editar plan', optimize: 'Optimizar', close: 'Tu dinero del mes', paid: 'Ya me pagaron' };
+const TITLES = { recat: 'Movimiento', connect: 'Cómo leemos tus gastos', add: 'Registrar', card: 'Deuda o tarjeta', goal: 'Meta', settings: 'Ajustes', folder: 'Carpeta', plan: 'Editar plan', optimize: 'Optimizar', close: 'Tu dinero del mes', paid: 'Ya me pagaron', paydebt: 'Pago de deudas', alltx: 'Todos los movimientos' };
 
 export function SheetHost({ store, d }: { store: Store; d: Derived }) {
   const { s } = store;
@@ -39,6 +40,8 @@ export function SheetHost({ store, d }: { store: Store; d: Derived }) {
         {s.sheet === 'optimize' && <OptimizeSheet store={store} d={d} />}
         {s.sheet === 'close' && <CloseSheet store={store} d={d} />}
         {s.sheet === 'paid' && <PaidSheet store={store} />}
+        {s.sheet === 'paydebt' && <PayDebtSheet store={store} d={d} />}
+        {s.sheet === 'alltx' && <AllTxSheet store={store} d={d} />}
       </div>
     </>
   );

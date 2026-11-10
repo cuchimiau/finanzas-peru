@@ -23,7 +23,7 @@ import { PERSISTED_KEYS, isPersisted, migrate, pickPersisted, type ChatMsg, type
 
 export type { ChatMsg } from './persisted';
 export type Tab = 'home' | 'folders' | 'debts' | 'metrics' | 'advisor';
-export type Sheet = 'recat' | 'connect' | 'add' | 'card' | 'goal' | 'settings' | 'folder' | 'plan' | 'optimize' | 'close' | 'paid' | null;
+export type Sheet = 'recat' | 'connect' | 'add' | 'card' | 'goal' | 'settings' | 'folder' | 'plan' | 'optimize' | 'close' | 'paid' | 'paydebt' | 'alltx' | null;
 export type SyncStatus = 'off' | 'idle' | 'syncing' | 'offline' | 'error';
 
 export interface SyncMeta { rev: number | null; dirty: boolean; lastSync: number | null }
@@ -422,6 +422,20 @@ export function useFinanceStore(opts: StoreOptions) {
       flash(`${c.name} guardada`);
     },
     setCardDue: (id: string, dueDay: number) => set(x => ({ cards: x.cards.map(c => (c.id === id ? { ...c, dueDay, dueConfirmed: true } : c)) })),
+    /** Registra el pago de una o más deudas: un movimiento en "Pago de deudas" por cada una, que baja su saldo. */
+    payDebts: (items: { id: string; amt: number }[], pay: PayRef, day: string) => {
+      const st = ref.current, date = dateFromInput(day);
+      const valid = items.filter(i => i.amt > 0 && st.cards.some(c => c.id === i.id));
+      if (!valid.length) { flash('Elige una deuda y escribe cuánto pagaste', 'ph ph-warning'); return; }
+      const stamp = Date.now().toString(36);
+      const txs: Tx[] = valid.map((i, k) => {
+        const c = st.cards.find(x => x.id === i.id)!;
+        return { id: `d${stamp}${k}`, name: 'Pago ' + c.name, amt: Math.round(i.amt * 100) / 100, f: 'deudas', pay, date, why: `Pago de deuda: baja el saldo de ${c.name}.`, source: 'manual', debtId: c.id };
+      });
+      set(x => ({ txs: [...txs, ...x.txs].sort(byDateDesc), sheet: null }));
+      const total = txs.reduce((a, t) => a + t.amt, 0);
+      flash(txs.length > 1 ? `${txs.length} pagos de deuda por ${fmt(total)}` : `${txs[0].name} · ${fmt(total)}`, 'ph ph-check-circle');
+    },
     deleteCard: (id: string) => { set(x => ({ cards: x.cards.filter(c => c.id !== id), sheet: null })); flash('Tarjeta eliminada'); },
     // ─── Metas ───
     /**

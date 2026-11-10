@@ -68,6 +68,8 @@ iOS no deja leer notificaciones de otras apps. En su lugar:
   - Carpetas propias: crear, renombrar, cambiar ícono o tipo, y borrar.
   - **Editar plan**, para poner todos los montos de una vez.
   - Registrar gastos con fecha (hoy, ayer u otra) e **ingresos extra** que suman solo al mes.
+- **Pago de deudas:** en Deudas, **Registrar pago de deudas** para pagar una o varias a la vez, desde efectivo, Yape o débito. Baja el saldo de cada una y queda en "Pago de deudas".
+- **Inicio:** los movimientos de **Hoy** y de **Días anteriores**, y **Ver todos los movimientos**, agrupados por día y con búsqueda.
 - **Deudas no bancarias:** préstamos de familia, caja, cooperativa o tienda, con cuota, interés opcional y día de pago.
 - **Optimizar:**
   - Para el resto del mes: cuánto puedes gastar por día, qué carpetas se van a pasar y cuánto puedes ahorrar todavía. Ese ahorro va a la deuda más cara o al fondo de emergencia.

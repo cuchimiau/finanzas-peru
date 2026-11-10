@@ -42,6 +42,10 @@ export function Debts({ store, d }: { store: Store; d: Derived }) {
             {pay < minTotal && <div role="alert" style={{ fontSize: 12.5, color: 'var(--color-accent-300)', marginTop: 6 }}>Tu carpeta Pago de deudas ({fmt0(pay)}) no cubre los mínimos y cuotas ({fmt0(minTotal)}). Súbela en Carpetas.</div>}
           </div>
 
+          <button type="button" className="btn btn-primary btn-block" onClick={() => store.openSheet('paydebt')} style={{ height: 44, borderRadius: 12, gap: 6 }}>
+            <Icon name="ph ph-hand-coins" />Registrar pago de deudas
+          </button>
+
           <Segmented label="Estrategia de pago" value={s.strat} options={STRATS} onChange={store.setStrat} />
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

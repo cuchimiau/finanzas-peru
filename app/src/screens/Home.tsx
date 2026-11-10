@@ -1,5 +1,5 @@
 import { fmt, fmt0, pct } from '../domain/format';
-import { FolderRow, Icon, SectionHeader, TxRow, pressable } from '../components/common';
+import { Icon, SectionHeader, TxRow, pressable } from '../components/common';
 import { syncLabel } from '../components/ConnectForm';
 import type { Derived } from '../state/selectors';
 import type { Store } from '../state/store';
@@ -10,8 +10,10 @@ export function Home({ store, d }: { store: Store; d: Derived }) {
   const { s } = store, m = d.m, mo = d.money;
   const hotPct = d.hot ? Math.round(d.hot.r * 100) : 0;
   const askHot = () => d.hot && store.ask(`${d.hot.name} va al ${hotPct}% y apenas llevo ${m.pctL} del mes. Propón un ajuste sin tocar mi ahorro ni el pago de tarjetas.`);
-  const peek = d.flex.slice().sort((a, b) => b.r - a.r).slice(0, 4);
-  const recent = s.txs.slice(0, 5);
+  // Dos sectores: todo lo de hoy y los últimos de días anteriores.
+  const isToday = (iso: string) => { const a = new Date(iso), n = m.now; return a.getFullYear() === n.getFullYear() && a.getMonth() === n.getMonth() && a.getDate() === n.getDate(); };
+  const today = s.txs.filter(t => isToday(t.date));
+  const before = s.txs.filter(t => !isToday(t.date)).slice(0, Math.max(5, 10 - today.length));
   return (
     <div className="rise" style={{ padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -148,22 +150,33 @@ export function Home({ store, d }: { store: Store; d: Derived }) {
       )}
 
       <div>
-        <SectionHeader title="Carpetas de gasto" right={<button className="link-btn" onClick={() => store.goTab('folders')}>Ver las {d.folderCount}</button>} />
-        {peek.map(f => <FolderRow key={f.id} f={f} onOpen={() => store.openFolder(f.id)} />)}
-      </div>
-
-      <div>
         <SectionHeader title="Últimos movimientos" right={
           <button className="link-btn" onClick={() => (s.conn ? void store.pull() : store.openSheet('settings'))} style={{ fontSize: 12, color: 'var(--color-neutral-500)', display: 'flex', alignItems: 'center', gap: 4 }}>
             <Icon name="ph-fill ph-circle" style={{ fontSize: 7, color: s.conn && s.sync !== 'error' ? 'var(--color-accent)' : 'var(--color-neutral-600)' }} />
             {syncLabel(s)}
           </button>
         } />
-        {recent.map(t => <TxRow key={t.id} t={d.txView(t)} variant="recent" onOpen={() => store.openRecat(t.id)} />)}
-        {recent.length === 0 && (
+        {s.txs.length === 0 ? (
           <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', padding: '10px 0', lineHeight: 1.5 }}>
             Aún no hay movimientos. Registra uno con <Icon name="ph ph-plus" /> o paga con Apple Pay si ya configuraste el Atajo.
           </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--color-neutral-400)', margin: '4px 0 2px' }}>
+              <span style={{ fontWeight: 500 }}>Hoy</span>{today.length > 0 && <span className="tnum">−{fmt(today.reduce((a, t) => a + t.amt, 0))}</span>}
+            </div>
+            {today.map(t => <TxRow key={t.id} t={d.txView(t)} variant="recent" onOpen={() => store.openRecat(t.id)} />)}
+            {today.length === 0 && <div className="row-sub" style={{ padding: '6px 0 4px' }}>Aún no registraste nada hoy.</div>}
+            {before.length > 0 && (
+              <>
+                <div style={{ fontSize: 12.5, color: 'var(--color-neutral-400)', fontWeight: 500, margin: '14px 0 2px' }}>Días anteriores</div>
+                {before.map(t => <TxRow key={t.id} t={d.txView(t)} variant="recent" onOpen={() => store.openRecat(t.id)} />)}
+              </>
+            )}
+            <button type="button" className="btn btn-secondary btn-block" onClick={() => store.openSheet('alltx')} style={{ height: 42, borderRadius: 12, marginTop: 10, gap: 6 }}>
+              <Icon name="ph ph-list-bullets" />Ver todos los movimientos ({s.txs.length})
+            </button>
+          </>
         )}
       </div>
     </div>
