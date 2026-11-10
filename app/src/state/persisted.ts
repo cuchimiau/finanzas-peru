@@ -1,6 +1,7 @@
 import { DEFAULT_FOLDERS, type Budgets, type Card, type Folder, type Goal, type Income, type Prios, type Profile, type Tx } from '../domain/data';
 import { monthKey } from '../domain/dates';
 import { emptyCash, type CashMonth } from '../domain/money';
+import { fixYapeDates } from '../sync/merge';
 import type { Strategy } from '../domain/debts';
 import type { Move } from '../domain/plan';
 
@@ -65,5 +66,7 @@ export function migrate(p: Persisted): Persisted {
     cash: p.cash && typeof p.cash === 'object' && typeof p.cash.key === 'string' ? p.cash : emptyCash(monthKey(new Date())),
     // Una meta sin su carpeta de ahorro no tiene a dónde ir su aporte: se quita.
     goals: p.goals.filter(g => fixed.some(f => f.id === g.id)),
+    // Yape registrados con la fecha en que se compartió la constancia: se corrige con la fecha de la constancia.
+    txs: fixYapeDates(p.txs),
   };
 }

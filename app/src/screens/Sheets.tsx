@@ -44,6 +44,9 @@ export function SheetHost({ store, d }: { store: Store; d: Derived }) {
   );
 }
 
+/** "2026-11-06" en hora del teléfono. */
+const localDay = (iso: string) => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
 function Recat({ store }: { store: Store }) {
   const { s } = store;
   const tx = s.txs.find(t => t.id === s.rcId);
@@ -70,6 +73,9 @@ function Recat({ store }: { store: Store }) {
       </div>
       <Field label="Nombre"><input className="input" style={{ ...inputStyle, marginTop: 4 }} key={tx.id} defaultValue={tx.name} aria-label="Nombre del movimiento"
         onBlur={e => { const v = e.target.value.trim(); if (v && v !== tx.name) store.setTxName(tx.id, v); }} /></Field>
+      <Field label="Fecha"><input className="input" type="date" style={{ ...inputStyle, marginTop: 4 }} key={tx.id + tx.date} aria-label="Fecha del movimiento"
+        defaultValue={localDay(tx.date)} max={localDay(new Date().toISOString())}
+        onChange={e => { if (e.target.value && e.target.value !== localDay(tx.date)) store.setTxDate(tx.id, e.target.value); }} /></Field>
       {tx.ocr && (
         <details style={{ marginTop: 10, fontSize: 12.5, color: 'var(--color-neutral-400)' }}>
           <summary style={{ cursor: 'pointer' }}>Texto leído de la constancia</summary>

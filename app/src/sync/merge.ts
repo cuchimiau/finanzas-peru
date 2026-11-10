@@ -77,6 +77,57 @@ export function parseYape(raw: string): { amt: number; merchant: string; op: str
   return { amt, merchant: merchant.replace(/[*.]+$/, '').slice(0, 60), op };
 }
 
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+/**
+ * Fecha y hora de la constancia, en hora del teléfono: "Viernes, 06 de noviembre de 2026 – 03:01 p.m." (BCP),
+ * "02 nov. 2026 | 8:19 a.m." (Yape) o "06/11/2026 15:01". Devuelve null si no se ve o no es creíble
+ * (posterior a `now` —cuando se compartió— o de más de un año antes).
+ */
+export function parseReceiptDate(raw: string, now = new Date()): string | null {
+  const t = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  let y = 0, mo = -1, d = 0, rest = '';
+  const named = t.match(/(\d{1,2})\s*(?:de\s+)?([a-z]{3,})\.?\s*(?:de(?:l)?\s+)?(\d{4})/);
+  if (named) {
+    const i = MONTHS.indexOf(named[2].slice(0, 3) === 'set' ? 'sep' : named[2].slice(0, 3));
+    if (i >= 0) { d = Number(named[1]); mo = i; y = Number(named[3]); rest = t.slice((named.index ?? 0) + named[0].length); }
+  }
+  if (mo < 0) {
+    const num = t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (num) { d = Number(num[1]); mo = Number(num[2]) - 1; y = Number(num[3]); rest = t.slice((num.index ?? 0) + num[0].length); }
+  }
+  if (mo < 0 || mo > 11 || d < 1 || d > 31) return null;
+  let h = 12, mi = 0;
+  const tm = rest.slice(0, 40).match(/(\d{1,2})[:.](\d{2})\s*(?:([ap])\.?\s*m\.?)?/);
+  if (tm) {
+    h = Number(tm[1]) % 24; mi = Number(tm[2]) % 60;
+    if (tm[3] === 'p' && h < 12) h += 12;
+    if (tm[3] === 'a' && h === 12) h = 0;
+  }
+  const date = new Date(y, mo, d, h, mi);
+  if (date.getMonth() !== mo || Number.isNaN(date.getTime())) return null;
+  const ms = date.getTime();
+  if (ms > now.getTime() + 36e5 || ms < now.getTime() - 366 * 864e5) return null;
+  return date.toISOString();
+}
+
+/**
+ * Corrige la fecha de los Yape ya registrados con la fecha de su constancia (los que guardaron el texto leído).
+ * Solo cambia la fecha; si nada cambia devuelve el mismo arreglo.
+ */
+export function fixYapeDates(txs: Tx[]): Tx[] {
+  let changed = false;
+  const out = txs.map(t => {
+    if (t.source !== 'yape' || !t.ocr) return t;
+    // Referencia: cuándo se registró (la constancia no puede ser posterior).
+    const d = parseReceiptDate(t.ocr, new Date(t.date));
+    if (!d || Math.abs(new Date(d).getTime() - new Date(t.date).getTime()) < 60e3) return t;
+    changed = true;
+    return { ...t, date: d };
+  });
+  return changed ? out.sort(byDateDesc) : txs;
+}
+
 const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 /** Carpeta elegida en el Atajo ("Comer fuera", "comer FUERA", "Mercado y super"…) → id, o null. */
 export function folderByName(name: string | undefined): FolderId | null {
@@ -118,7 +169,9 @@ export function inboxToTxs(inbox: InboxItem[], cards: Card[], existing: Tx[]): T
       : spoken && !cardRaw ? 'cash' : matchCard(cardRaw, cards);
     const learned = learnedFolder(name, existing);
     const g = guessFolder(name);
-    const date = Number.isNaN(new Date(it.at).getTime()) ? new Date().toISOString() : new Date(it.at).toISOString();
+    const sent = Number.isNaN(new Date(it.at).getTime()) ? new Date().toISOString() : new Date(it.at).toISOString();
+    // Yape: la fecha del pago es la de la constancia, no la de cuando la compartiste.
+    const date = (yp && parseReceiptDate(it.text!, new Date(sent))) || sent;
     const via = yp ? 'Constancia de Yape' : spoken ? 'Registrado con Siri' : 'Llegó por Apple Pay';
     const dup = findDup({ id, amt, date } as Tx, [...existing, ...out]);
     const chosen = folderByName(it.folder);

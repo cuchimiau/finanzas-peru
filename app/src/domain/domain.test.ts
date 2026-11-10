@@ -9,7 +9,7 @@ import { buildGeminiRequest, buildSystemPrompt, toGeminiContents } from './advis
 import { agoLabel, lastMonthKeys, monthAt, monthCtx, nextDueLabel, whenLabel } from './dates';
 import { fmt, fmt0, parseAmount } from './format';
 import { realMoney } from './money';
-import { applyFixes, inboxToTxs, mergeRemote, parseSpoken, parseYape } from '../sync/merge';
+import { applyFixes, fixYapeDates, inboxToTxs, mergeRemote, parseReceiptDate, parseSpoken, parseYape } from '../sync/merge';
 import { nextMonthPlan, restOfMonth } from './optimize';
 import { FM } from './data';
 import { encodeConnection, parseConnection } from '../sync/backend';
@@ -459,3 +459,39 @@ describe('Dinero real del mes', () => {
   });
 });
 
+
+describe('Fecha de la constancia de Yape', () => {
+  const now = new Date(2026, 10, 10, 11, 0);
+  const local = (iso: string | null) => { const d = new Date(iso!); return [d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes()]; };
+  const bcp = '›BCP»\nYapear a celular\nMonto enviado\nS/ 5.00\nViernes, 06 de noviembre de 2026 – 03:01 p.m.\nEnviado a\nRAMIREZ HAUJAPUMA LAZARO';
+
+  it('lee la fecha y hora en los formatos de BCP y Yape', () => {
+    expect(local(parseReceiptDate(bcp, now))).toEqual([2026, 11, 6, 15, 1]);
+    expect(local(parseReceiptDate('¡Yapeaste!\nS/ 2.50\nMadeleyne Cas*\n02 nov. 2026 | 8:19 a.m.', now))).toEqual([2026, 11, 2, 8, 19]);
+    expect(local(parseReceiptDate('Pago\n06/11/2026 15:01', now))).toEqual([2026, 11, 6, 15, 1]);
+    expect(local(parseReceiptDate('30 set. 2026 12:05 a. m.', now))).toEqual([2026, 9, 30, 0, 5]);
+    expect(local(parseReceiptDate('06 de noviembre de 2026', now))).toEqual([2026, 11, 6, 12, 0]); // sin hora: mediodía
+    expect(parseReceiptDate('sin fecha visible', now)).toBeNull();
+    expect(parseReceiptDate('06 de diciembre de 2026 10:00', now)).toBeNull(); // en el futuro: no creíble
+  });
+
+  it('un Yape nuevo toma la fecha de la constancia, no la de cuando se compartió', () => {
+    const [t] = inboxToTxs([{ id: 'y1', amount: 0, kind: 'yape', folder: 'Libre', text: bcp, at: new Date(2026, 10, 10, 11, 9).toISOString() }], [], []);
+    expect(t).toMatchObject({ amt: 5, name: 'Ramirez Haujapuma Lazaro', source: 'yape' });
+    expect(local(t.date)).toEqual([2026, 11, 6, 15, 1]);
+    const [w] = inboxToTxs([{ id: 'w1', amount: '9', merchant: 'Tambo', kind: 'wallet', at: '2026-11-10T16:00:00Z' }], [], []);
+    expect(w.date).toBe('2026-11-10T16:00:00.000Z'); // lo demás no cambia
+  });
+
+  it('corrige la fecha de los Yape ya registrados que guardaron el texto, sin tocar nada más', () => {
+    const tx = (id: string, extra: Partial<Tx>) => ({ id, name: id, amt: 5, f: 'libre', pay: 'yape', date: new Date(2026, 10, 10, 11, 9).toISOString(), why: 'x', source: 'yape' as const, ...extra });
+    const old = [tx('a', { ocr: bcp }), tx('b', {}), tx('c', { source: 'manual', ocr: bcp })];
+    const fixed = fixYapeDates(old);
+    const a = fixed.find(t => t.id === 'a')!;
+    expect(local(a.date)).toEqual([2026, 11, 6, 15, 1]);
+    expect({ ...a, date: '' }).toEqual({ ...old[0], date: '' });
+    expect(fixed.find(t => t.id === 'b')).toBe(old[1]); // sin texto leído: queda igual
+    expect(fixed.find(t => t.id === 'c')).toBe(old[2]); // no es Yape: queda igual
+    expect(fixYapeDates(fixed)).toBe(fixed); // ya corregido: no vuelve a cambiar
+  });
+});

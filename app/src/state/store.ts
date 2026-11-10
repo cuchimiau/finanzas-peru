@@ -14,7 +14,7 @@ import {
   BackendError, call, loadConnection, saveConnection,
   type Connection, type LoadResponse, type PingResponse, type SaveResponse, type ShortcutHit,
 } from '../sync/backend';
-import { applyFixes, byDateDesc, inboxToTxs, mergeRemote } from '../sync/merge';
+import { applyFixes, byDateDesc, fixYapeDates, inboxToTxs, mergeRemote } from '../sync/merge';
 
 const SOURCE_LABEL: Record<Tx['source'], string> = { manual: 'A mano', applepay: 'Apple Pay', siri: 'Siri', yape: 'Yape' };
 const SHEET_SOURCE: Record<Tx['source'], string> = { manual: 'Manual', applepay: 'Apple Pay (Atajo)', siri: 'Siri (Atajo)', yape: 'Yape (constancia)' };
@@ -190,6 +190,10 @@ export function useFinanceStore(opts: StoreOptions) {
       } else if (!isPersisted(res.state)) dirty = true; // Drive vacío: subir lo local
       const fresh = inboxToTxs(res.inbox || [], next.cards, next.txs);
       if (fresh.length) { next = { ...next, txs: [...fresh, ...next.txs].sort(byDateDesc) }; dirty = true; }
+      // Fechas de Yape tomadas de la constancia (también los ya registrados): si cambia algo, se guarda en Drive.
+      const dated = fixYapeDates(next.txs);
+      if (dated !== next.txs) { next = { ...next, txs: dated }; dirty = true; }
+      else if (isPersisted(res.state) && fixYapeDates(res.state.txs) !== res.state.txs) dirty = true; // Drive aún tiene las fechas viejas
       const fixed = applyFixes(res.inbox || [], next.txs);
       if (fixed !== next.txs && fixed.some((t, i) => t !== next.txs[i])) { next = { ...next, txs: fixed }; dirty = true; }
       pendingAck.current = Array.from(new Set([...pendingAck.current, ...(res.inbox || []).map(i => i.id)]));
@@ -318,6 +322,13 @@ export function useFinanceStore(opts: StoreOptions) {
       if (!(amt > 0)) { flash('Escribe un monto válido', 'ph ph-warning'); return; }
       set(x => ({ txs: x.txs.map(t => (t.id === id ? { ...t, amt, pending: undefined, why: t.why.replace(' sin monto: escríbelo abajo.', '.') } : t)) }));
       flash(`Monto guardado: ${fmt(amt)}`);
+    },
+    /** Cambia el día de un movimiento (conserva la hora). */
+    setTxDate: (id: string, day: string) => {
+      const [y, m, d] = day.split('-').map(Number);
+      if (!y || !m || !d) return;
+      set(x => ({ txs: x.txs.map(t => { if (t.id !== id) return t; const o = new Date(t.date); return { ...t, date: new Date(y, m - 1, d, o.getHours(), o.getMinutes()).toISOString() }; }).sort(byDateDesc) }));
+      flash('Fecha guardada');
     },
     setTxName: (id: string, name: string) => { set(x => ({ txs: x.txs.map(t => (t.id === id ? { ...t, name: name.slice(0, 80) } : t)) })); flash('Nombre guardado'); },
     deleteTx: (id: string) => { set(x => ({ txs: x.txs.filter(t => t.id !== id), sheet: null })); flash('Movimiento eliminado'); },
