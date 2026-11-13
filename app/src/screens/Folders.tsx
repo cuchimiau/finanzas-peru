@@ -4,7 +4,8 @@ import { fmt, fmt0 } from '../domain/format';
 import { minPayments, payInfo } from '../domain/cards';
 import { autoCover, suggestSources, type Take } from '../domain/plan';
 import { spentMap } from '../state/store';
-import { FolderRow, Icon, Track, TxRow, pressable } from '../components/common';
+import { BudgetCard, Icon, Track, TxRow, pressable } from '../components/common';
+import { isFixedFolder } from '../domain/money';
 import { SUBS_FOLDER, subStatus, subsTotal } from '../domain/subs';
 import type { Derived } from '../state/selectors';
 import type { Store } from '../state/store';
@@ -38,11 +39,11 @@ function FolderList({ store, d }: { store: Store; d: Derived }) {
 
       {d.groupRows.map(g => (
         <div key={g.id} style={{ marginTop: 22 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--color-neutral-500)', marginBottom: 2 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-neutral-500)', margin: '0 4px 8px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span className="dot" style={{ background: g.color }} />{g.label}</span>
             <span className="tnum">{g.amtL}</span>
           </div>
-          {g.items.map(f => <FolderRow key={f.id} f={f} divider onOpen={() => store.openFolder(f.id)} />)}
+          {g.items.map(f => <BudgetCard key={f.id} f={f} monthPct={d.m.pct} pace={!(FM[f.id] && isFixedFolder(FM[f.id]))} onOpen={() => store.openFolder(f.id)} />)}
         </div>
       ))}
     </div>

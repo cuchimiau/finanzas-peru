@@ -30,6 +30,9 @@ export function SettingsScreen({ store, d }: { store: Store; d: Derived }) {
         <Row icon="plugs-connected" color="#56a2cd" label="Cómo leemos tus gastos" onClick={() => store.openSheet('connect')} />
         <Row icon="cloud-check" color="#e48a33" label="Drive" end={s.conn ? 'Conectado' : 'Sin conectar'} onClick={() => document.getElementById('ajustes-drive')?.scrollIntoView({ behavior: 'smooth' })} />
       </div>
+      <div className="group">
+        <Row icon="microsoft-excel-logo" color="#1f9d55" label="Exportar a Excel (.csv)" end={`${s.txs.length + s.incomes.length}`} onClick={() => store.openSheet('export')} />
+      </div>
       <div><Settings store={store} embedded /></div>
     </div>
   );

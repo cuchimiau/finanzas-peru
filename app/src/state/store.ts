@@ -25,7 +25,7 @@ import { PERSISTED_KEYS, isPersisted, migrate, pickPersisted, type ChatMsg, type
 export type { ChatMsg } from './persisted';
 /** Pestañas de la barra (home = Analítica) y pantallas que se abren desde ellas (debts, advisor, metrics). */
 export type Tab = 'home' | 'list' | 'folders' | 'settings' | 'debts' | 'metrics' | 'advisor';
-export type Sheet = 'recat' | 'connect' | 'add' | 'card' | 'goal' | 'settings' | 'folder' | 'plan' | 'optimize' | 'close' | 'paid' | 'paydebt' | 'alltx' | 'sub' | 'filter' | null;
+export type Sheet = 'recat' | 'connect' | 'add' | 'card' | 'goal' | 'settings' | 'folder' | 'plan' | 'optimize' | 'close' | 'paid' | 'paydebt' | 'alltx' | 'sub' | 'filter' | 'export' | null;
 /** Analítica: periodo que se mira, mes elegido ("2026-11") y carpetas filtradas (null = todas). */
 export interface AnView { period: 'mes' | 'año'; month: string; folders: FolderId[] | null }
 export type SyncStatus = 'off' | 'idle' | 'syncing' | 'offline' | 'error';

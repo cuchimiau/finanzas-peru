@@ -70,6 +70,18 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await p.screenshot({ path: `${out}/sub3-analitica-filtro.png` });
   await p.click('text=Suscripciones · Quitar filtro'); await p.waitForTimeout(150);
   ok(!(await main()).includes('Quitar filtro'), 'quitar filtro');
+  // Presupuestos con tarjetas y barra
+  await p.click('nav >> text=Presupuestos'); await p.waitForTimeout(200);
+  const subsCard = await p.getAttribute('main .bud-card[aria-label^="Suscripciones"]', 'aria-label');
+  ok(/Suscripciones: gastaste S\/ 67\.80 de S\/ 45\. Te pasaste por S\/ 22\.80/.test(subsCard), 'tarjeta de presupuesto con gastado y exceso: ' + subsCard);
+  ok(await p.locator('main .bud-card[aria-label^="Suscripciones"] .bud-tick').count() === 1, 'marca del límite cuando te pasas');
+  await p.screenshot({ path: `${out}/sub4-presupuestos.png` });
+  // Exportar a Excel (.csv)
+  await p.click('nav >> text=Ajustes'); await p.click('[aria-label="Abrir Exportar a Excel (.csv)"]');
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.click('.sheet >> button:has-text("Exportar 2 movimientos")')]);
+  const csv = require('fs').readFileSync(await dl.path(), 'utf8');
+  ok(/^finanzas-peru-\d{4}-\d{2}-\d{8}\.csv$/.test(dl.suggestedFilename()), 'archivo .csv: ' + dl.suggestedFilename());
+  ok(csv.startsWith('\uFEFFFecha,Hora,Tipo,Descripción,Carpeta,Monto (S/),Origen,Suscripción') && /,Gasto,Spotify,Suscripciones,-22\.90,A mano,Spotify\r\n/.test(csv) && /,Gasto,Netflix,Suscripciones,-44\.90,A mano,Netflix/.test(csv), 'CSV con los movimientos del mes');
   ok(errs.length === 0, 'sin errores en la página ' + errs.join(' | '));
   await b.close();
 })().catch(e => { console.error(e); process.exit(1); });

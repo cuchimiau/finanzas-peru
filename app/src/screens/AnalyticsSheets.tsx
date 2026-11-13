@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { FOLDERS, type FolderId } from '../domain/data';
 import { parseAmount } from '../domain/format';
+import { monthKey, monthKeyOf } from '../domain/dates';
+import { buildCsv, csvName } from '../domain/exportCsv';
 import { Field, Icon, Segmented, inputStyle } from '../components/common';
 import type { Store } from '../state/store';
 
@@ -71,6 +73,45 @@ export function FilterSheet({ store }: { store: Store }) {
       </div>
       <button type="button" className="btn btn-primary btn-block" style={{ height: 46, borderRadius: 12 }} disabled={sel !== null && sel.length === 0}
         onClick={() => { store.setAn({ period, folders: sel }); store.closeSheet(); }}>Aplicar</button>
+    </div>
+  );
+}
+
+/** Exportar a Excel (.csv): este mes o todo; en el iPhone abre Compartir (Guardar en Archivos, WhatsApp, Excel…). */
+export function ExportSheet({ store }: { store: Store }) {
+  const { s } = store;
+  const cur = monthKey(new Date());
+  const [range, setRange] = useState<'mes' | 'todo'>('mes');
+  const [busy, setBusy] = useState(false);
+  const month = range === 'mes' ? cur : null;
+  const count = s.txs.filter(t => t.amt > 0 && (!month || monthKeyOf(t.date) === month)).length + s.incomes.filter(i => !month || monthKeyOf(i.date) === month).length;
+  const run = async () => {
+    setBusy(true);
+    const name = csvName(month), csv = buildCsv(s.txs, s.incomes, s.subs, month);
+    try {
+      const file = new File([csv], name, { type: 'text/csv' });
+      const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
+      if (nav.canShare?.({ files: [file] }) && /iPhone|iPad|Android/i.test(navigator.userAgent)) {
+        await nav.share({ files: [file], title: name });
+      } else {
+        const url = URL.createObjectURL(file), a = document.createElement('a');
+        a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      }
+      store.flash(`${count} movimientos exportados`, 'ph ph-microsoft-excel-logo');
+      store.closeSheet();
+    } catch (e) {
+      if ((e as Error)?.name !== 'AbortError') store.flash('No se pudo exportar. Inténtalo de nuevo.', 'ph ph-warning');
+    } finally { setBusy(false); }
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ fontSize: 20, fontWeight: 500 }}>Exportar a Excel</div>
+      <div className="row-sub" style={{ lineHeight: 1.45 }}>Un archivo .csv con fecha, hora, tipo, descripción, carpeta, monto (gastos en negativo, ingresos en positivo), origen y suscripción. Ábrelo con Excel, Numbers o Google Sheets.</div>
+      <Segmented label="Qué exportar" value={range} options={[['mes', 'Este mes'], ['todo', 'Todo']]} onChange={setRange} />
+      <button type="button" className="btn btn-primary btn-block" style={{ height: 46, borderRadius: 12, gap: 8 }} disabled={busy || !count} onClick={run}>
+        <Icon name="ph ph-export" />{count ? `Exportar ${count} movimientos` : 'No hay movimientos en este periodo'}
+      </button>
     </div>
   );
 }

@@ -31,7 +31,7 @@ export function derive(s: State, now = new Date()) {
   const flexLeft = flex.reduce((a, v) => a + Math.max(0, v.left), 0);
   const spent = views.filter(v => v.flow).reduce((a, v) => a + v.spent, 0);
   const saved = views.filter(v => !v.flow).reduce((a, v) => a + v.budget, 0);
-  const hot = views.filter(v => v.flow && v.id !== 'vivienda' && v.spent > 0 && v.r > m.pct + HOT_MARGIN).sort((a, b) => b.r - a.r)[0];
+  const hot = views.filter(v => v.flow && !(FM[v.id] && isFixedFolder(FM[v.id])) && v.spent > 0 && v.r > m.pct + HOT_MARGIN).sort((a, b) => b.r - a.r)[0];
 
   const groupRows: GroupRow[] = GROUPS.map(g => {
     const items = views.filter(v => v.grp === g.id), amt = items.reduce((a, v) => a + v.budget, 0);

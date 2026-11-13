@@ -11,9 +11,9 @@ import type { Store } from '../state/store';
 import type { Derived } from '../state/selectors';
 import { CloseSheet, FolderForm, OptimizeSheet, PaidSheet, PlanEditor } from './PlanSheets';
 import { AllTxSheet, PayDebtSheet } from './MoreSheets';
-import { FilterSheet, SubForm } from './AnalyticsSheets';
+import { ExportSheet, FilterSheet, SubForm } from './AnalyticsSheets';
 
-const TITLES = { recat: 'Movimiento', connect: 'Cómo leemos tus gastos', add: 'Registrar', card: 'Deuda o tarjeta', goal: 'Meta', settings: 'Ajustes', folder: 'Carpeta', plan: 'Editar plan', optimize: 'Optimizar', close: 'Tu dinero del mes', paid: 'Ya me pagaron', paydebt: 'Pago de deudas', alltx: 'Todos los movimientos', sub: 'Suscripción', filter: 'Filtrar' };
+const TITLES = { recat: 'Movimiento', connect: 'Cómo leemos tus gastos', add: 'Registrar', card: 'Deuda o tarjeta', goal: 'Meta', settings: 'Ajustes', folder: 'Carpeta', plan: 'Editar plan', optimize: 'Optimizar', close: 'Tu dinero del mes', paid: 'Ya me pagaron', paydebt: 'Pago de deudas', alltx: 'Todos los movimientos', sub: 'Suscripción', filter: 'Filtrar', export: 'Exportar a Excel' };
 
 export function SheetHost({ store, d }: { store: Store; d: Derived }) {
   const { s } = store;
@@ -46,6 +46,7 @@ export function SheetHost({ store, d }: { store: Store; d: Derived }) {
         {s.sheet === 'alltx' && <AllTxSheet store={store} d={d} />}
         {s.sheet === 'sub' && <SubForm key={s.subId || 'new'} store={store} />}
         {s.sheet === 'filter' && <FilterSheet store={store} />}
+        {s.sheet === 'export' && <ExportSheet store={store} />}
       </div>
     </>
   );

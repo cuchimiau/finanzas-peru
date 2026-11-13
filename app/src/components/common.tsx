@@ -1,5 +1,6 @@
 import type { KeyboardEvent, ReactNode } from 'react';
-import type { FolderView } from '../domain/plan';
+import { HOT_MARGIN, type FolderView } from '../domain/plan';
+import { fmt, fmt0 } from '../domain/format';
 import type { TxView } from '../state/selectors';
 
 /** Props para que un div clicable también funcione con teclado. */
@@ -23,21 +24,44 @@ export const Track = ({ w, color, height = 3, bg = 'var(--color-neutral-900)', s
   </div>
 );
 
-export function FolderRow({ f, onOpen, divider }: { f: FolderView; onOpen: () => void; divider?: boolean }) {
+/**
+ * Tarjeta de presupuesto (estilo Incomes): ícono, nombre y presupuesto; barra de lo gastado
+ * (azul; amarilla si vas más rápido que el mes; roja con marca en el límite si te pasaste) y abajo gastado / lo que queda.
+ */
+export function BudgetCard({ f, onOpen, monthPct, pace = true }: { f: FolderView; onOpen: () => void; monthPct: number; pace?: boolean }) {
+  const over = f.flow && f.left < 0;
+  // Gastos fijos (se pagan una vez al mes): sin ritmo del mes.
+  const hot = pace && f.flow && !over && f.r > monthPct + HOT_MARGIN;
+  const fill = over ? 'var(--color-over)' : hot ? '#f8d03c' : f.flow ? 'var(--color-accent)' : f.barColor;
+  const w = f.flow ? (over ? 100 : Math.min(100, f.r * 100)) : f.budget ? 100 : 0;
+  const label = f.flow
+    ? `${f.name}: gastaste ${fmt(f.spent)} de ${fmt0(f.budget)}. ${over ? `Te pasaste por ${fmt(-f.left)}` : `Quedan ${fmt(f.left)}`}.`
+    : `${f.name}: ${f.leftL} ${f.leftLabel}.`;
   return (
-    <div {...pressable(onOpen)} style={{ padding: '10px 0', borderBottom: divider ? '1px solid var(--color-divider)' : undefined }}>
-      <div className="row">
-        <div className="ibox"><Icon name={f.icon} /></div>
-        <div className="row-main">
-          <div className="row-title">{f.name}</div>
-          <div className="row-sub tnum">{f.ofL}</div>
-        </div>
-        <div className="row-end">
-          <div className="tnum" style={{ fontSize: 15, fontWeight: 500, color: f.leftColor }}>{f.leftL}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--color-neutral-500)' }}>{f.leftLabel}</div>
-        </div>
+    <div {...pressable(onOpen, 'bud-card')} aria-label={label}>
+      <div className="bud-top">
+        <span className="bud-icon"><Icon name={f.icon} /></span>
+        <span className="bud-name">{f.name}</span>
+        <span className="bud-budget tnum">{f.flow ? fmt0(f.budget) : f.leftLabel}</span>
       </div>
-      <Track w={f.barW} color={f.barColor} style={{ margin: '8px 0 0 48px' }} />
+      <div className="bud-track" aria-hidden="true">
+        <span style={{ width: w + '%', background: fill }} />
+        {over && f.spent > 0 && <i className="bud-tick" style={{ left: `${(f.budget / f.spent) * 100}%` }} />}
+        {pace && f.flow && !over && f.budget > 0 && monthPct > 0 && monthPct < 1 && <i className="bud-pace" style={{ left: `${monthPct * 100}%` }} />}
+      </div>
+      <div className="bud-bottom tnum">
+        {f.flow ? (
+          <>
+            <span>{fmt(f.spent)}</span>
+            <span style={{ color: over ? 'var(--color-negative)' : 'var(--color-neutral-400)' }}>{over ? '−' + fmt(-f.left) : fmt(f.left)}</span>
+          </>
+        ) : (
+          <>
+            <span className="bud-note">{f.ofL}</span>
+            <span style={{ color: f.leftColor }}>{f.leftL}</span>
+          </>
+        )}
+      </div>
     </div>
   );
 }
