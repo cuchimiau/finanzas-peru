@@ -11,6 +11,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message));
   const main = () => p.evaluate(() => document.querySelector('main')?.innerText || '');
+  const lista = async () => { await p.click('nav >> text=Lista'); await p.waitForTimeout(200); return main(); };
   await p.goto('http://localhost:5173/?reset=1'); await p.waitForTimeout(300);
   await p.click('text=Crear mi plan'); await p.fill('input[autocomplete=given-name]', 'Leo'); await p.fill('input[inputmode=numeric]', '2600');
   await p.click('text=Siguiente'); await p.click('text=Sin tarjetas por ahora'); await p.waitForSelector('text=Crear mis carpetas'); await p.click('text=Crear mis carpetas');
@@ -33,7 +34,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   ok((await post({ text: '¡Yapeaste!\nS/ 18\nPollería El Rey\n14 oct. 2026 - 06:30 pm\nNro. de operación 4455667', kind: 'yape' })).ok, 'Yape registra');
   await post({ text: '¡Yapeaste!\nS/ 18\nPollería El Rey\nNro. de operación 4455667', kind: 'yape' }); // compartida dos veces
   await p.goto('http://localhost:5173/'); await p.waitForTimeout(1500);
-  const m = await main();
+  const m = await lista();
   ok(/Pollería El Rey/.test(m) && (m.match(/Pollería El Rey/g) || []).length === 1, 'Yape llega una sola vez');
   ok(m.includes('¿Duplicado?') && m.includes('≈ Tambo'), 'Wallet + Siri marcado como posible duplicado');
   await p.locator('text=¿Duplicado?').scrollIntoViewIfNeeded();

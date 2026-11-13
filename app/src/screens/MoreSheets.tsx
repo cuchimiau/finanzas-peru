@@ -4,6 +4,7 @@ import { fmt, fmt0, parseAmount } from '../domain/format';
 import { debtPayChoices } from '../domain/cards';
 import { Field, Icon, TxRow, inputStyle } from '../components/common';
 import type { Derived } from '../state/selectors';
+import { TxAlerts } from '../components/TxAlerts';
 import type { Store } from '../state/store';
 
 const todayInput = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -104,6 +105,7 @@ function TxList({ store, d, screen }: { store: Store; d: Derived; screen?: boole
     <div>
       {screen ? <div className="page-title">Transacciones</div> : <div style={{ fontSize: 20, fontWeight: 500 }}>Todos los movimientos</div>}
       <div className="row-sub" style={{ marginTop: 2 }}>{s.txs.length} registrados · del más reciente al más antiguo</div>
+      {screen && <TxAlerts store={store} />}
       <div style={{ position: 'relative', marginTop: 10 }}>
         <Icon name="ph ph-magnifying-glass" style={{ position: 'absolute', left: 12, top: 13, color: 'var(--color-neutral-500)', fontSize: 16 }} />
         <input className="input" style={{ ...inputStyle, paddingLeft: 34 }} value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por lugar o carpeta" aria-label="Buscar movimientos" />

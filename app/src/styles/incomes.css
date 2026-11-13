@@ -137,3 +137,51 @@ main.app-main { padding-bottom: 92px; }
   main.app-main { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
   .composer-wrap { margin-bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* ─── Registrar con teclado de calculadora (estilo Incomes) ─── */
+.add-sheet { display: flex; flex-direction: column; gap: 10px; }
+.add-x { width: 36px; height: 36px; border-radius: 18px; border: 0; background: var(--color-surface-2); color: var(--color-text); font-size: 17px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none; }
+.add-amount { position: relative; text-align: center; padding: 4px 40px 0; }
+.add-amount input { width: 100%; background: none; border: 0; outline: 0; text-align: center; font: 500 46px var(--font-heading); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; caret-color: var(--color-accent); padding: 0; height: 56px; }
+.add-amount input::placeholder { color: currentColor; opacity: .9; font-weight: 400; }
+.add-result { font-size: 14px; min-height: 18px; font-variant-numeric: tabular-nums; }
+.add-undo { position: absolute; right: 0; top: 14px; width: 34px; height: 34px; border-radius: 17px; border: 0; background: none; color: var(--color-accent); font-size: 21px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.add-undo:disabled { color: var(--color-neutral-700); cursor: default; }
+.add-pays { display: flex; overflow-x: auto; border-bottom: 0.5px solid var(--color-divider); margin: 0 -20px; padding: 0 8px; scrollbar-width: none; }
+.add-pays::-webkit-scrollbar { display: none; }
+.add-pay { flex: 1 0 auto; min-width: 96px; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 10px 8px; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--color-neutral-300); font: 500 15px var(--font-body); cursor: pointer; white-space: nowrap; }
+.add-pay small { font-size: 12.5px; color: var(--color-neutral-500); font-weight: 400; }
+.add-pay.on { color: var(--color-text); border-bottom-color: var(--color-accent); }
+.add-pad { background: var(--color-surface-2); border-radius: 16px; padding: 10px 10px 4px; display: flex; flex-direction: column; gap: 4px; }
+.add-pad .seg { background: #3a393d; }
+.add-ops, .add-keys { display: grid; }
+.add-ops { grid-template-columns: repeat(4, 1fr); }
+.add-keys { grid-template-columns: repeat(3, 1fr); }
+.add-ops button, .add-keys button { height: 46px; border: 0; background: none; border-radius: 12px; color: var(--color-text); font: 400 27px var(--font-heading); cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+.add-ops button { height: 38px; color: var(--color-accent); font-size: 19px; }
+.add-ops button:active, .add-keys button:active { background: rgba(255, 255, 255, 0.08); }
+.add-keys button i { font-size: 25px; }
+.add-folders { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px 2px; }
+.add-folder { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; background: none; border: 0; border-radius: 12px; color: var(--color-neutral-300); cursor: pointer; min-width: 0; }
+.add-ficon { width: 42px; height: 42px; border-radius: 21px; background: var(--color-surface-2); display: flex; align-items: center; justify-content: center; font-size: 21px; color: var(--color-neutral-200); }
+.add-fname { font-size: 11.5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.add-folder.on .add-ficon { background: var(--color-accent); color: #fff; }
+.add-folder.on { color: var(--color-text); }
+
+/* ─── Resumen del mes en Analítica (estilo Incomes) ─── */
+.sum-label { font-size: 13px; color: var(--color-neutral-500); }
+.sum-big { font: 600 25px var(--font-heading); letter-spacing: -0.01em; margin-top: 2px; }
+.sum-note { font-size: 11.5px; color: var(--color-neutral-500); margin-top: 2px; }
+.sum-bars { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; height: 128px; margin-top: 12px; }
+.sum-bars button { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; background: none; border: 0; padding: 0; cursor: pointer; min-width: 0; }
+.sum-bars button:disabled { cursor: default; }
+.sum-bar { width: 72%; max-width: 22px; border-radius: 4px; display: block; transition: height .25s ease; }
+.sum-letter { font-size: 12px; color: var(--color-neutral-500); }
+.sum-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 0.5px solid var(--color-divider); }
+.sum-icon { width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; flex: none; }
+.sum-name { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sum-track { flex: 1; height: 4px; border-radius: 2px; background: var(--color-surface-2); overflow: hidden; display: block; }
+.sum-track span { display: block; height: 100%; border-radius: 2px; }
+.sum-pct { font-size: 12px; color: var(--color-neutral-500); width: 34px; text-align: right; }
+.tab { position: relative; }
+.tab-badge { position: absolute; top: 3px; left: calc(50% + 6px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--color-negative); color: #fff; font: 600 11px/17px var(--font-body); text-align: center; }

@@ -4,7 +4,7 @@ import { fmt, fmt0 } from '../domain/format';
 import { minPayments, payInfo } from '../domain/cards';
 import { autoCover, suggestSources, type Take } from '../domain/plan';
 import { spentMap } from '../state/store';
-import { FolderRow, Icon, Track, TxRow } from '../components/common';
+import { FolderRow, Icon, Track, TxRow, pressable } from '../components/common';
 import type { Derived } from '../state/selectors';
 import type { Store } from '../state/store';
 
@@ -13,6 +13,8 @@ export function Folders({ store, d }: { store: Store; d: Derived }) {
 }
 
 function FolderList({ store, d }: { store: Store; d: Derived }) {
+  const m = d.m, hotPct = d.hot ? Math.round(d.hot.r * 100) : 0;
+  const askHot = () => d.hot && store.ask(`${d.hot.name} va al ${hotPct}% y apenas llevo ${m.pctL} del mes. Propón un ajuste sin tocar mi ahorro ni el pago de tarjetas.`);
   return (
     <div className="rise" style={{ padding: '8px 20px 28px' }}>
       <div className="page-title">Presupuestos</div>
@@ -22,6 +24,17 @@ function FolderList({ store, d }: { store: Store; d: Derived }) {
         <button className="btn btn-secondary" onClick={() => store.openFolderEdit(null)} style={{ flex: 1, height: 38, borderRadius: 10, gap: 6, fontSize: 13 }}><Icon name="ph ph-folder-plus" />Nueva carpeta</button>
         <button className="btn btn-primary" onClick={() => store.openSheet('optimize')} style={{ flex: 1, height: 38, borderRadius: 10, gap: 6, fontSize: 13 }}><Icon name="ph ph-magic-wand" />Optimizar</button>
       </div>
+      {d.hot && (
+        <div {...pressable(askHot)} style={{ padding: 14, borderRadius: 14, marginTop: 14, border: '1px solid var(--color-accent-700)', background: 'linear-gradient(160deg, var(--color-accent-900), transparent)', display: 'flex', gap: 12 }}>
+          <Icon name="ph ph-sparkle" style={{ fontSize: 20, color: 'var(--color-accent-300)', marginTop: 1 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>{d.hot.name} va al {hotPct}% con {m.pctL} del mes</div>
+            <div style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--color-neutral-300)' }}>Pídele a tu asesor un ajuste que no toque tu ahorro.</div>
+            <div style={{ fontSize: 13, color: 'var(--color-accent-300)', marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}>Pedir propuesta <Icon name="ph ph-arrow-right" /></div>
+          </div>
+        </div>
+      )}
+
       {d.groupRows.map(g => (
         <div key={g.id} style={{ marginTop: 22 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, letterSpacing: '.05em', textTransform: 'uppercase', color: 'var(--color-neutral-500)', marginBottom: 2 }}>

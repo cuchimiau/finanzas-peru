@@ -53,7 +53,10 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   // Métricas: gráfico
   await p.click('nav >> text=Analítica'); await p.waitForTimeout(300);
   const mt = await main();
-  ok(mt.includes('Lo que tienes y lo que gastaste') && mt.includes('Comer fuera') && mt.includes('Te queda'), 'gráfico de lo que tienes vs gastado');
+  ok(mt.includes('Saldo') && /Crecimiento en \w+/.test(mt) && /Gastos en \w+/.test(mt) && mt.includes('Promedio diario') && mt.includes('Comer fuera') && !mt.includes('Últimos movimientos'), 'resumen estilo Incomes: saldo, crecimiento, gasto del mes y carpetas');
+  await p.click('main >> button[role=radio]:has-text("Ingresos")'); await p.waitForTimeout(150);
+  ok(/Ingresos en \w+\nS\/ 2,600/.test(await main()) && (await main()).includes('Sueldo'), 'Ingresos: el sueldo recibido del mes');
+  await p.click('main >> button[role=radio]:has-text("Gastos")');
   await shot('m4-metricas');
 
   // Metas: crear, editar, borrar

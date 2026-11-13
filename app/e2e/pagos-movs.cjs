@@ -49,13 +49,13 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   });
   await p.reload(); await p.waitForTimeout(800);
   m = await main();
-  ok(!m.includes('Carpetas de gasto'), 'Inicio ya no muestra la vista previa de carpetas');
-  ok(/Hoy[\s\S]*Pago BBVA Visa[\s\S]*Pago Tío Juan[\s\S]*Días anteriores[\s\S]*Pardos Chicken[\s\S]*Ver todos los movimientos \(3\)/.test(m), 'Hoy y Días anteriores, luego el botón con el total');
-  await p.locator('text=Ver todos los movimientos').scrollIntoViewIfNeeded();
+  ok(!m.includes('Carpetas de gasto') && !m.includes('Últimos movimientos') && !m.includes('Ver todos los movimientos') && m.includes('Métricas'), 'Analítica: los 2 cuadros y luego las métricas (los movimientos están en Lista)');
   await p.screenshot({ path: `${out}/pd2-inicio.png` });
-  await p.click('text=Ver todos los movimientos');
+  const exp = new Date(Date.now() - 3 * 864e5).getMonth() === new Date().getMonth() ? '845' : '800'; // Pardos (hace 3 días) puede caer en el mes anterior
+  ok(new RegExp('Gastos en \\w+\\nS/ ' + exp).test(m) && /Pago de deudas[\s\S]{0,40}S\/ 800/.test(m), 'resumen del mes con los pagos de deudas por carpeta');
+  await p.click('nav >> text=Lista'); await p.waitForTimeout(200);
   const all = await main();
-  ok(/Hoy[\s\S]*Pago BBVA Visa[\s\S]*Pago Tío Juan[\s\S]*Pardos Chicken/.test(all) && all.includes('3 registrados'), 'todos los movimientos por fecha y agrupados por día');
+  ok(/Hoy[\s\S]*Pago BBVA Visa[\s\S]*Pago Tío Juan[\s\S]*Pardos Chicken/.test(all) && all.includes('3 registrados'), 'Lista: todos los movimientos por fecha y agrupados por día');
   await p.fill('[aria-label="Buscar movimientos"]', 'pardos'); await p.waitForTimeout(150);
   ok((await main()).includes('Pardos Chicken') && !(await main()).includes('Pago BBVA'), 'la búsqueda filtra');
   await p.screenshot({ path: `${out}/pd3-todos.png` });

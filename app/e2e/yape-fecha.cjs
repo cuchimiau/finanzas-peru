@@ -12,6 +12,7 @@ const BCP = '›BCP»\nYapear a celular\nMonto enviado\nS/ 5.00\nViernes, 06 de 
   const p = await ctx.newPage();
   const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('dialog', d => d.accept());
   const main = () => p.evaluate(() => document.querySelector('main')?.innerText || '');
+  const lista = async () => { await p.click('nav >> text=Lista'); await p.waitForTimeout(200); return main(); };
   await p.goto('http://localhost:5173/?reset=1'); await p.waitForTimeout(300);
   await p.click('text=Crear mi plan'); await p.fill('input[autocomplete=given-name]', 'Leo'); await p.fill('input[inputmode=numeric]', '2600');
   await p.click('text=Siguiente'); await p.click('text=Sin tarjetas por ahora'); await p.waitForSelector('text=Crear mis carpetas'); await p.click('text=Crear mis carpetas');
@@ -21,7 +22,7 @@ const BCP = '›BCP»\nYapear a celular\nMonto enviado\nS/ 5.00\nViernes, 06 de 
   // 1. Yape nuevo: fecha de la constancia (vie 6), no la de hoy
   await post({ action: 'addTx', kind: 'yape', folder: 'Libre', text: BCP });
   await p.goto('http://localhost:5173/'); await p.waitForTimeout(1500);
-  let m = await main();
+  let m = await lista();
   ok(/Ramirez Haujapuma Lazaro\nYape · (Vie 6|6 nov)\n−S\/ 5/.test(m), 'Yape nuevo con la fecha y hora de la constancia: ' + m.slice(-600));
 
   // 2. Yape ya registrado con fecha equivocada (versión anterior): se corrige al abrir y se guarda en Drive
@@ -32,7 +33,7 @@ const BCP = '›BCP»\nYapear a celular\nMonto enviado\nS/ 5.00\nViernes, 06 de 
     localStorage.setItem(k + ':sync', JSON.stringify({ ...JSON.parse(localStorage.getItem(k + ':sync') || '{}'), dirty: true }));
   }, '¡Yapeaste!\nS/ 2.50\nMadeleyne Cas*\n02 nov. 2026 | 8:19 a.m.\nNro. de operación\n05858288');
   await p.reload(); await p.waitForTimeout(2500);
-  m = await main();
+  m = await lista();
   ok(/Madeleyne Cas\nYape · (Lun 2|2 nov)\n/.test(m), 'Yape ya registrado corregido con la fecha de su constancia');
   await p.waitForTimeout(2500);
   const st = await (await fetch('http://127.0.0.1:8790/__state')).json();

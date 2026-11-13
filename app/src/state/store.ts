@@ -1,3 +1,4 @@
+import { evalExpr, normalizeExpr } from '../domain/calc';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   DEFAULT_FOLDERS, DEFAULT_GOALS, DEFAULT_PRIOS, FM, FOLDER_IDS, folderName, setFolders,
@@ -336,12 +337,13 @@ export function useFinanceStore(opts: StoreOptions) {
     setTxName: (id: string, name: string) => { set(x => ({ txs: x.txs.map(t => (t.id === id ? { ...t, name: name.slice(0, 80) } : t)) })); flash('Nombre guardado'); },
     deleteTx: (id: string) => { set(x => ({ txs: x.txs.filter(t => t.id !== id), sheet: null })); flash('Movimiento eliminado'); },
     // ─── Registrar gasto ───
-    setAddAmt: (v: string) => set({ addAmt: v.replace(/[^0-9.,]/g, '').slice(0, 10) }),
+    setAddAmt: (v: string) => set({ addAmt: normalizeExpr(v) }),
     setAddName: (v: string) => set({ addName: v.slice(0, 80) }),
     setAddPay: (p: PayRef) => set({ addPay: p }),
     setAdd: (p: Partial<Pick<State, 'addKind' | 'addDate' | 'addF'>>) => set(p),
     saveAdd: () => {
-      const st = ref.current, amt = parseAmount(st.addAmt), name = st.addName.trim();
+      // El monto puede ser una cuenta del teclado ("245+45×2"): se calcula sin eval.
+      const st = ref.current, ev = evalExpr(st.addAmt), amt = ev > 0 ? ev : 0, name = st.addName.trim();
       const date = dateFromInput(st.addDate);
       if (st.addKind === 'ingreso') {
         if (!amt) { flash('Escribe el monto del ingreso', 'ph ph-warning'); return; }
@@ -352,7 +354,7 @@ export function useFinanceStore(opts: StoreOptions) {
         flash(thisMonth ? `+${fmt(amt)} a ${folderName(f)} este mes` : `Ingreso de ${fmt(amt)} registrado`, 'ph ph-arrow-circle-down');
         return;
       }
-      if (!amt || !name) { flash('Falta el monto o el lugar', 'ph ph-warning'); return; }
+      if (!amt || !name) { flash(!amt ? (st.addAmt ? 'La cuenta no da un monto válido' : 'Falta el monto') : 'Escribe dónde fue el gasto', 'ph ph-warning'); return; }
       const f = (st.addF && FM[st.addF] ? st.addF : null) || learnedFolder(name, st.txs) || guessFolder(name).id || 'libre';
       const t: Tx = { id: 'm' + Date.now().toString(36), name, amt, f, pay: st.addPay, date, why: 'Registrado a mano. Puedes cambiar la carpeta.', source: 'manual' };
       set(x => ({ txs: [t, ...x.txs].sort(byDateDesc), sheet: null }));

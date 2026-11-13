@@ -1,10 +1,9 @@
 import { FOLDERS, INEI_BENCH, folderName, type Tx } from '../domain/data';
 import { fmt0, pct } from '../domain/format';
-import { lastMonthKeys, monthShort } from '../domain/dates';
 import { payInfo, viaApplePay } from '../domain/cards';
-import { essentials, goalViews, grossFromNet, isFlow, spendByMonth } from '../domain/plan';
+import { essentials, goalViews, grossFromNet, isFlow } from '../domain/plan';
 import { Icon, SparkleButton, Track, pressable } from '../components/common';
-import { MoneyChart } from '../components/MoneyChart';
+import { MonthSummary } from '../components/MonthSummary';
 import type { Derived } from '../state/selectors';
 import type { Store } from '../state/store';
 
@@ -22,14 +21,6 @@ export function Metrics({ store, d, embedded }: { store: Store; d: Derived; embe
     { label: 'Fondo de emergencia', value: (ess && ef ? ef.saved / ess : 0).toFixed(1) + ' meses', note: 'de 3 meses de esenciales', hi: false },
     { label: 'Uso de crédito', value: limits ? use + '%' : '—', note: limits ? 'Ideal por debajo de 30%' : 'Sin líneas registradas', hi: use > 30 },
   ];
-
-  // Últimos 6 meses desde el primer movimiento registrado.
-  const keys = lastMonthKeys(6, d.m.now);
-  const first = s.txs.length ? s.txs[s.txs.length - 1].date.slice(0, 7) : d.m.key;
-  const shown = keys.filter(k => k >= first);
-  const byMonth = spendByMonth(s.txs, shown);
-  const mv: [string, number][] = shown.map(k => [monthShort(k), Math.round(byMonth[k])]);
-  const maxV = Math.max(income, ...mv.map(m => m[1])) * 1.12 || 1;
 
   const planSpend = FOLDERS.filter(isFlow).reduce((a, f) => a + b[f.id], 0) || 1;
   const bench = INEI_BENCH.map(x => {
@@ -59,13 +50,7 @@ export function Metrics({ store, d, embedded }: { store: Store; d: Derived; embe
     <div className={embedded ? '' : 'rise'} style={{ padding: embedded ? 0 : '8px 20px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       {embedded ? <div className="section-title" style={{ marginTop: 6 }}>Métricas</div> : <div className="page-title">Métricas</div>}
 
-      {d.money.known ? (
-        <MoneyChart total={d.money.total} byFolder={d.money.byFolder} onOpen={id => store.openFolder(id)}
-          note={d.money.salaryPending ? 'Tu sueldo aún no está sumado: entra cuando toques "Ya me pagaron".' : undefined} />
-      ) : (
-        <MoneyChart total={d.income} byFolder={Object.fromEntries(FOLDERS.map(f => [f.id, d.monthTxs.filter(t => t.f === f.id).reduce((a, t) => a + t.amt, 0)]))} onOpen={id => store.openFolder(id)}
-          note="Calculado con tu sueldo del plan. Escribe tu dinero real en Inicio para ver lo que de verdad tienes." />
-      )}
+      <MonthSummary store={store} d={d} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         {kpis.map(k => (
@@ -75,26 +60,6 @@ export function Metrics({ store, d, embedded }: { store: Store; d: Derived; embe
             <div style={{ fontSize: 11.5, color: k.hi ? 'var(--color-accent-300)' : 'var(--color-neutral-500)', marginTop: 2 }}>{k.note}</div>
           </div>
         ))}
-      </div>
-
-      <div className="surface">
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 12 }}>
-          <span style={{ fontWeight: 500 }}>Gasto mensual</span><span className="muted">línea = sueldo</span>
-        </div>
-        <div style={{ height: 120, display: 'flex', alignItems: 'flex-end', gap: 10, position: 'relative' }} role="img"
-          aria-label={'Gasto por mes: ' + mv.map(([l, v]) => `${l} ${fmt0(v)}`).join(', ') + `. Sueldo ${fmt0(income)}.`}>
-          <div style={{ position: 'absolute', left: 0, right: 0, bottom: pct(income, maxV), borderTop: '1px dashed var(--color-neutral-600)' }} />
-          {mv.map(([l, v], i) => (
-            <div key={l + i} style={{ flex: 1, maxWidth: 52, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: 4, height: '100%' }}>
-              <div className="tnum" style={{ fontSize: 10, color: 'var(--color-neutral-500)' }}>{v >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(v)}</div>
-              <div style={{ width: '100%', height: pct(v, maxV), minHeight: v ? 2 : 0, borderRadius: '5px 5px 2px 2px', background: i === mv.length - 1 ? 'var(--color-accent)' : v > income ? 'var(--color-accent-700)' : 'var(--color-neutral-700)' }} />
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 10, marginTop: 6 }} aria-hidden="true">
-          {mv.map(([l], i) => <div key={l + i} style={{ flex: 1, maxWidth: 52, textAlign: 'center', fontSize: 11.5, color: 'var(--color-neutral-500)' }}>{l}</div>)}
-        </div>
-        {mv.length < 2 && <div style={{ fontSize: 11.5, color: 'var(--color-neutral-500)', marginTop: 8 }}>El historial crece mes a mes con tus movimientos.</div>}
       </div>
 
       <div className="surface">

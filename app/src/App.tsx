@@ -10,6 +10,7 @@ import { Metrics } from './screens/Metrics';
 import { Advisor, Composer } from './screens/Advisor';
 import { SheetHost } from './screens/Sheets';
 import { ListScreen } from './screens/MoreSheets';
+import { txAlertCount } from './components/TxAlerts';
 import { SettingsScreen } from './screens/SettingsScreen';
 
 /** Barra estilo Incomes: Analítica · Lista · (+) · Presupuestos · Ajustes. Deudas y Asesor se abren desde Ajustes y Analítica. */
@@ -64,9 +65,11 @@ export function App(props: StoreOptions) {
                     </button>
                   );
                   const on = s.tab === id || OWNER[s.tab] === id;
+                  const badge = id === 'list' ? txAlertCount(store) : 0;
                   return (
-                    <button key={id} className={'tab' + (on ? ' on' : '')} aria-label={label} aria-current={on ? 'page' : undefined} onClick={() => store.goTab(id)}>
+                    <button key={id} className={'tab' + (on ? ' on' : '')} aria-label={badge ? `${label}, ${badge} por revisar` : label} aria-current={on ? 'page' : undefined} onClick={() => store.goTab(id)}>
                       <Icon name={(on ? 'ph-fill ph-' : 'ph ph-') + icon} />{label}
+                      {badge > 0 && <span className="tab-badge" aria-hidden="true">{badge}</span>}
                     </button>
                   );
                 })}

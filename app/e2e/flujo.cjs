@@ -55,7 +55,7 @@ const until = async (fn, ms = 8000) => { const t = Date.now(); while (Date.now()
 
   // 2. Registrar gasto → se guarda en Drive y en la hoja
   await p.click('[aria-label="Registrar gasto"]');
-  await p.fill('input[inputmode=decimal]', '45.50');
+  await p.fill('[aria-label="Monto"]', '45.50');
   await p.fill('[aria-label="Lugar"]', 'Pardos Chicken');
   await p.click('.sheet >> button[role=radio]:has-text("BBVA Visa")');
   await shot('e08-registrar');
@@ -76,7 +76,7 @@ const until = async (fn, ms = 8000) => { const t = Date.now(); while (Date.now()
   // 4. Sin señal: queda pendiente y se guarda al reconectar
   await ctx.setOffline(true);
   await p.click('[aria-label="Registrar gasto"]');
-  await p.fill('input[inputmode=decimal]', '12');
+  await p.fill('[aria-label="Monto"]', '12');
   await p.fill('[aria-label="Lugar"]', 'Tambo');
   await p.click('.sheet >> text=Guardar');
   assert(await until(() => p.isVisible('text=Sin señal: se guardará al reconectar'), 6000), 'sin señal: aviso de pendiente');

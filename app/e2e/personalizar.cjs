@@ -7,6 +7,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('dialog', d => d.accept());
   const main = () => p.evaluate(() => document.querySelector('main')?.innerText || '');
+  const lista = async () => { await p.click('nav >> text=Lista'); await p.waitForTimeout(200); return main(); };
   const sheet = () => p.evaluate(() => document.querySelector('.sheet')?.innerText || '');
   const shot = n => p.screenshot({ path: `${out}/${n}.png` });
   await p.goto('http://localhost:5173/?reset=1'); await p.waitForTimeout(300);
@@ -36,15 +37,15 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
 
   // Ingreso extra + gasto de ayer
   await p.click('nav >> text=Analítica'); await p.click('[aria-label="Registrar gasto"]');
-  await p.click('.sheet >> button[role=radio]:has-text("Ingreso")'); await p.fill('.sheet input[inputmode=decimal]', '300'); await p.fill('[aria-label="Lugar"]', 'Bono');
+  await p.click('.sheet >> button[role=radio]:has-text("Ingreso")'); await p.fill('[aria-label="Monto"]', '300'); await p.fill('[aria-label="Lugar"]', 'Bono');
   await shot('p3-ingreso');
   await p.click('text=Guardar ingreso'); await p.waitForTimeout(300);
   await p.click('nav >> text=Analítica'); await p.waitForTimeout(200);
   ok(/Bono[\s\S]*\+S\/ 300/.test(await main()), 'ingreso extra suma al mes');
   await p.click('nav >> text=Analítica');
-  await p.click('[aria-label="Registrar gasto"]'); await p.fill('.sheet input[inputmode=decimal]', '45'); await p.fill('[aria-label="Lugar"]', 'Pardos');
+  await p.click('[aria-label="Registrar gasto"]'); await p.fill('[aria-label="Monto"]', '45'); await p.fill('[aria-label="Lugar"]', 'Pardos');
   await p.click('.sheet >> button[role=radio]:has-text("Ayer")'); await p.click('text=Guardar gasto'); await p.waitForTimeout(300);
-  ok(/Pardos[\s\S]*Ayer/.test(await main()), 'gasto registrado con fecha de ayer');
+  ok(/Pardos[\s\S]*Ayer/.test(await lista()), 'gasto registrado con fecha de ayer');
 
   // Préstamo no bancario
   await p.click('nav >> text=Ajustes'); await p.click('[aria-label="Abrir Deudas"]'); await p.click('text=Deuda o tarjeta'); await p.click('.sheet >> text=Préstamo');
@@ -55,12 +56,12 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   ok((await main()).includes('Préstamo sin intereses'), 'préstamo familiar en Deudas');
 
   // Optimizar
-  await p.click('nav >> text=Analítica'); await p.click('text=Optimiza tu mes'); await p.waitForTimeout(300);
+  await p.click('nav >> text=Presupuestos'); await p.click('main >> button:has-text("Optimizar")'); await p.waitForTimeout(300);
   await shot('p5-optimizar-resto');
   const t1 = await sheet();
   ok(/plan de ahorro para fin de mes/i.test(t1), 'optimizar: resto del mes');
   if (t1.includes('Aplicar · ahorrar')) { await p.click('text=Aplicar · ahorrar'); await p.waitForTimeout(300); ok(true, 'propuesta de ahorro aplicada'); }
-  await p.click('text=Optimiza tu mes'); await p.click('.sheet >> text=Próximo mes'); await p.waitForTimeout(200);
+  await p.click('nav >> text=Presupuestos'); await p.click('main >> button:has-text("Optimizar")'); await p.click('.sheet >> text=Próximo mes'); await p.waitForTimeout(200);
   await shot('p6-optimizar-proximo');
   await p.click('text=Usar como mi plan base'); await p.waitForTimeout(300);
 

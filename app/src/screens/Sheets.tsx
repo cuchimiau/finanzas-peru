@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { FM, FOLDERS, SOURCES, SOURCE_IDS, type Card, type Goal } from '../domain/data';
 import { fmt, fmt0, parseAmount } from '../domain/format';
+import { evalExpr, hasOp, normalizeExpr, pressKey } from '../domain/calc';
 import { agoLabel, whenLabel } from '../domain/dates';
 import { emptyCard, payChoices, payInfo, viaApplePay } from '../domain/cards';
 import { essentials, guessFolder, isFlow, learnedFolder } from '../domain/plan';
@@ -129,6 +130,10 @@ function Sources({ store, d }: { store: Store; d: Derived }) {
 
 const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'del'];
+const OPS: [string, string, string][] = [['÷', 'ph ph-divide', 'Dividir'], ['×', 'ph ph-x', 'Multiplicar'], ['−', 'ph ph-minus', 'Restar'], ['+', 'ph ph-plus', 'Sumar']];
+
+/** Registrar (estilo Incomes): monto con teclado de calculadora, medio de pago, fecha y carpeta. */
 function AddExpense({ store }: { store: Store }) {
   const { s } = store;
   const income = s.addKind === 'ingreso';
@@ -137,66 +142,89 @@ function AddExpense({ store }: { store: Store }) {
   const auto = learned || g.id;
   const chosen = s.addF && FM[s.addF] ? s.addF : null;
   const id = income ? chosen || 'libre' : chosen || auto;
-  const [pick, setPick] = useState(false);
+  const [hist, setHist] = useState<string[]>([]);
+  const holdRef = useRef<number | null>(null);
   const today = isoDay(new Date()), yest = isoDay(new Date(Date.now() - 86400000));
   const dateMode = !s.addDate ? 'hoy' : s.addDate === yest ? 'ayer' : 'otra';
   const options = income ? FOLDERS : FOLDERS.filter(isFlow);
+  const result = evalExpr(s.addAmt);
+  const color = income ? 'var(--color-positive)' : 'var(--color-negative)';
+  const monthKey = isoDay(new Date()).slice(0, 7);
+  const spentWith = (pay: string) => s.txs.filter(t => t.pay === pay && localDay(t.date).slice(0, 7) === monthKey).reduce((a, t) => a + t.amt, 0);
+
+  const change = (next: string) => { if (next === s.addAmt) return; setHist(h => [...h.slice(-30), s.addAmt]); store.setAddAmt(next); };
+  const press = (k: string) => change(pressKey(s.addAmt, k));
+  const undo = () => { if (!hist.length) return; store.setAddAmt(hist[hist.length - 1]); setHist(h => h.slice(0, -1)); };
+  // Mantener ⌫ apretado borra todo (y "Deshacer" lo recupera).
+  const holdStart = () => { holdRef.current = window.setTimeout(() => { holdRef.current = -1; change(''); }, 550); };
+  const holdEnd = (e: React.SyntheticEvent) => { if (holdRef.current === -1) e.preventDefault(); else if (holdRef.current) window.clearTimeout(holdRef.current); };
+  const delClick = () => { if (holdRef.current === -1) { holdRef.current = null; return; } holdRef.current = null; press('del'); };
+
   return (
-    <form onSubmit={e => { e.preventDefault(); store.saveAdd(); }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, gap: 10 }}>
-        <div style={{ fontSize: 20, fontWeight: 500 }}>Registrar</div>
-        <div style={{ width: 190 }}>
-          <Segmented label="Tipo" value={s.addKind} options={[['gasto', 'Gasto'], ['ingreso', 'Ingreso']]} onChange={k => { store.setAdd({ addKind: k, addF: null }); setPick(false); }} />
+    <form onSubmit={e => { e.preventDefault(); store.saveAdd(); }} className="add-sheet">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button type="button" className="add-x" aria-label="Cerrar" onClick={store.closeSheet}><Icon name="ph ph-x" /></button>
+        <div style={{ flex: 1 }}>
+          <Segmented label="Tipo" value={s.addKind} options={[['gasto', 'Gasto'], ['ingreso', 'Ingreso']]} onChange={k => store.setAdd({ addKind: k, addF: null })} />
         </div>
       </div>
-      <label className="amount-field" style={{ gap: 6, paddingBottom: 6 }}>
-        <span style={{ fontSize: 26, color: income ? 'var(--color-accent-300)' : 'var(--color-neutral-500)' }}>{income ? '+S/' : 'S/'}</span>
-        <span className="visually-hidden">Monto</span>
-        <input type="text" inputMode="decimal" placeholder="0" autoComplete="off" value={s.addAmt} onChange={e => store.setAddAmt(e.target.value)} style={{ fontSize: 34, letterSpacing: 0 }} autoFocus />
-      </label>
-      <input type="text" className="input" placeholder={income ? '¿De dónde? ej. Bono, venta, cachuelo, devolución' : '¿Dónde? ej. Tambo, InDrive, Inkafarma'} aria-label="Lugar" value={s.addName} maxLength={80}
-        onChange={e => store.setAddName(e.target.value)} style={{ ...inputStyle, marginTop: 14, fontSize: 14 }} />
 
-      <div style={{ display: 'flex', gap: 6, marginTop: 12, alignItems: 'center' }} role="radiogroup" aria-label="Fecha">
-        {([['hoy', 'Hoy', ''], ['ayer', 'Ayer', yest]] as const).map(([k, l, v]) => (
-          <button type="button" key={k} role="radio" aria-checked={dateMode === k} className={'option ghost' + (dateMode === k ? ' on' : '')}
-            style={{ height: 36, borderRadius: 10, justifyContent: 'center', padding: '0 14px' }} onClick={() => store.setAdd({ addDate: v })}>{l}</button>
-        ))}
-        <input type="date" className="input" aria-label="Otra fecha" max={today} value={dateMode === 'otra' ? s.addDate : ''}
-          onChange={e => store.setAdd({ addDate: e.target.value === today ? '' : e.target.value })}
-          style={{ flex: 1, height: 36, borderRadius: 10, fontSize: 13.5, borderColor: dateMode === 'otra' ? 'var(--color-accent)' : undefined }} />
+      <div className="add-amount">
+        <input type="text" inputMode="none" aria-label="Monto" placeholder={income ? 'Ingresar ingreso' : 'Ingresar gasto'} autoComplete="off" value={s.addAmt}
+          onChange={e => change(normalizeExpr(e.target.value))} style={{ color, fontSize: s.addAmt.length > 12 ? 30 : s.addAmt ? 46 : 30 }} />
+        <div className="add-result" aria-live="polite" style={{ color }}>
+          {s.addAmt && hasOp(s.addAmt) ? (Number.isNaN(result) ? 'Cuenta incompleta' : `= ${fmt(result)}`) : ' '}
+        </div>
+        <button type="button" className="add-undo" aria-label="Deshacer" disabled={!hist.length} onClick={undo}><Icon name="ph ph-arrow-counter-clockwise" /></button>
       </div>
+
+      <input type="text" className="input" placeholder={income ? '¿De dónde? Bono, venta, cachuelo…' : '¿Dónde? Tambo, InDrive, Inkafarma…'} aria-label="Lugar" value={s.addName} maxLength={80}
+        onChange={e => store.setAddName(e.target.value)} style={{ ...inputStyle, height: 40, fontSize: 14, textAlign: 'center' }} />
 
       {!income && (
-        <div style={{ display: 'flex', gap: 6, marginTop: 10, overflowX: 'auto' }} role="radiogroup" aria-label="Medio de pago">
+        <div className="add-pays" role="radiogroup" aria-label="Medio de pago">
           {payChoices(s.cards).map(m => (
-            <button type="button" key={m.id} role="radio" aria-checked={s.addPay === m.id} className={'option ghost' + (s.addPay === m.id ? ' on' : '')}
-              style={{ flex: '1 0 auto', height: 36, borderRadius: 10, justifyContent: 'center', gap: 5, whiteSpace: 'nowrap' }} onClick={() => store.setAddPay(m.id)}>
-              <Icon name={m.icon} />{m.label}
+            <button type="button" key={m.id} role="radio" aria-checked={s.addPay === m.id} className={'add-pay' + (s.addPay === m.id ? ' on' : '')} onClick={() => store.setAddPay(m.id)}>
+              <span>{m.label}</span><small className="tnum">{spentWith(m.id) ? '−' + fmt0(spentWith(m.id)) : fmt0(0)}</small>
             </button>
           ))}
         </div>
       )}
 
-      <button type="button" onClick={() => setPick(v => !v)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, padding: 12, borderRadius: 12, background: 'var(--color-bg)', border: 0, color: 'var(--color-text)', cursor: 'pointer', textAlign: 'left' }}>
-        <Icon name={id && FM[id] ? 'ph ph-' + FM[id].icon : 'ph ph-question'} style={{ fontSize: 20, color: 'var(--color-accent-300)' }} />
-        <div style={{ flex: 1 }}>
-          <div className="row-sub">{income ? 'Suma a la carpeta (solo este mes)' : chosen ? 'Carpeta elegida' : 'Carpeta detectada'}</div>
-          <div className="row-title">{id && FM[id] ? FM[id].name : 'Escribe dónde compraste'}</div>
+      <div className="add-pad">
+        <div className="seg" role="radiogroup" aria-label="Fecha" style={{ display: 'flex' }}>
+          <button type="button" role="radio" aria-checked={dateMode === 'hoy'} className={'seg-btn' + (dateMode === 'hoy' ? ' on' : '')} onClick={() => store.setAdd({ addDate: '' })}>Hoy</button>
+          <button type="button" role="radio" aria-checked={dateMode === 'ayer'} className={'seg-btn' + (dateMode === 'ayer' ? ' on' : '')} onClick={() => store.setAdd({ addDate: yest })}>Ayer</button>
+          <label className={'seg-btn' + (dateMode === 'otra' ? ' on' : '')} style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {dateMode === 'otra' ? new Date(s.addDate + 'T12:00:00').toLocaleDateString('es-PE', { day: 'numeric', month: 'short' }) : 'Otra fecha'}
+            <input type="date" aria-label="Otra fecha" max={today} value={dateMode === 'otra' ? s.addDate : ''}
+              onChange={e => store.setAdd({ addDate: e.target.value === today ? '' : e.target.value })}
+              style={{ position: 'absolute', inset: 0, opacity: 0, width: '100%', cursor: 'pointer' }} />
+          </label>
         </div>
-        <span style={{ fontSize: 12, color: 'var(--color-accent-300)' }}>{pick ? 'Cerrar' : 'Cambiar'}</span>
+        <div className="add-ops">
+          {OPS.map(([k, icon, l]) => <button type="button" key={k} aria-label={l} onClick={() => press(k)}><Icon name={icon} /></button>)}
+        </div>
+        <div className="add-keys">
+          {KEYS.map(k => k === 'del'
+            ? <button type="button" key={k} aria-label="Borrar (mantén para borrar todo)" onClick={delClick} onPointerDown={holdStart} onPointerUp={holdEnd} onPointerLeave={holdEnd} onContextMenu={e => e.preventDefault()}><Icon name="ph ph-backspace" /></button>
+            : <button type="button" key={k} aria-label={k === '.' ? 'Punto decimal' : k} onClick={() => press(k)}>{k}</button>)}
+        </div>
+      </div>
+
+      <div className="row-sub" style={{ textAlign: 'center' }}>
+        {income ? 'Suma a la carpeta (solo este mes)' : chosen ? 'Carpeta elegida' : auto ? (learned ? 'Carpeta aprendida de tus correcciones' : g.confident ? 'Carpeta por el tipo de comercio' : 'Carpeta sugerida') : 'Elige la carpeta o escribe dónde compraste'}
+      </div>
+      <div className="add-folders" role="radiogroup" aria-label="Carpeta">
+        {options.map(f => (
+          <button type="button" key={f.id} role="radio" aria-checked={id === f.id} className={'add-folder' + (id === f.id ? ' on' : '')} onClick={() => store.setAdd({ addF: f.id })}>
+            <span className="add-ficon"><Icon name={'ph ph-' + f.icon} /></span><span className="add-fname">{f.name}</span>
+          </button>
+        ))}
+      </div>
+      <button type="submit" className="btn btn-primary btn-block" style={{ height: 48, borderRadius: 14 }}>
+        {income ? 'Guardar ingreso' : 'Guardar gasto'}{result > 0 ? ` · ${fmt(result)}` : ''}
       </button>
-      {!income && !chosen && auto && <div className="row-sub" style={{ marginTop: 4 }}>{learned ? 'Aprendido de tus correcciones' : g.confident ? 'Por el tipo de comercio' : 'Sugerencia'}</div>}
-      {pick && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 8 }}>
-          {options.map(f => (
-            <button type="button" key={f.id} className={'option' + (id === f.id ? ' on' : '')} style={{ height: 40 }} onClick={() => { store.setAdd({ addF: f.id }); setPick(false); }}>
-              <Icon name={'ph ph-' + f.icon} style={{ fontSize: 15 }} />{f.name}
-            </button>
-          ))}
-        </div>
-      )}
-      <button type="submit" className="btn btn-primary btn-block" style={{ height: 46, borderRadius: 12, marginTop: 12 }}>{income ? 'Guardar ingreso' : 'Guardar gasto'}</button>
     </form>
   );
 }
