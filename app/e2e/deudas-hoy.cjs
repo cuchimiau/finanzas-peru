@@ -34,6 +34,8 @@ if (T > 29) { console.log('✓ omitida: hoy es ' + T + ' y no hay días del mes 
   // Sueldo en SUELDO; la tarjeta vence en DESPUES → no se separa
   await p.click('text=Escribir mi dinero de hoy');
   await p.fill('[aria-label="Dinero que tienes hoy"]', '850'); await p.fill('[aria-label="Día de pago"]', SUELDO);
+  // Gastos fijos: vienen marcados (separados); se desmarcan los que se pagan con el próximo sueldo.
+  for (let on = p.locator('.sheet [role=checkbox]:not([aria-label])[aria-checked=true]'); await on.count();) await on.first().click();
   ok((await sheet()).includes('Vence después de tu sueldo'), 'la deuda que vence después del sueldo se paga con él');
   await shot('d1-hoja-deudas');
   await p.click('.sheet button[type=submit]'); await p.waitForTimeout(400);

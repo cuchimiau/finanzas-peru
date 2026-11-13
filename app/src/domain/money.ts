@@ -1,9 +1,18 @@
 // Dinero real del mes: lo que de verdad tienes, sin suponer que ya te pagaron.
-import { FOLDERS, type Budgets, type Card, type FolderId, type Income, type Tx } from './data';
+import { FOLDERS, type Budgets, type Card, type Folder, type FolderId, type Income, type Tx } from './data';
 import { daysInMonth, monthCtx, monthKeyOf, sameDay } from './dates';
 
 /** Carpetas de gasto variable (el resto de necesidades se consideran pagos fijos por reservar). */
 export const FLEX_IDS: FolderId[] = ['mercado', 'transporte', 'restaurantes', 'ocio', 'libre'];
+
+/**
+ * Gasto fijo mensual: alquiler, servicios (celular), salud, suscripciones o cualquier carpeta que marques como fija.
+ * Su dinero se separa desde el principio, así que pagarlo no baja lo que puedes gastar por día.
+ */
+export const isFixedFolder = (f: Pick<Folder, 'id' | 'grp' | 'fixed'>) =>
+  f.fixed ?? ((f.grp === 'nec' && !FLEX_IDS.includes(f.id)) || f.id === 'suscripciones');
+/** Fijas que la versión anterior ofrecía marcar antes del sueldo (para leer bien los meses ya empezados). */
+const legacyOffered = (f: Folder) => f.grp === 'nec' && !FLEX_IDS.includes(f.id);
 
 /** Lo que escribiste al empezar el mes. `opening: null` = aún no lo dijiste (la app no lo inventa). */
 export interface CashMonth {
@@ -16,8 +25,10 @@ export interface CashMonth {
    * `inOpening`: ya estaba dentro del monto inicial que escribiste (no se suma dos veces).
    */
   salary: { amt: number; date: string; inOpening?: boolean } | null;
-  /** Pagos fijos (carpetas de necesidades) que dijiste que aún debes pagar con este dinero antes del sueldo. */
+  /** Pagos fijos que dijiste que aún debes pagar con este dinero antes del sueldo (y cuotas: 'card-<id>'). */
   reserve?: FolderId[];
+  /** Pagos fijos que pagas con tu próximo sueldo (no se separan de este dinero). Si falta, se lee `reserve` (versión anterior). */
+  skip?: FolderId[];
 }
 
 export const emptyCash = (key: string, now = new Date()): CashMonth => ({ key, opening: null, openedAt: now.toISOString(), salary: null });
@@ -88,8 +99,13 @@ export function realMoney(o: {
   // Pagos fijos del mes aún sin pagar (alquiler, servicios, salud, carpetas propias de necesidades).
   const spentIn = (id: FolderId) => o.txs.filter(t => t.f === id && monthKeyOf(t.date) === m.key).reduce((a, t) => a + t.amt, 0);
   // Antes del sueldo solo se reserva lo que marcaste; después, todos los fijos del plan que falten.
-  const fixedIds = (id: FolderId) => (beforePay || salaryPending ? (o.cash.reserve ?? []).includes(id) : true);
-  const reserved: Reserved[] = FOLDERS.filter(f => f.grp === 'nec' && !FLEX_IDS.includes(f.id) && fixedIds(f.id))
+  // Antes del sueldo se separan todos los fijos menos los que dijiste que pagas con el próximo sueldo.
+  const sep = (f: Folder) => {
+    if (!(beforePay || salaryPending)) return true;
+    if (o.cash.skip) return !o.cash.skip.includes(f.id);
+    return legacyOffered(f) ? (o.cash.reserve ?? []).includes(f.id) : true;
+  };
+  const reserved: Reserved[] = FOLDERS.filter(f => isFixedFolder(f) && sep(f))
     .map(f => ({ id: f.id, name: f.name, amt: Math.max(0, (o.budgets[f.id] || 0) - spentIn(f.id)) }))
     .filter(r => r.amt > 0);
   // Cuotas de deudas: antes del sueldo solo las que marcaste (por defecto, las que vencen antes del pago);
@@ -107,8 +123,8 @@ export function realMoney(o: {
   const reservedTotal = reserved.reduce((a, r) => a + r.amt, 0);
   const free = Math.max(0, real - reservedTotal);
   const usable = beforePay || salaryPending ? free : Math.min(free, o.flexLeft);
-  // Hoy: lo que gastaste hoy fuera de lo reservado (pagar el alquiler o una cuota no te quita el gasto del día).
-  const reservedIds = new Set<string>(FOLDERS.filter(f => f.grp === 'nec' && !FLEX_IDS.includes(f.id) && fixedIds(f.id)).map(f => f.id).concat('deudas'));
+  // Hoy: solo cuenta el gasto variable (pagar el alquiler, el celular, una suscripción o una cuota no te quita el gasto del día).
+  const reservedIds = new Set<string>(FOLDERS.filter(isFixedFolder).map(f => f.id).concat('deudas'));
   const todaySpent = known ? counted.filter(t => sameDay(new Date(t.date), now) && !(t.f && reservedIds.has(t.f))).reduce((a, t) => a + t.amt, 0) : 0;
   const nDays = Math.max(1, days);
   const todayBase = known ? (usable + todaySpent) / nDays : 0;

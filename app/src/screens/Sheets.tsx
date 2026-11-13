@@ -3,7 +3,7 @@ import { FM, FOLDERS, SOURCES, SOURCE_IDS, type Card, type Goal } from '../domai
 import { fmt, fmt0, parseAmount } from '../domain/format';
 import { evalExpr, hasOp, normalizeExpr, pressKey } from '../domain/calc';
 import { agoLabel, whenLabel } from '../domain/dates';
-import { emptyCard, payChoices, payInfo, viaApplePay } from '../domain/cards';
+import { emptyCard, payInfo, viaApplePay } from '../domain/cards';
 import { essentials, guessFolder, isFlow, learnedFolder } from '../domain/plan';
 import { Field, Icon, Segmented, SourceCard, inputStyle } from '../components/common';
 import { ConnectForm, ShortcutGuide } from '../components/ConnectForm';
@@ -149,8 +149,6 @@ function AddExpense({ store }: { store: Store }) {
   const options = income ? FOLDERS : FOLDERS.filter(isFlow);
   const result = evalExpr(s.addAmt);
   const color = income ? 'var(--color-positive)' : 'var(--color-negative)';
-  const monthKey = isoDay(new Date()).slice(0, 7);
-  const spentWith = (pay: string) => s.txs.filter(t => t.pay === pay && localDay(t.date).slice(0, 7) === monthKey).reduce((a, t) => a + t.amt, 0);
 
   const change = (next: string) => { if (next === s.addAmt) return; setHist(h => [...h.slice(-30), s.addAmt]); store.setAddAmt(next); };
   const press = (k: string) => change(pressKey(s.addAmt, k));
@@ -180,16 +178,6 @@ function AddExpense({ store }: { store: Store }) {
 
       <input type="text" className="input" placeholder={income ? '¿De dónde? Bono, venta, cachuelo…' : '¿Dónde? Tambo, InDrive, Inkafarma…'} aria-label="Lugar" value={s.addName} maxLength={80}
         onChange={e => store.setAddName(e.target.value)} style={{ ...inputStyle, height: 40, fontSize: 14, textAlign: 'center' }} />
-
-      {!income && (
-        <div className="add-pays" role="radiogroup" aria-label="Medio de pago">
-          {payChoices(s.cards).map(m => (
-            <button type="button" key={m.id} role="radio" aria-checked={s.addPay === m.id} className={'add-pay' + (s.addPay === m.id ? ' on' : '')} onClick={() => store.setAddPay(m.id)}>
-              <span>{m.label}</span><small className="tnum">{spentWith(m.id) ? '−' + fmt0(spentWith(m.id)) : fmt0(0)}</small>
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className="add-pad">
         <div className="seg" role="radiogroup" aria-label="Fecha" style={{ display: 'flex' }}>

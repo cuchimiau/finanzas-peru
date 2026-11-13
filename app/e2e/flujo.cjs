@@ -57,7 +57,7 @@ const until = async (fn, ms = 8000) => { const t = Date.now(); while (Date.now()
   await p.click('[aria-label="Registrar gasto"]');
   await p.fill('[aria-label="Monto"]', '45.50');
   await p.fill('[aria-label="Lugar"]', 'Pardos Chicken');
-  await p.click('.sheet >> button[role=radio]:has-text("BBVA Visa")');
+  assert((await p.locator('.sheet [role=radiogroup][aria-label="Medio de pago"]').count()) === 0, 'Registrar es un solo gasto, sin elegir cuenta');
   await shot('e08-registrar');
   await p.click('.sheet >> text=Guardar');
   assert(await until(async () => (await gasState()).data?.state?.txs?.length === 1), 'gasto guardado en Drive');
@@ -95,7 +95,7 @@ const until = async (fn, ms = 8000) => { const t = Date.now(); while (Date.now()
 
   // 6. Pantallas
   await p.click('nav >> text=Ajustes'); await p.click('[aria-label="Abrir Deudas"]'); await p.waitForTimeout(300); await shot('e12-deudas');
-  assert(await p.isVisible('text=S/ 3,322'), 'deuda = saldo + cargos posteriores (3,260 + 45.50 + 16.90)');
+  assert(await p.isVisible('text=S/ 3,277'), 'deuda = saldo + cargos con la tarjeta (3,260 + 16.90 del Wallet; el gasto a mano no se carga a la tarjeta)');
   await p.click('nav >> text=Analítica'); await p.waitForTimeout(300); await shot('e13-metricas');
   await p.click('nav >> text=Analítica'); await p.click('[aria-label="Ajustes"]'); await p.waitForTimeout(300); await shot('e14-ajustes');
 

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_GOALS, FOLDERS, type Card, type Debt, type Tx } from './data';
+import { DEFAULT_GOALS, FOLDERS, setFolders, type Card, type Debt, type Tx } from './data';
 import { simulate, type Strategy } from './debts';
 import { applyMoves, autoCover, buildBudgets, folderView, goalViews, planChange, sanitizeMoves, spendByMonth, suggestSources, sumBudgets, txsOfMonth, type PlanOpts } from './plan';
 import { currentDebts, debtPayChoices, matchCard, payInfo } from './cards';
@@ -440,6 +440,29 @@ describe('Dinero real del mes', () => {
     const paid = realMoney({ cash: c0, txs: [tx('bbva', 100, 'deudas', at(2, 9))], incomes: [], budgets, cards: [card], payday: 30, flexLeft: 500, now });
     expect(paid.reserved.some(x => x.id === 'card-c1')).toBe(false);
     expect(paid.todayLeft).toBeCloseTo(r0.todayLeft, 5);
+  });
+
+  it('gastos fijos (celular, suscripciones): pagarlos no baja el monto del día ni lo de hoy', () => {
+    const b2 = { ...budgets, suscripciones: 45 };
+    const c0 = { ...base, reserve: ['vivienda', 'servicios'] }; // mes empezado con la versión anterior
+    const r0 = realMoney({ cash: c0, txs: [], incomes: [], budgets: b2, cards: [], payday: 30, flexLeft: 500, now });
+    // Suscripciones no se ofrecía antes: ahora se separa sola.
+    expect(r0.reserved.map(x => x.id)).toEqual(['vivienda', 'servicios', 'suscripciones']);
+    const cel = realMoney({ cash: c0, txs: [tx('claro', 60, 'servicios', at(2, 9))], incomes: [], budgets: b2, cards: [], payday: 30, flexLeft: 500, now });
+    const net = realMoney({ cash: c0, txs: [tx('netflix', 45, 'suscripciones', at(2, 9))], incomes: [], budgets: b2, cards: [], payday: 30, flexLeft: 500, now });
+    for (const r of [cel, net]) {
+      expect(r.perDay).toBeCloseTo(r0.perDay, 5);
+      expect(r.todayLeft).toBeCloseTo(r0.todayLeft, 5);
+      expect(r.todaySpent).toBe(0);
+    }
+    // Lo que dices que pagas con el próximo sueldo no se separa.
+    const sk = realMoney({ cash: { ...base, reserve: [], skip: ['suscripciones', 'salud'] }, txs: [], incomes: [], budgets: b2, cards: [], payday: 30, flexLeft: 500, now });
+    expect(sk.reserved.map(x => x.id)).toEqual(['vivienda', 'servicios']);
+    // Una carpeta propia marcada como fija también se separa.
+    setFolders([...FOLDERS, { id: 'ugym', name: 'Gimnasio', icon: 'barbell', grp: 'des', base: 0, fixed: true }]);
+    const gym = realMoney({ cash: { ...base, skip: [] }, txs: [], incomes: [], budgets: { ...b2, ugym: 90 }, cards: [], payday: 30, flexLeft: 500, now });
+    expect(gym.reserved.some(x => x.id === 'ugym')).toBe(true);
+    setFolders(FOLDERS.filter(f => f.id !== 'ugym'));
   });
 
   it('el sueldo cuenta solo cuando llega, y no se suma dos veces si ya estaba en el monto inicial', () => {

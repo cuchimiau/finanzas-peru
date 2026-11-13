@@ -7,7 +7,7 @@ import { HOT_MARGIN, folderView, planIncome, txsOfMonth, type FolderView } from 
 import { monthAt } from '../domain/dates';
 import { parseIncome, type State } from './store';
 
-import { FLEX_IDS, realMoney } from '../domain/money';
+import { FLEX_IDS, isFixedFolder, realMoney } from '../domain/money';
 export { FLEX_IDS };
 
 export interface TxView {
@@ -27,7 +27,7 @@ export function derive(s: State, now = new Date()) {
   const views = FOLDERS.map(f => folderView(f, s.budgets, monthTxs, vctx));
   const VM = Object.fromEntries(views.map(v => [v.id, v])) as Record<FolderId, FolderView>;
   // Gasto variable: todos tus deseos (incluidas carpetas propias) + mercado y transporte.
-  const flex = views.filter(v => v.grp === 'des' || FLEX_IDS.includes(v.id));
+  const flex = views.filter(v => (v.grp === 'des' || FLEX_IDS.includes(v.id)) && !isFixedFolder(FM[v.id] ?? v));
   const flexLeft = flex.reduce((a, v) => a + Math.max(0, v.left), 0);
   const spent = views.filter(v => v.flow).reduce((a, v) => a + v.spent, 0);
   const saved = views.filter(v => !v.flow).reduce((a, v) => a + v.budget, 0);

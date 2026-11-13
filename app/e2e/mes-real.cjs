@@ -23,6 +23,10 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await p.click('text=Escribir mi dinero de hoy');
   await p.fill('[aria-label="Dinero que tienes hoy"]', '850');
   await p.fill('[aria-label="Día de pago"]', '30');
+  const fixedOn = await p.locator('.sheet [role=checkbox]:not([aria-label])').evaluateAll(els => els.map(e => e.textContent + '=' + e.getAttribute('aria-checked')));
+  ok(fixedOn.length >= 3 && fixedOn.every(x => x.endsWith('=true')) && fixedOn.some(x => x.includes('Suscripciones')), 'los gastos fijos (con Suscripciones) vienen separados por defecto: ' + fixedOn.join(', '));
+  // Gastos fijos: vienen marcados (separados); se desmarcan los que se pagan con el próximo sueldo.
+  for (let on = p.locator('.sheet [role=checkbox]:not([aria-label])[aria-checked=true]'); await on.count();) await on.first().click();
   await p.click('.sheet [role=checkbox]:has-text("Alquiler")');
   await shot('m2-hoja');
   await p.click('.sheet button[type=submit]'); await p.waitForTimeout(400);

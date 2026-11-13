@@ -3,7 +3,7 @@ import { FM, FOLDERS, GROUPS, LOCKED_FOLDERS, folderName, type Budgets, type Fol
 import { fmt, fmt0, parseAmount } from '../domain/format';
 import { MONTH_LONG, monthKey } from '../domain/dates';
 import { goalViews, sumBudgets, txsOfMonth } from '../domain/plan';
-import { FLEX_IDS } from '../domain/money';
+import { FLEX_IDS, isFixedFolder } from '../domain/money';
 import { nextMonthPlan, restOfMonth, type NextMonthPlan } from '../domain/optimize';
 import type { Derived } from '../state/selectors';
 import { minPayments } from '../domain/cards';
@@ -29,12 +29,16 @@ export function FolderForm({ store }: { store: Store }) {
   const [err, setErr] = useState('');
   const locked = !!existing && LOCKED_FOLDERS.includes(existing.id);
   const fixedGroup = !!existing && (existing.grp === 'deu' || locked);
+  const [fixedMonthly, setFixedMonthly] = useState(existing ? isFixedFolder(existing) : false);
+  const canFix = (grp === 'nec' || grp === 'des') && existing?.id !== 'libre';
 
   const save = () => {
     const n = name.trim().slice(0, 28);
     if (!n) { setErr('Ponle un nombre, por ejemplo "Gimnasio" o "Mascota".'); return; }
     if (FOLDERS.some(f => f.name.toLowerCase() === n.toLowerCase() && f.id !== existing?.id)) { setErr('Ya tienes una carpeta con ese nombre.'); return; }
-    const f: Folder = existing ? { ...existing, name: n, icon, grp: fixedGroup ? existing.grp : grp } : { id: 'u' + Date.now().toString(36), name: n, icon, grp, base: 0 };
+    const g = fixedGroup && existing ? existing.grp : grp;
+    const base: Folder = existing ? { ...existing, name: n, icon, grp: g } : { id: 'u' + Date.now().toString(36), name: n, icon, grp: g, base: 0 };
+    const f: Folder = { ...base, fixed: (g === 'nec' || g === 'des') && base.id !== 'libre' ? fixedMonthly : undefined };
     store.saveFolder(f);
   };
 
@@ -50,6 +54,16 @@ export function FolderForm({ store }: { store: Store }) {
             {grp === 'nec' ? 'Gastos que no puedes evitar: nunca se recortan para cubrir deseos.' : grp === 'des' ? 'Gastos que eliges: se usan primero cuando falta dinero en otra carpeta.' : 'Se aparta el día de pago, antes de gastar.'}
           </div>
         </div>
+      )}
+      {canFix && (
+        <button type="button" role="switch" aria-checked={fixedMonthly} onClick={() => setFixedMonthly(v => !v)} className={'option ghost' + (fixedMonthly ? ' on' : '')}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, textAlign: 'left', height: 'auto' }}>
+          <Icon name={fixedMonthly ? 'ph-fill ph-check-circle' : 'ph ph-circle'} style={{ fontSize: 20, color: fixedMonthly ? 'var(--color-accent)' : 'var(--color-neutral-500)' }} />
+          <span style={{ flex: 1 }}>
+            <span style={{ display: 'block', fontSize: 14, fontWeight: 500 }}>Gasto fijo mensual</span>
+            <span className="row-sub" style={{ display: 'block' }}>Celular, suscripciones, cuotas… Se separa al cobrar y pagarlo no baja tu gasto del día.</span>
+          </span>
+        </button>
       )}
       <div>
         <div style={{ fontSize: 12, color: 'var(--color-neutral-400)', marginBottom: 6 }}>Ícono</div>
@@ -256,14 +270,21 @@ export function CloseSheet({ store, d }: { store: Store; d: Derived }) {
   const prevTxs = newMonth ? txsOfMonth(s.txs, s.monthKey) : [];
   const hasPrev = prevTxs.length > 0;
   const [which, setWhich] = useState<'base' | 'opt'>('base');
-  const fixed = FOLDERS.filter(f => f.grp === 'nec' && !FLEX_IDS.includes(f.id) && (s.budgets[f.id] || 0) > 0);
+  const fixed = FOLDERS.filter(f => isFixedFolder(f) && (s.budgets[f.id] || 0) > 0);
   const debtCards = s.cards.filter(c => c.kind !== 'debit' && c.min > 0 && d.debts.some(x => x.id === c.id));
   const today = new Date().getDate();
   const [dues, setDues] = useState<Record<string, string>>(() => Object.fromEntries(debtCards.map(c => [c.id, c.dueDay && (c.dueConfirmed || c.dueDay !== 5) ? String(c.dueDay) : ''])));
   // Por defecto se separa la cuota solo si vence antes de tu sueldo (la que pagas con el sueldo, no).
   const dueBeforePay = (c: { id: string }) => { const dd = Number(dues[c.id]), pd = Number(payday); return dd >= today && pd > 0 && dd < pd; };
-  const [reserve, setReserve] = useState<string[]>(() => sameCash && s.cash.reserve ? s.cash.reserve
-    : debtCards.filter(c => c.dueConfirmed && c.dueDay >= today && s.profile.payday && c.dueDay < s.profile.payday).map(c => 'card-' + c.id));
+  // Fijos: marcados por defecto (su dinero ya debía estar separado); desmarca los que pagas con tu próximo sueldo.
+  const [reserve, setReserve] = useState<string[]>(() => {
+    const cards = sameCash && s.cash.reserve ? s.cash.reserve.filter(x => x.startsWith('card-'))
+      : debtCards.filter(c => c.dueConfirmed && c.dueDay >= today && s.profile.payday && c.dueDay < s.profile.payday).map(c => 'card-' + c.id);
+    const legacy = (id: string) => FOLDERS.some(f => f.id === id && f.grp === 'nec' && !FLEX_IDS.includes(f.id));
+    const filled = sameCash && s.cash.opening !== null; // ya escribiste tu dinero este mes: respeta lo que elegiste
+    const keep = (id: string) => !filled ? true : s.cash.skip ? !s.cash.skip.includes(id) : !legacy(id) || (s.cash.reserve ?? []).includes(id);
+    return [...fixed.filter(f => keep(f.id)).map(f => f.id), ...cards];
+  });
   const [err, setErr] = useState('');
   const plan = hasPrev ? nextMonthPlan(s.template, prevTxs, 1, salary, minDebt, d.debts, gap) : null;
   const spent = prevTxs.reduce((a, t) => a + t.amt, 0);
@@ -280,7 +301,7 @@ export function CloseSheet({ store, d }: { store: Store; d: Derived }) {
     const now = new Date();
     store.startMonth(
       newMonth ? (which === 'opt' && plan ? plan.budgets : s.template) : null,
-      { key: cur, opening: o, openedAt: now.toISOString(), salary: paid === 'si' ? { amt: parseAmount(salAmt), date: now.toISOString(), inOpening: true } : null, reserve: paid === 'no' ? reserve : [] },
+      { key: cur, opening: o, openedAt: now.toISOString(), salary: paid === 'si' ? { amt: parseAmount(salAmt), date: now.toISOString(), inOpening: true } : null, reserve: paid === 'no' ? reserve : [], skip: paid === 'no' ? fixed.filter(f => !reserve.includes(f.id)).map(f => f.id) : [] },
       pd >= 1 && pd <= 31 ? pd : s.profile.payday ?? null,
     );
   };
@@ -326,7 +347,7 @@ export function CloseSheet({ store, d }: { store: Store; d: Derived }) {
               );
             })}
           </div>
-          <div className="row-sub" style={{ marginTop: 6 }}>Lo que marques se separa y no cuenta para tu gasto del día. Lo que pagas con tu próximo sueldo, déjalo sin marcar.</div>
+          <div className="row-sub" style={{ marginTop: 6 }}>Los gastos fijos se separan y pagarlos no baja tu gasto del día. Desmarca solo los que pagas con tu próximo sueldo.</div>
         </div>
       )}
       {paid === 'no' && debtCards.length > 0 && (

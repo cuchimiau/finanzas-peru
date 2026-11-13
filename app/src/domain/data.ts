@@ -14,7 +14,8 @@ export type GoalId = string;
 
 export type Budgets = Record<FolderId, number>;
 
-export interface Folder { id: FolderId; name: string; icon: string; grp: GroupId; base: number }
+/** `fixed`: gasto fijo mensual (alquiler, celular, suscripciones…). Si no se dice, se deduce del tipo de carpeta. */
+export interface Folder { id: FolderId; name: string; icon: string; grp: GroupId; base: number; fixed?: boolean }
 
 /** Carpetas que la app necesita: se pueden renombrar pero no borrar. */
 export const LOCKED_FOLDERS: FolderId[] = ['libre', 'deudas', 'emergencia'];
