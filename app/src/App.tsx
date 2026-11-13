@@ -9,11 +9,16 @@ import { Debts } from './screens/Debts';
 import { Metrics } from './screens/Metrics';
 import { Advisor, Composer } from './screens/Advisor';
 import { SheetHost } from './screens/Sheets';
+import { ListScreen } from './screens/MoreSheets';
+import { SettingsScreen } from './screens/SettingsScreen';
 
-const TABS: [Tab, string, string][] = [
-  ['home', 'Inicio', 'house'], ['folders', 'Carpetas', 'folders'], ['debts', 'Deudas', 'credit-card'],
-  ['metrics', 'Métricas', 'chart-bar'], ['advisor', 'Asesor', 'sparkle'],
+/** Barra estilo Incomes: Analítica · Lista · (+) · Presupuestos · Ajustes. Deudas y Asesor se abren desde Ajustes y Analítica. */
+const TABS: [Tab | 'add', string, string][] = [
+  ['home', 'Analítica', 'chart-pie-slice'], ['list', 'Lista', 'list-bullets'], ['add', 'Añadir', 'plus-circle'],
+  ['folders', 'Presupuestos', 'wallet'], ['settings', 'Ajustes', 'gear-six'],
 ];
+/** Pestaña que queda marcada mientras ves una pantalla interna. */
+const OWNER: Partial<Record<Tab, Tab>> = { debts: 'settings', advisor: 'home', metrics: 'home' };
 
 export function App(props: StoreOptions) {
   const store = useFinanceStore(props);
@@ -41,20 +46,30 @@ export function App(props: StoreOptions) {
 
           {s.phase === 'onb' ? <Onboarding store={store} d={d} /> : (
             <>
-              <main ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
+              <main ref={scrollRef} className="app-main" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}>
                 {s.tab === 'home' && <Home store={store} d={d} />}
+                {s.tab === 'list' && <ListScreen store={store} d={d} />}
                 {s.tab === 'folders' && <Folders store={store} d={d} />}
+                {s.tab === 'settings' && <SettingsScreen store={store} d={d} />}
                 {s.tab === 'debts' && <Debts store={store} d={d} />}
                 {s.tab === 'metrics' && <Metrics store={store} d={d} />}
                 {s.tab === 'advisor' && <Advisor store={store} />}
               </main>
-              {s.tab === 'advisor' && <Composer store={store} />}
+              {s.tab === 'advisor' && <div className="composer-wrap"><Composer store={store} /></div>}
               <nav className="tabbar" aria-label="Secciones">
-                {TABS.map(([id, label, icon]) => (
-                  <button key={id} className={'tab' + (s.tab === id ? ' on' : '')} aria-current={s.tab === id ? 'page' : undefined} onClick={() => store.goTab(id)}>
-                    <Icon name={(s.tab === id ? 'ph-fill ph-' : 'ph ph-') + icon} />{label}
-                  </button>
-                ))}
+                {TABS.map(([id, label, icon]) => {
+                  if (id === 'add') return (
+                    <button key={id} className="tab add" aria-label="Registrar gasto" onClick={() => store.openSheet('add')}>
+                      <Icon name={'ph-fill ph-' + icon} />{label}
+                    </button>
+                  );
+                  const on = s.tab === id || OWNER[s.tab] === id;
+                  return (
+                    <button key={id} className={'tab' + (on ? ' on' : '')} aria-label={label} aria-current={on ? 'page' : undefined} onClick={() => store.goTab(id)}>
+                      <Icon name={(on ? 'ph-fill ph-' : 'ph ph-') + icon} />{label}
+                    </button>
+                  );
+                })}
               </nav>
             </>
           )}

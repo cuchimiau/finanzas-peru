@@ -41,17 +41,17 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   ok(list.split('\n').includes('Comer fuera') && list.split('\n').indexOf('Libre') < list.split('\n').indexOf('Fondo de emergencia'), 'el Atajo recibe tus carpetas en orden');
   await p.goto('http://localhost:5173/'); await p.waitForTimeout(1500);
   ok((await main()).includes('tienes S/ 820'), 'el gasto baja el dinero real');
-  await p.click('nav >> text=Carpetas'); await p.click('text=Comer fuera'); await p.waitForTimeout(300);
+  await p.click('nav >> text=Presupuestos'); await p.click('text=Comer fuera'); await p.waitForTimeout(300);
   ok((await main()).includes('Kiosko Raro'), 'el gasto quedó en la carpeta elegida');
 
   // Ya me pagaron
-  await p.click('nav >> text=Inicio'); await p.click('button:has-text("Ya me pagaron")');
+  await p.click('nav >> text=Analítica'); await p.click('button:has-text("Ya me pagaron")');
   await p.fill('[aria-label="Sueldo recibido"]', '2600'); await p.click('text=Registrar sueldo'); await p.waitForTimeout(300);
   const m2 = await main();
   ok(m2.includes('tienes S/ 3,420') && !m2.includes('Sueldo pendiente'), 'el sueldo suma recién al llegar');
 
   // Métricas: gráfico
-  await p.click('nav >> text=Métricas'); await p.waitForTimeout(300);
+  await p.click('nav >> text=Analítica'); await p.waitForTimeout(300);
   const mt = await main();
   ok(mt.includes('Lo que tienes y lo que gastaste') && mt.includes('Comer fuera') && mt.includes('Te queda'), 'gráfico de lo que tienes vs gastado');
   await shot('m4-metricas');
@@ -63,9 +63,9 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   ok((await main()).includes('Laptop') && (await main()).includes('+S/ 50/mes'), 'meta nueva con aporte');
   await p.click('main >> text=Laptop'); await p.fill('.sheet input[placeholder^="Ej. Laptop"]', 'Laptop nueva'); await p.click('.sheet button:has-text("Guardar")'); await p.waitForTimeout(300);
   ok((await main()).includes('Laptop nueva'), 'meta editada');
-  await p.click('nav >> text=Carpetas'); await p.waitForTimeout(200);
+  await p.click('nav >> text=Presupuestos'); await p.waitForTimeout(200);
   ok((await main()).includes('Laptop nueva'), 'la meta tiene su carpeta de ahorro');
-  await p.click('nav >> text=Métricas'); await p.click('main >> text=Laptop nueva'); await p.click('text=Borrar meta'); await p.waitForTimeout(300);
+  await p.click('nav >> text=Analítica'); await p.click('main >> text=Laptop nueva'); await p.click('text=Borrar meta'); await p.waitForTimeout(300);
   ok(!(await main()).includes('Laptop nueva'), 'meta borrada');
   await p.click('main >> text=Fondo de emergencia'); await p.waitForTimeout(200);
   ok(!(await p.locator('text=Borrar meta').count()), 'el fondo de emergencia no se puede borrar');

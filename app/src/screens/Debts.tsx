@@ -23,6 +23,7 @@ export function Debts({ store, d }: { store: Store; d: Derived }) {
     <div className="rise" style={{ padding: '8px 20px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
+          <button type="button" className="back-btn" onClick={() => store.goTab('settings')}><Icon name="ph ph-caret-left" />Ajustes</button>
           <div className="page-title">Deudas</div>
           <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 2 }}>Tarjetas, cuotas y lo que cargas a crédito</div>
         </div>

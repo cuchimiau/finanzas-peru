@@ -8,7 +8,7 @@ import { MoneyChart } from '../components/MoneyChart';
 import type { Derived } from '../state/selectors';
 import type { Store } from '../state/store';
 
-export function Metrics({ store, d }: { store: Store; d: Derived }) {
+export function Metrics({ store, d, embedded }: { store: Store; d: Derived; embedded?: boolean }) {
   const { s } = store, b = s.budgets, income = d.income;
   const dti = income ? Math.round((b.deudas / income) * 100) : 0;
   const limits = d.debts.reduce((a, x) => a + x.limit, 0);
@@ -56,8 +56,8 @@ export function Metrics({ store, d }: { store: Store; d: Derived }) {
   ];
 
   return (
-    <div className="rise" style={{ padding: '8px 20px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div className="page-title">Métricas</div>
+    <div className={embedded ? '' : 'rise'} style={{ padding: embedded ? 0 : '8px 20px 28px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {embedded ? <div className="section-title" style={{ marginTop: 6 }}>Métricas</div> : <div className="page-title">Métricas</div>}
 
       {d.money.known ? (
         <MoneyChart total={d.money.total} byFolder={d.money.byFolder} onOpen={id => store.openFolder(id)}

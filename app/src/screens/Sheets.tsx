@@ -322,12 +322,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Settings({ store }: { store: Store }) {
+export function Settings({ store, embedded }: { store: Store; embedded?: boolean }) {
   const { s } = store;
   const [income, setIncome] = useState(s.income);
   return (
     <>
-      <div style={{ fontSize: 20, fontWeight: 500 }}>Ajustes</div>
+      {!embedded && <div style={{ fontSize: 20, fontWeight: 500 }}>Ajustes</div>}
 
       <Section title="Tu perfil">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -355,6 +355,7 @@ function Settings({ store }: { store: Store }) {
         </div>
       </Section>
 
+      <div id="ajustes-drive" />
       <Section title="Drive y asesor (Apps Script)">
         <ConnectForm store={store} />
       </Section>

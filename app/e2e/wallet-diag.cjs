@@ -27,11 +27,12 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   ok(m.includes('Elige la carpeta') && m.includes('Pago con Apple Pay (sin datos)'), 'el Wallet sin datos aparece para completarlo');
   // Registro en Ajustes
   await p.click('[aria-label="Ajustes"]'); await p.click('text=Registrar solo cada pago con Wallet'); await p.waitForTimeout(200);
-  const st = await sheet();
+  const st = await main();
   ok(st.includes('Últimos envíos de tus atajos') && /Wallet · sin datos/.test(st) && /código secreto incorrecto/.test(st) && /Wallet · S\/ 18\.00 · BEMBOS LARCO/.test(st), 'el registro muestra prueba manual, secreto mal y compra');
   await p.locator('text=Últimos envíos de tus atajos').scrollIntoViewIfNeeded();
   await p.screenshot({ path: `${out}/w1-registro.png` });
   await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+  await p.click('nav >> text=Analítica'); await p.waitForTimeout(200);
 
   // Elegir carpeta una vez por comercio → la próxima llega sola
   await p.click('main >> text=Bembos Larco'); await p.click('.sheet >> button:has-text("Comer fuera")'); await p.waitForTimeout(300);
@@ -39,7 +40,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await p.goto('http://localhost:5173/'); await p.waitForTimeout(1500);
   m = await main();
   ok(!/Elige la carpeta[\s\S]*Bembos Larco S\/ 22/.test(m), 'la segunda compra en el mismo comercio no pide carpeta');
-  await p.click('nav >> text=Carpetas'); await p.click('text=Comer fuera'); await p.waitForTimeout(300);
+  await p.click('nav >> text=Presupuestos'); await p.click('text=Comer fuera'); await p.waitForTimeout(300);
   ok(((await main()).match(/Bembos Larco/g) || []).length === 2, 'las dos compras quedan en Comer fuera');
 
   // Yape leído como "SI 2"

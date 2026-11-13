@@ -22,7 +22,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await p.fill('input[placeholder^="FP1"]', code); await p.click('button:has-text("Conectar")'); await p.waitForSelector('text=Conectado a tu Drive');
   await p.click('text=Ir a mis finanzas'); await p.waitForTimeout(400);
   // Un préstamo además de la tarjeta
-  await p.click('nav >> text=Deudas'); await p.click('text=Deuda o tarjeta'); await p.click('.sheet >> text=Préstamo');
+  await p.click('nav >> text=Ajustes'); await p.click('[aria-label="Abrir Deudas"]'); await p.click('text=Deuda o tarjeta'); await p.click('.sheet >> text=Préstamo');
   await p.fill('.sheet input[placeholder^="Préstamo de mi tío"]', 'Tío Juan');
   await fill('Cuánto debes hoy', '500'); await fill('Cuota mensual', '100'); await fill('Día de pago', '25');
   await p.click('.sheet >> text=Guardar'); await p.waitForTimeout(300);
@@ -54,12 +54,12 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await p.locator('text=Ver todos los movimientos').scrollIntoViewIfNeeded();
   await p.screenshot({ path: `${out}/pd2-inicio.png` });
   await p.click('text=Ver todos los movimientos');
-  const all = await sheet();
+  const all = await main();
   ok(/Hoy[\s\S]*Pago BBVA Visa[\s\S]*Pago Tío Juan[\s\S]*Pardos Chicken/.test(all) && all.includes('3 registrados'), 'todos los movimientos por fecha y agrupados por día');
   await p.fill('[aria-label="Buscar movimientos"]', 'pardos'); await p.waitForTimeout(150);
-  ok((await sheet()).includes('Pardos Chicken') && !(await sheet()).includes('Pago BBVA'), 'la búsqueda filtra');
+  ok((await main()).includes('Pardos Chicken') && !(await main()).includes('Pago BBVA'), 'la búsqueda filtra');
   await p.screenshot({ path: `${out}/pd3-todos.png` });
-  await p.click('.sheet >> text=Pardos Chicken'); await p.waitForTimeout(200);
+  await p.click('main >> text=Pardos Chicken'); await p.waitForTimeout(200);
   ok((await sheet()).includes('Carpeta') && (await sheet()).includes('Pardos Chicken'), 'tocar un movimiento abre su detalle');
   ok(errs.length === 0, 'sin errores en la página ' + errs.join(' | '));
   await b.close();

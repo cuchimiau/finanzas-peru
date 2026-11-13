@@ -4,6 +4,7 @@ import '@phosphor-icons/web/regular';
 import '@phosphor-icons/web/fill';
 import './styles/nocturne.css';
 import './styles/app.css';
+import './styles/incomes.css';
 import { App } from './App';
 
 // ?reset=1 → borra lo guardado en este teléfono (Drive no se toca).

@@ -86,7 +86,7 @@ const until = async (fn, ms = 8000) => { const t = Date.now(); while (Date.now()
   assert(await until(async () => (await gasState()).data.state.txs.length === 3), 'al reconectar se guarda en Drive');
 
   // 5. Asesor (Gemini simulado): propuesta → aplicar
-  await p.click('nav >> text=Asesor');
+  await p.click('nav >> text=Analítica'); await p.click('[aria-label="Asesor"]');
   await p.click('text=Optimiza mi plan este mes');
   await p.waitForSelector('text=Propuesta de ajuste', { timeout: 8000 }); await p.waitForTimeout(300);
   await p.click('text=Aplicar a mis carpetas');
@@ -94,10 +94,10 @@ const until = async (fn, ms = 8000) => { const t = Date.now(); while (Date.now()
   assert(await until(async () => { const b2 = (await gasState()).data.state.budgets; return b2.restaurantes === 205 || b2.restaurantes > 180; }), 'ajuste del asesor aplicado y guardado');
 
   // 6. Pantallas
-  await p.click('nav >> text=Deudas'); await p.waitForTimeout(300); await shot('e12-deudas');
+  await p.click('nav >> text=Ajustes'); await p.click('[aria-label="Abrir Deudas"]'); await p.waitForTimeout(300); await shot('e12-deudas');
   assert(await p.isVisible('text=S/ 3,322'), 'deuda = saldo + cargos posteriores (3,260 + 45.50 + 16.90)');
-  await p.click('nav >> text=Métricas'); await p.waitForTimeout(300); await shot('e13-metricas');
-  await p.click('nav >> text=Inicio'); await p.click('[aria-label="Ajustes"]'); await p.waitForTimeout(300); await shot('e14-ajustes');
+  await p.click('nav >> text=Analítica'); await p.waitForTimeout(300); await shot('e13-metricas');
+  await p.click('nav >> text=Analítica'); await p.click('[aria-label="Ajustes"]'); await p.waitForTimeout(300); await shot('e14-ajustes');
 
   // 7. Otro teléfono (o reinstalar): conectar recupera todo desde Drive
   const ctx2 = await b.newContext(iphone);

@@ -7,6 +7,7 @@ export function Advisor({ store }: { store: Store }) {
   const { s } = store;
   return (
     <div style={{ padding: '4px 20px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <button type="button" className="back-btn" onClick={() => store.goTab('home')}><Icon name="ph ph-caret-left" />Analítica</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0 6px' }}>
         <div style={{ width: 40, height: 40, borderRadius: 12, border: '1px solid var(--color-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-accent-300)', fontSize: 20, boxShadow: '0 0 20px var(--color-accent-800)' }}>
           <Icon name="ph ph-sparkle" />

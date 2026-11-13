@@ -22,7 +22,8 @@ import { derive } from './selectors';
 import { PERSISTED_KEYS, isPersisted, migrate, pickPersisted, type ChatMsg, type Persisted } from './persisted';
 
 export type { ChatMsg } from './persisted';
-export type Tab = 'home' | 'folders' | 'debts' | 'metrics' | 'advisor';
+/** Pestañas de la barra (home = Analítica) y pantallas que se abren desde ellas (debts, advisor, metrics). */
+export type Tab = 'home' | 'list' | 'folders' | 'settings' | 'debts' | 'metrics' | 'advisor';
 export type Sheet = 'recat' | 'connect' | 'add' | 'card' | 'goal' | 'settings' | 'folder' | 'plan' | 'optimize' | 'close' | 'paid' | 'paydebt' | 'alltx' | null;
 export type SyncStatus = 'off' | 'idle' | 'syncing' | 'offline' | 'error';
 
@@ -94,8 +95,10 @@ export function spentMap(txs: Tx[]): Partial<Record<FolderId, number>> {
 export function dateFromInput(v: string): string {
   if (!v) return new Date().toISOString();
   const [y, m, d] = v.split('-').map(Number);
-  const dt = new Date(y, (m || 1) - 1, d || 1, 12, 0);
-  return Number.isNaN(dt.getTime()) || dt.getTime() > Date.now() ? new Date().toISOString() : dt.toISOString();
+  const dt = new Date(y, (m || 1) - 1, d || 1, 12, 0), now = new Date();
+  // Hoy = ahora mismo: así un pago de hoy queda después del saldo que se escribió hoy (y en orden).
+  const isToday = dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth() && dt.getDate() === now.getDate();
+  return Number.isNaN(dt.getTime()) || isToday || dt.getTime() > now.getTime() ? now.toISOString() : dt.toISOString();
 }
 
 export const parseIncome = (s: string) => Math.max(0, parseFloat(String(s).replace(/[^0-9.]/g, '')) || 0);

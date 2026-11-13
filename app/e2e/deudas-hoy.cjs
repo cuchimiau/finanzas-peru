@@ -2,6 +2,10 @@
 const { chromium } = require(process.env.PW || 'playwright');
 const out = process.argv[2] || '.';
 const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓ ' + m); };
+// Días relativos a hoy (la regla: se separa si hoy ≤ vencimiento < día de sueldo).
+const T = new Date().getDate();
+const [ANTES, SUELDO, DESPUES] = (T <= 24 ? [T + 2, T + 4, T + 6] : [T, T + 1, T + 2]).map(String);
+if (T > 29) { console.log('✓ omitida: hoy es ' + T + ' y no hay días del mes para probar antes/después del sueldo'); process.exit(0); }
 (async () => {
   const { code } = await (await fetch('http://127.0.0.1:8790/__code')).json();
   const { u: url, s: secret } = JSON.parse(Buffer.from(code.slice(4), 'base64').toString());
@@ -21,27 +25,28 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await fill('Deuda actual', '900'); await fill('TCEA', '60'); await fill('Pago mínimo', '100');
   await p.click('.sheet >> text=Guardar');
   ok((await sheet()).includes('día del mes en que vence'), 'el día de pago de la deuda es obligatorio (sin 5 por defecto)');
-  await fill('Día de pago', '20'); await p.click('.sheet >> text=Guardar');
+  await fill('Día de pago', DESPUES); await p.click('.sheet >> text=Guardar');
   await p.click('text=Calcular plan óptimo'); await p.waitForSelector('text=Crear mis carpetas'); await p.click('text=Crear mis carpetas');
   await p.fill('input[placeholder^="FP1"]', code); await p.click('button:has-text("Conectar")'); await p.waitForSelector('text=Conectado a tu Drive');
   await p.click('text=Ir a mis finanzas'); await p.waitForTimeout(400);
 
-  // Sueldo el 15; la tarjeta vence el 20 → no se separa
+  // Sueldo en SUELDO; la tarjeta vence en DESPUES → no se separa
   await p.click('text=Escribir mi dinero de hoy');
-  await p.fill('[aria-label="Dinero que tienes hoy"]', '850'); await p.fill('[aria-label="Día de pago"]', '15');
+  await p.fill('[aria-label="Dinero que tienes hoy"]', '850'); await p.fill('[aria-label="Día de pago"]', SUELDO);
   ok((await sheet()).includes('Vence después de tu sueldo'), 'la deuda que vence después del sueldo se paga con él');
   await shot('d1-hoja-deudas');
   await p.click('.sheet button[type=submit]'); await p.waitForTimeout(400);
   let m = await main();
-  ok(!m.includes('Cuota BBVA') && m.includes('S/ 850 disponibles hasta tu sueldo del 15'), 'no separa la cuota que vence después del sueldo');
-  // Cambia el vencimiento al 10 → ahora sí se separa
+  ok(!m.includes('Cuota BBVA') && m.includes('S/ 850 disponibles hasta tu sueldo del ' + SUELDO), 'no separa la cuota que vence después del sueldo');
+  // Cambia el vencimiento a ANTES → ahora sí se separa
   await p.click('text=Corregir dinero y día de pago').catch(() => {});
   if (!(await sheet())) { await p.click('[aria-label="Ajustes"]'); await p.click('text=Corregir dinero y día de pago'); }
-  await p.fill('[aria-label="Día de pago de BBVA Visa"]', '10'); await p.press('[aria-label="Día de pago de BBVA Visa"]', 'Tab');
+  await p.fill('[aria-label="Día de pago de BBVA Visa"]', ANTES); await p.press('[aria-label="Día de pago de BBVA Visa"]', 'Tab');
   ok((await sheet()).includes('Vence antes de tu sueldo') && (await p.getAttribute('[aria-label="Separar cuota de BBVA Visa"]', 'aria-checked')) === 'true', 'al vencer antes del sueldo se marca para separar');
   await p.click('.sheet button[type=submit]'); await p.waitForTimeout(400);
+  await p.click('nav >> text=Analítica'); await p.waitForTimeout(200); // Ajustes ahora es una pestaña
   m = await main();
-  ok(m.includes('Ya separé S/ 100 para Cuota BBVA Visa (vence el 10)'), 'separa la cuota con su día');
+  ok(m.includes('Ya separé S/ 100 para Cuota BBVA Visa (vence el ' + ANTES + ')'), 'separa la cuota con su día');
   const before = await p.evaluate(() => document.querySelector('main .tnum')?.textContent || '');
 
   // Wallet: registra primero (solo id), carpeta después
@@ -58,7 +63,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   ok((await (await post({ action: 'setFolder', id, folder: 'Comer fuera' })).json()).ok, 'setFolder');
   await p.goto('http://localhost:5173/'); await p.waitForTimeout(1500);
   ok(!(await main()).includes('Elige la carpeta'), 'la carpeta elegida después se aplica');
-  await p.click('nav >> text=Carpetas'); await p.click('text=Comer fuera'); await p.waitForTimeout(300);
+  await p.click('nav >> text=Presupuestos'); await p.click('text=Comer fuera'); await p.waitForTimeout(300);
   ok((await main()).includes('Kiosko Raro'), 'el pago quedó en Comer fuera');
 
   // Yape con el texto de una constancia real

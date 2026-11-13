@@ -16,7 +16,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await p.click('text=Ir a mis finanzas'); await p.waitForTimeout(400);
 
   // Carpeta propia
-  await p.click('nav >> text=Carpetas'); await p.click('text=Nueva carpeta');
+  await p.click('nav >> text=Presupuestos'); await p.click('text=Nueva carpeta');
   await p.fill('.sheet input', 'Gimnasio'); await p.click('.sheet >> text=Necesidad'); await p.click('[aria-label="barbell"]');
   await shot('p1-nueva-carpeta');
   await p.click('text=Crear carpeta'); await p.waitForTimeout(300);
@@ -35,19 +35,19 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   await p.click('text=Guardar plan'); await p.waitForTimeout(300);
 
   // Ingreso extra + gasto de ayer
-  await p.click('nav >> text=Inicio'); await p.click('[aria-label="Registrar gasto"]');
+  await p.click('nav >> text=Analítica'); await p.click('[aria-label="Registrar gasto"]');
   await p.click('.sheet >> button[role=radio]:has-text("Ingreso")'); await p.fill('.sheet input[inputmode=decimal]', '300'); await p.fill('[aria-label="Lugar"]', 'Bono');
   await shot('p3-ingreso');
   await p.click('text=Guardar ingreso'); await p.waitForTimeout(300);
-  await p.click('nav >> text=Métricas'); await p.waitForTimeout(200);
+  await p.click('nav >> text=Analítica'); await p.waitForTimeout(200);
   ok(/Bono[\s\S]*\+S\/ 300/.test(await main()), 'ingreso extra suma al mes');
-  await p.click('nav >> text=Inicio');
+  await p.click('nav >> text=Analítica');
   await p.click('[aria-label="Registrar gasto"]'); await p.fill('.sheet input[inputmode=decimal]', '45'); await p.fill('[aria-label="Lugar"]', 'Pardos');
   await p.click('.sheet >> button[role=radio]:has-text("Ayer")'); await p.click('text=Guardar gasto'); await p.waitForTimeout(300);
   ok(/Pardos[\s\S]*Ayer/.test(await main()), 'gasto registrado con fecha de ayer');
 
   // Préstamo no bancario
-  await p.click('nav >> text=Deudas'); await p.click('text=Deuda o tarjeta'); await p.click('.sheet >> text=Préstamo');
+  await p.click('nav >> text=Ajustes'); await p.click('[aria-label="Abrir Deudas"]'); await p.click('text=Deuda o tarjeta'); await p.click('.sheet >> text=Préstamo');
   await p.fill('.sheet input[placeholder^="Préstamo de mi tío"]', 'Tío Juan');
   await p.fill('label:has-text("Cuánto debes hoy") input', '500'); await p.fill('label:has-text("Cuota mensual") input', '100'); await p.fill('label:has-text("Día de pago") input', '1');
   await shot('p4-prestamo');
@@ -55,7 +55,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   ok((await main()).includes('Préstamo sin intereses'), 'préstamo familiar en Deudas');
 
   // Optimizar
-  await p.click('nav >> text=Inicio'); await p.click('text=Optimiza tu mes'); await p.waitForTimeout(300);
+  await p.click('nav >> text=Analítica'); await p.click('text=Optimiza tu mes'); await p.waitForTimeout(300);
   await shot('p5-optimizar-resto');
   const t1 = await sheet();
   ok(/plan de ahorro para fin de mes/i.test(t1), 'optimizar: resto del mes');
@@ -74,7 +74,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   ok(!(await sheet()) && (await main()).includes('tienes S/ 1,200'), 'mes nuevo iniciado con dinero real');
 
   // Borrar carpeta propia
-  await p.click('nav >> text=Carpetas'); await p.click('text=Gimnasio'); await p.click('[aria-label="Editar carpeta"]'); await p.click('.sheet >> text=Borrar'); await p.waitForTimeout(300);
+  await p.click('nav >> text=Presupuestos'); await p.click('text=Gimnasio'); await p.click('[aria-label="Editar carpeta"]'); await p.click('.sheet >> text=Borrar'); await p.waitForTimeout(300);
   ok(!(await main()).includes('Gimnasio'), 'carpeta propia borrada (su dinero a Libre)');
   ok((await main()).includes('S/ 2,600 asignados'), 'mes nuevo cuadra con el sueldo (el bono era del mes anterior)');
   ok(errs.length === 0, 'sin errores de JavaScript' + (errs.length ? ': ' + errs.join(' | ') : ''));

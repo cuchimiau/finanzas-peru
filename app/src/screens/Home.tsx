@@ -1,6 +1,7 @@
 import { fmt, fmt0, pct } from '../domain/format';
 import { Icon, SectionHeader, TxRow, pressable } from '../components/common';
 import { syncLabel } from '../components/ConnectForm';
+import { Metrics } from './Metrics';
 import type { Derived } from '../state/selectors';
 import type { Store } from '../state/store';
 
@@ -16,22 +17,19 @@ export function Home({ store, d }: { store: Store; d: Derived }) {
   const before = s.txs.filter(t => !isToday(t.date)).slice(0, Math.max(5, 10 - today.length));
   return (
     <div className="rise" style={{ padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontSize: 13, color: 'var(--color-neutral-500)' }}>{m.todayL}</div>
-          <div style={{ fontSize: 20, fontWeight: 500, marginTop: 2 }}>Hola{s.profile.name ? ', ' + s.profile.name.split(' ')[0] : ''}</div>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 40 }}>
+          <span style={{ fontSize: 15, fontWeight: 600 }}>{m.name} de {m.now.getFullYear()}</span>
+          <button className="btn btn-icon btn-secondary" aria-label="Asesor" onClick={() => store.goTab('advisor')} style={{ width: 38, height: 38, borderRadius: 19, fontSize: 18, color: 'var(--color-accent-300)' }}><Icon name="ph-fill ph-sparkle" /></button>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button className="btn btn-icon btn-ghost" aria-label="Ajustes" onClick={() => store.openSheet('settings')} style={{ width: 40, height: 40, borderRadius: 12, fontSize: 19 }}><Icon name="ph ph-gear-six" /></button>
-          <button className="btn btn-icon btn-ghost" aria-label="Cómo leemos tus gastos" onClick={() => store.openSheet('connect')} style={{ width: 40, height: 40, borderRadius: 12, fontSize: 19 }}><Icon name="ph ph-plugs-connected" /></button>
-          <button className="btn btn-icon btn-primary" aria-label="Registrar gasto" onClick={() => store.openSheet('add')} style={{ width: 40, height: 40, borderRadius: 12, fontSize: 19 }}><Icon name="ph ph-plus" /></button>
-        </div>
+        <div className="page-title" style={{ marginTop: 4 }}>Analítica</div>
+        <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 4 }}>Hola{s.profile.name ? ', ' + s.profile.name.split(' ')[0] : ''} · {m.todayL}</div>
       </div>
 
       {mo.known ? (
-        <div>
-          <div style={{ fontSize: 13, color: 'var(--color-neutral-400)' }}>{mo.todayLeft >= 0 ? 'Te queda para hoy' : 'Hoy te pasaste'}</div>
-          <div className="tnum" style={{ fontSize: 52, fontWeight: 500, letterSpacing: '-0.03em', lineHeight: 1.05, marginTop: 4, color: mo.todayLeft < 0 ? 'var(--color-accent-300)' : undefined }}>
+        <div className="surface" style={{ padding: '16px 16px 14px' }}>
+          <div style={{ fontSize: 13, color: 'var(--color-neutral-500)' }}>{mo.todayLeft >= 0 ? 'Te queda para hoy' : 'Hoy te pasaste'}</div>
+          <div className="tnum" style={{ fontSize: 48, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.05, marginTop: 4, color: mo.todayLeft < 0 ? 'var(--color-negative)' : undefined }}>
             {mo.todayLeft < 0 && <Icon name="ph ph-warning-circle" style={{ fontSize: 34, marginRight: 6, verticalAlign: 'middle' }} />}{fmt(Math.abs(mo.todayLeft))}
           </div>
           <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 6, lineHeight: 1.45 }}>
@@ -173,12 +171,13 @@ export function Home({ store, d }: { store: Store; d: Derived }) {
                 {before.map(t => <TxRow key={t.id} t={d.txView(t)} variant="recent" onOpen={() => store.openRecat(t.id)} />)}
               </>
             )}
-            <button type="button" className="btn btn-secondary btn-block" onClick={() => store.openSheet('alltx')} style={{ height: 42, borderRadius: 12, marginTop: 10, gap: 6 }}>
+            <button type="button" className="btn btn-secondary btn-block" onClick={() => store.goTab('list')} style={{ height: 42, borderRadius: 12, marginTop: 10, gap: 6 }}>
               <Icon name="ph ph-list-bullets" />Ver todos los movimientos ({s.txs.length})
             </button>
           </>
         )}
       </div>
+      <Metrics store={store} d={d} embedded />
     </div>
   );
 }

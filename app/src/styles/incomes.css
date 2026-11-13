@@ -1,0 +1,139 @@
+/*
+ * Tema "estilo Incomes" (iOS oscuro): capa encima de Nocturne + app.css.
+ * Solo cambia la apariencia: colores, tipografía, superficies, barra de pestañas flotante.
+ * Colores medidos de las capturas de referencia; los que no se leían bien se aclararon
+ * (texto secundario #8e8d93 en vez de #6c6a71). Ver la ficha de inspiración.
+ */
+:root {
+  --color-bg: #000000;
+  --color-surface: #1a191b;
+  --color-surface-2: #2c2c2e;
+  --color-text: #ffffff;
+  --color-divider: #3c3b3f;
+
+  /* Acento azul (barras, pestaña activa, botones). */
+  --color-accent: #5382e5;
+  --color-accent-2: #7da2ee;
+  --color-accent-100: #eef3fe;
+  --color-accent-200: #d6e2fb;
+  --color-accent-300: #a9c2f5;
+  --color-accent-400: #7da2ee;
+  --color-accent-500: #5382e5;
+  --color-accent-600: #3f69c4;
+  --color-accent-700: #33539a;
+  --color-accent-800: #263d6e;
+  --color-accent-900: #172540;
+
+  /* Grises del sistema. */
+  --color-neutral-100: #f2f2f7;
+  --color-neutral-200: #e5e5ea;
+  --color-neutral-300: #d1d1d6;
+  --color-neutral-400: #aeaeb2;
+  --color-neutral-500: #8e8d93;
+  --color-neutral-600: #6c6a71;
+  --color-neutral-700: #48484a;
+  --color-neutral-800: #3a393d;
+  --color-neutral-900: #2c2c2e;
+
+  /* Significados. */
+  --color-positive: #38e352;
+  --color-negative: #f03b56;
+  --color-over: #dd245a;
+
+  /* Tipografía del sistema: SF Pro en el iPhone; Inter en otros equipos. */
+  --font-heading: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --font-heading-weight: 600;
+
+  --shadow-sm: 0 0 0 0 transparent;
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.65);
+  --shadow-lg: 0 -10px 40px rgba(0, 0, 0, 0.7);
+}
+
+/* Fondo negro puro, sin degradados. */
+.stage { background: #000; }
+.screen { background: #000; }
+.device { background: #1c1c1e; }
+.statusbar .island { background: #000; }
+
+/* Títulos grandes de pantalla, como en iOS. */
+.page-title { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.section-title { font-size: 17px; font-weight: 600; }
+.eyebrow { color: var(--color-neutral-500); letter-spacing: .02em; text-transform: none; font-size: 13px; }
+
+/* Superficies: tarjetas rellenas, sin bordes. */
+.surface, .tile { border-radius: 14px; background: var(--color-surface); }
+.accent-card { background: var(--color-surface); border: 1px solid rgba(83, 130, 229, 0.35); }
+.hint-card { background: var(--color-surface); border: 1px solid var(--color-divider); }
+.ibox { background: var(--color-surface-2); color: var(--color-neutral-200); }
+.ibox.dark { background: var(--color-surface-2); }
+.track { background: var(--color-surface-2); }
+
+/* Botones: primario relleno (iOS), secundario gris. */
+.btn-primary { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+.btn-primary:hover { background: #4a76d4; }
+.btn-primary:active { background: #3f69c4; }
+.btn-primary:disabled { background: var(--color-surface-2); border-color: var(--color-surface-2); color: var(--color-neutral-500); opacity: 1; }
+.btn-secondary { background: var(--color-surface-2); border-color: transparent; color: var(--color-text); }
+.btn-secondary:hover { background: #3a393d; }
+.btn-ghost { color: var(--color-accent); }
+.link-btn { color: var(--color-accent-400); }
+.link-btn:hover { color: var(--color-accent-300); }
+
+/* Campos y opciones. */
+.input { background: var(--color-surface-2); border-color: transparent; border-radius: 10px; }
+.input:hover { border-color: transparent; }
+.input:focus-visible { border-color: var(--color-accent); }
+input::placeholder { color: var(--color-neutral-500); }
+.option { background: var(--color-surface-2); border-color: transparent; }
+.option:hover { border-color: var(--color-neutral-700); }
+.option.on { background: var(--color-accent-900); border-color: var(--color-accent); }
+.option.ghost { background: var(--color-surface-2); }
+.chip { background: var(--color-surface-2); border-color: transparent; color: var(--color-neutral-200); }
+.chip.on { background: var(--color-accent-900); border-color: var(--color-accent); color: var(--color-accent-200); }
+.sug-chip { background: var(--color-surface-2); border-color: transparent; color: var(--color-neutral-200); }
+.pill-toggle { border-color: var(--color-neutral-700); }
+
+/* Control segmentado (Gastos | Ingresos, Débito | Crédito…). */
+.seg { background: var(--color-surface-2); border: 0; border-radius: 9px; padding: 2px; gap: 2px; }
+.seg-btn { height: 30px; border-radius: 7px; color: var(--color-neutral-300); }
+.seg-btn.on { background: #5a595e; color: #fff; }
+
+/* Hojas modales. */
+.sheet-backdrop { background: rgba(0, 0, 0, 0.6); }
+.sheet { background: var(--color-surface); border-radius: 14px 14px 0 0; }
+.sheet .surface, .sheet .tile { background: var(--color-surface-2); }
+.sheet-grip { background: var(--color-neutral-700); }
+
+/* ─── Barra de pestañas flotante (píldora translúcida) ─── */
+main.app-main { padding-bottom: 92px; }
+.tabbar {
+  position: absolute; left: 12px; right: 12px; bottom: 14px; z-index: 15;
+  height: 62px; padding: 6px; gap: 2px; border-top: 0; border-radius: 31px;
+  background: rgba(30, 30, 32, 0.82); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.10), 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.tab {
+  padding-top: 5px; gap: 2px; border-radius: 26px; font: 600 10px var(--font-body); color: var(--color-neutral-300);
+}
+.tab i { font-size: 22px; height: 24px; line-height: 24px; }
+.tab.on { color: var(--color-accent); background: rgba(255, 255, 255, 0.08); }
+.tab.add i { font-size: 24px; color: #fff; }
+.composer-wrap { margin-bottom: 84px; }
+
+/* Cabecera con botón atrás (Deudas y Asesor desde Ajustes / Analítica). */
+.back-btn { display: inline-flex; align-items: center; gap: 2px; background: none; border: 0; padding: 0; color: var(--color-accent); font: 500 15px var(--font-body); cursor: pointer; }
+
+/* Listas agrupadas tipo Ajustes de iPhone. */
+.group { border-radius: 12px; background: var(--color-surface); overflow: hidden; }
+.group-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 46px; padding: 8px 14px; background: none; border: 0; color: var(--color-text); font: 400 15px var(--font-body); text-align: left; cursor: pointer; }
+.group-row + .group-row { border-top: 0.5px solid var(--color-divider); }
+.group-row .gicon { width: 29px; height: 29px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 17px; flex-shrink: 0; }
+.group-row .gend { margin-left: auto; color: var(--color-neutral-500); font-size: 14px; display: flex; align-items: center; gap: 4px; }
+
+@media (max-width: 500px), (max-height: 760px) and (max-width: 900px) {
+  .stage, .screen { background: #000; }
+  .tabbar { height: 62px !important; padding: 6px !important; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+  main.app-main { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
+  .composer-wrap { margin-bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+}

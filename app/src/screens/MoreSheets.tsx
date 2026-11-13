@@ -94,26 +94,38 @@ export function groupByDay(txs: Tx[]): { key: string; title: string; total: numb
 }
 
 /** Todos los movimientos, ordenados por fecha y agrupados por día, con búsqueda. */
-export function AllTxSheet({ store, d }: { store: Store; d: Derived }) {
+function TxList({ store, d, screen }: { store: Store; d: Derived; screen?: boolean }) {
   const { s } = store;
   const [q, setQ] = useState('');
-  const norm = (x: string) => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const list = q.trim() ? s.txs.filter(t => norm(t.name + ' ' + d.txView(t).folderName).includes(norm(q.trim()))) : s.txs;
   const groups = groupByDay(list);
   return (
     <div>
-      <div style={{ fontSize: 20, fontWeight: 500 }}>Todos los movimientos</div>
+      {screen ? <div className="page-title">Transacciones</div> : <div style={{ fontSize: 20, fontWeight: 500 }}>Todos los movimientos</div>}
       <div className="row-sub" style={{ marginTop: 2 }}>{s.txs.length} registrados · del más reciente al más antiguo</div>
-      <input className="input" style={{ ...inputStyle, marginTop: 10 }} value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por lugar o carpeta" aria-label="Buscar movimientos" />
+      <div style={{ position: 'relative', marginTop: 10 }}>
+        <Icon name="ph ph-magnifying-glass" style={{ position: 'absolute', left: 12, top: 13, color: 'var(--color-neutral-500)', fontSize: 16 }} />
+        <input className="input" style={{ ...inputStyle, paddingLeft: 34 }} value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar por lugar o carpeta" aria-label="Buscar movimientos" />
+      </div>
       {groups.map(g => (
-        <div key={g.key} style={{ marginTop: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--color-neutral-400)', marginBottom: 2 }}>
-            <span style={{ fontWeight: 500 }}>{g.title}</span><span className="tnum">−{fmt(g.total)}</span>
+        <div key={g.key} style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--color-neutral-500)', margin: '0 4px 6px' }}>
+            <span>{g.title}</span><span className="tnum">−{fmt(g.total)}</span>
           </div>
-          {g.items.map(t => <TxRow key={t.id} t={d.txView(t)} variant="recent" onOpen={() => store.openRecat(t.id)} />)}
+          <div className={screen ? 'surface' : ''} style={screen ? { padding: '2px 14px' } : undefined}>
+            {g.items.map(t => <TxRow key={t.id} t={d.txView(t)} variant="recent" onOpen={() => store.openRecat(t.id)} />)}
+          </div>
         </div>
       ))}
-      {!groups.length && <div className="row-sub" style={{ marginTop: 14 }}>{q ? 'Nada coincide con tu búsqueda.' : 'Aún no hay movimientos.'}</div>}
+      {!groups.length && <div className="row-sub" style={{ marginTop: 14 }}>{q ? 'Nada coincide con tu búsqueda.' : 'Aún no hay movimientos. Regístralos con el botón + de abajo.'}</div>}
     </div>
   );
 }
+
+export const AllTxSheet = ({ store, d }: { store: Store; d: Derived }) => <TxList store={store} d={d} />;
+
+/** Pestaña Lista (estilo Incomes): todos tus movimientos en tarjetas por día. */
+export const ListScreen = ({ store, d }: { store: Store; d: Derived }) => (
+  <div className="rise" style={{ padding: '8px 16px 24px' }}><TxList store={store} d={d} screen /></div>
+);

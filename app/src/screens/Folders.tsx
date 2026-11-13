@@ -15,7 +15,7 @@ export function Folders({ store, d }: { store: Store; d: Derived }) {
 function FolderList({ store, d }: { store: Store; d: Derived }) {
   return (
     <div className="rise" style={{ padding: '8px 20px 28px' }}>
-      <div className="page-title">Carpetas</div>
+      <div className="page-title">Presupuestos</div>
       <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 2 }}>{fmt0(d.income)} asignados · S/ 0 sin destino</div>
       <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
         <button className="btn btn-secondary" onClick={() => store.openSheet('plan')} style={{ flex: 1, height: 38, borderRadius: 10, gap: 6, fontSize: 13 }}><Icon name="ph ph-sliders-horizontal" />Editar plan</button>
