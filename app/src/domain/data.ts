@@ -68,7 +68,12 @@ export interface Tx {
   needsFolder?: boolean;
   /** Posible duplicado: nombre del gasto parecido (mismo monto, ±30 min) que ya estaba registrado. */
   dup?: string;
+  /** Pago de una suscripción (id de la suscripción dentro de la carpeta Suscripciones). */
+  sub?: string;
 }
+
+/** Una suscripción dentro de la carpeta Suscripciones (Netflix, Spotify, iCloud…): monto mensual y día de cobro. */
+export interface Sub { id: string; name: string; amt: number; day?: number }
 
 export interface Goal { id: GoalId; name: string; saved: number; target: number }
 

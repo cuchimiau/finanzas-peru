@@ -5,6 +5,7 @@ import { minPayments, payInfo } from '../domain/cards';
 import { autoCover, suggestSources, type Take } from '../domain/plan';
 import { spentMap } from '../state/store';
 import { FolderRow, Icon, Track, TxRow, pressable } from '../components/common';
+import { SUBS_FOLDER, subStatus, subsTotal } from '../domain/subs';
 import type { Derived } from '../state/selectors';
 import type { Store } from '../state/store';
 
@@ -88,10 +89,11 @@ function FolderDetail({ store, d, id }: { store: Store; d: Derived; id: FolderId
   const fo = d.VM[id];
   const monthTx = d.monthTxs.filter(t => t.f === id);
   const tx = s.txs.filter(t => t.f === id).slice(0, 30);
+  const [preset, setPreset] = useState<number | undefined>(undefined);
   return (
     <div style={{ padding: '4px 20px 28px', animation: 'rise .3s ease' }}>
       <button onClick={store.closeFolder} className="link-btn" style={{ fontSize: 15, display: 'flex', alignItems: 'center', gap: 4, padding: '6px 0', marginLeft: -4 }}>
-        <Icon name="ph ph-caret-left" />Carpetas
+        <Icon name="ph ph-caret-left" />Presupuestos
       </button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
         <div className="ibox xl"><Icon name={fo.icon} /></div>
@@ -108,7 +110,9 @@ function FolderDetail({ store, d, id }: { store: Store; d: Derived; id: FolderId
         <span>{tipFor(id, monthTx, s.cards, d)}</span>
       </div>
 
-      <BudgetEditor key={`${id}-${s.budgets[id]}`} store={store} id={id} />
+      {id === SUBS_FOLDER && <SubsList store={store} d={d} onUse={setPreset} />}
+
+      <BudgetEditor key={`${id}-${s.budgets[id]}-${preset ?? ''}`} store={store} id={id} preset={preset} />
 
       <div className="section-title" style={{ margin: '22px 0 4px' }}>Movimientos</div>
       {tx.map(t => <TxRow key={t.id} t={d.txView(t)} variant="folder" onOpen={() => store.openRecat(t.id)} />)}
@@ -121,12 +125,54 @@ function FolderDetail({ store, d, id }: { store: Store; d: Derived; id: FolderId
   );
 }
 
+/** Suscripciones de la carpeta: monto de cada una, si ya se pagó este mes y botón para pagarla. */
+function SubsList({ store, d, onUse }: { store: Store; d: Derived; onUse: (n: number) => void }) {
+  const { s } = store;
+  const list = subStatus(s.subs, s.txs, d.m.key);
+  const total = subsTotal(s.subs), budget = s.budgets[SUBS_FOLDER] || 0;
+  const pending = list.filter(x => !x.paid).reduce((a, x) => a + x.amt, 0);
+  return (
+    <div style={{ marginTop: 18 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '0 2px 6px' }}>
+        <span className="section-title">Tus suscripciones</span>
+        <span className="row-sub tnum">{fmt0(total)} al mes{pending ? ` · faltan ${fmt0(pending)}` : list.length ? ' · todo pagado' : ''}</span>
+      </div>
+      <div className="group">
+        {list.map(x => (
+          <div key={x.id} className="group-row" style={{ cursor: 'default' }}>
+            <button type="button" aria-label={'Editar ' + x.name} onClick={() => store.openSub(x.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 12, background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer', minWidth: 0 }}>
+              <span className="gicon" style={{ background: x.paid ? 'var(--color-positive)' : 'var(--color-surface-2)', color: x.paid ? '#0b2a10' : 'var(--color-neutral-200)' }}><Icon name={x.paid ? 'ph-fill ph-check-circle' : 'ph ph-television-simple'} /></span>
+              <span style={{ minWidth: 0 }}>
+                <span style={{ display: 'block' }}>{x.name}</span>
+                <span className="row-sub" style={{ display: 'block' }}>{fmt(x.amt)}{x.day ? ` · se cobra el ${x.day}` : ''}{x.paid ? ' · pagada' : ''}</span>
+              </span>
+            </button>
+            {x.paid
+              ? <span className="gend" style={{ color: 'var(--color-positive)' }}>Pagada</span>
+              : <button type="button" className="btn btn-secondary" aria-label={'Pagar ' + x.name} onClick={() => store.paySub(x.id)} style={{ height: 30, borderRadius: 9, padding: '0 12px', fontSize: 13, marginLeft: 'auto' }}>Pagar</button>}
+          </div>
+        ))}
+        <button type="button" className="group-row" onClick={() => store.openSub(null)} style={{ color: 'var(--color-accent)' }}>
+          <span className="gicon" style={{ background: 'var(--color-accent)' }}><Icon name="ph ph-plus" /></span>Agregar suscripción
+        </button>
+      </div>
+      {list.length > 0 && Math.round(total) !== Math.round(budget) && (
+        <div className="hint-card" style={{ marginTop: 10, fontSize: 13, lineHeight: 1.45, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ flex: 1 }}>Tus suscripciones suman {fmt0(total)} y el presupuesto de la carpeta es {fmt0(budget)}.</span>
+          <button type="button" className="btn btn-secondary" onClick={() => onUse(Math.round(total))} style={{ height: 32, borderRadius: 9, padding: '0 10px', fontSize: 13, whiteSpace: 'nowrap' }}>Usar {fmt0(total)}</button>
+        </div>
+      )}
+      {list.length > 0 && <div className="row-sub" style={{ marginTop: 6 }}>Se separa lo que falta pagar de cada una; al pagarla no baja tu gasto del día.</div>}
+    </div>
+  );
+}
+
 /** Editor del presupuesto: monto exacto, pasos de 10/50 y de dónde sale (o a dónde va) la diferencia. */
-function BudgetEditor({ store, id }: { store: Store; id: FolderId }) {
+function BudgetEditor({ store, id, preset }: { store: Store; id: FolderId; preset?: number }) {
   const { s } = store;
   const cur = s.budgets[id];
-  const [target, setTarget] = useState(cur);
-  const [text, setText] = useState(String(cur));
+  const [target, setTarget] = useState(preset ?? cur);
+  const [text, setText] = useState(String(preset ?? cur));
   const [takes, setTakes] = useState<Take[]>([]);
   const [to, setTo] = useState<FolderId>('libre');
   const spent = spentMap(s.txs);

@@ -1,9 +1,10 @@
 // Dinero real del mes: lo que de verdad tienes, sin suponer que ya te pagaron.
-import { FOLDERS, type Budgets, type Card, type Folder, type FolderId, type Income, type Tx } from './data';
+import { FOLDERS, type Budgets, type Card, type Folder, type FolderId, type Income, type Sub, type Tx } from './data';
+import { SUBS_FOLDER, subsUnpaid } from './subs';
 import { daysInMonth, monthCtx, monthKeyOf, sameDay } from './dates';
 
 /** Carpetas de gasto variable (el resto de necesidades se consideran pagos fijos por reservar). */
-export const FLEX_IDS: FolderId[] = ['mercado', 'transporte', 'restaurantes', 'ocio', 'libre'];
+export const FLEX_IDS: FolderId[] = ['mercado', 'transporte', 'salud', 'restaurantes', 'ocio', 'libre'];
 
 /**
  * Gasto fijo mensual: alquiler, servicios (celular), salud, suscripciones o cualquier carpeta que marques como fija.
@@ -76,6 +77,8 @@ const after = (iso: string, from: string) => new Date(iso).getTime() >= new Date
 export function realMoney(o: {
   cash: CashMonth; txs: Tx[]; incomes: Income[]; budgets: Budgets; cards: Card[];
   payday: number | null; flexLeft: number; now?: Date;
+  /** Suscripciones: si las anotaste, se separa lo que falta pagar de cada una (no el presupuesto de la carpeta). */
+  subs?: Sub[];
 }): RealMoney {
   const now = o.now ?? new Date();
   const m = monthCtx(now);
@@ -106,7 +109,7 @@ export function realMoney(o: {
     return legacyOffered(f) ? (o.cash.reserve ?? []).includes(f.id) : true;
   };
   const reserved: Reserved[] = FOLDERS.filter(f => isFixedFolder(f) && sep(f))
-    .map(f => ({ id: f.id, name: f.name, amt: Math.max(0, (o.budgets[f.id] || 0) - spentIn(f.id)) }))
+    .map(f => ({ id: f.id, name: f.name, amt: f.id === SUBS_FOLDER && o.subs?.length ? subsUnpaid(o.subs, o.txs, m.key) : Math.max(0, (o.budgets[f.id] || 0) - spentIn(f.id)) }))
     .filter(r => r.amt > 0);
   // Cuotas de deudas: antes del sueldo solo las que marcaste (por defecto, las que vencen antes del pago);
   // después, lo que falta del Pago de deudas. Lo que ya pagaste este mes en esa carpeta se descuenta.

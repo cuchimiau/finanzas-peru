@@ -2,7 +2,7 @@ import { evalExpr, normalizeExpr } from '../domain/calc';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   DEFAULT_FOLDERS, DEFAULT_GOALS, DEFAULT_PRIOS, FM, FOLDER_IDS, folderName, setFolders,
-  LOCKED_FOLDERS, type Budgets, type Card, type Folder, type FolderId, type Goal, type GoalId, type Income, type PayRef, type PrioId, type Tx,
+  LOCKED_FOLDERS, type Budgets, type Card, type Folder, type FolderId, type Goal, type GoalId, type Income, type PayRef, type PrioId, type Sub, type Tx,
 } from '../domain/data';
 import { fmt, fmt0, parseAmount } from '../domain/format';
 import type { Strategy } from '../domain/debts';
@@ -25,7 +25,9 @@ import { PERSISTED_KEYS, isPersisted, migrate, pickPersisted, type ChatMsg, type
 export type { ChatMsg } from './persisted';
 /** Pestañas de la barra (home = Analítica) y pantallas que se abren desde ellas (debts, advisor, metrics). */
 export type Tab = 'home' | 'list' | 'folders' | 'settings' | 'debts' | 'metrics' | 'advisor';
-export type Sheet = 'recat' | 'connect' | 'add' | 'card' | 'goal' | 'settings' | 'folder' | 'plan' | 'optimize' | 'close' | 'paid' | 'paydebt' | 'alltx' | null;
+export type Sheet = 'recat' | 'connect' | 'add' | 'card' | 'goal' | 'settings' | 'folder' | 'plan' | 'optimize' | 'close' | 'paid' | 'paydebt' | 'alltx' | 'sub' | 'filter' | null;
+/** Analítica: periodo que se mira, mes elegido ("2026-11") y carpetas filtradas (null = todas). */
+export interface AnView { period: 'mes' | 'año'; month: string; folders: FolderId[] | null }
 export type SyncStatus = 'off' | 'idle' | 'syncing' | 'offline' | 'error';
 
 export interface SyncMeta { rev: number | null; dirty: boolean; lastSync: number | null }
@@ -36,6 +38,9 @@ export interface State extends Persisted {
   addAmt: string; addName: string; addPay: PayRef;
   /** Registrar: gasto o ingreso, fecha ('' = hoy, 'YYYY-MM-DD') y carpeta elegida a mano. */
   addKind: 'gasto' | 'ingreso'; addDate: string; addF: FolderId | null; editFolderId: FolderId | null;
+  /** Registrar: suscripción elegida; hoja de suscripción: cuál se edita (null = nueva). */
+  addSub: string | null; subId: string | null;
+  an: AnView;
   toast: string; toastIcon: string; adjustNote: string; draft: string; thinking: boolean;
   conn: Connection | null; sync: SyncStatus; syncError: string;
   /** Últimas llamadas de los atajos (solo en memoria, se trae de Drive). */
@@ -52,7 +57,7 @@ function freshPersisted(): Persisted {
   return {
     v: 2, phase: 'onb', profile: { name: '' }, income: '', prios,
     budgets: buildBudgets(2600, { ...prios, deuda: false }), txs: [], cards: [], goals: DEFAULT_GOALS.map(g => ({ ...g })),
-    strat: 'avalanche', messages: [], folders: DEFAULT_FOLDERS.map(f => ({ ...f })), template: {}, incomes: [], monthKey: monthKey(new Date()), cash: emptyCash(monthKey(new Date())),
+    strat: 'avalanche', messages: [], folders: DEFAULT_FOLDERS.map(f => ({ ...f })), template: {}, incomes: [], monthKey: monthKey(new Date()), cash: emptyCash(monthKey(new Date())), subs: [],
   };
 }
 
@@ -76,6 +81,7 @@ function initialState(reset: boolean): State {
     ...data, step: 0, analyzing: false,
     tab: 'home', folderId: null, sheet: null, rcId: null, cardId: null, goalId: null,
     addAmt: '', addName: '', addPay: 'cash', addKind: 'gasto', addDate: '', addF: null, editFolderId: null, toast: '', toastIcon: 'ph-fill ph-check-circle', adjustNote: '', draft: '', thinking: false,
+    addSub: null, subId: null, an: { period: 'mes', month: monthKey(new Date()), folders: null },
     conn, sync: conn ? 'idle' : 'off', syncError: '', meta, hits: [],
   };
 }
@@ -289,11 +295,35 @@ export function useFinanceStore(opts: StoreOptions) {
     goTab: (tab: Tab) => set({ tab, folderId: null }),
     openFolder: (id: FolderId) => set({ tab: 'folders', folderId: id, adjustNote: '' }),
     closeFolder: () => set({ folderId: null }),
-    openSheet: (sheet: Exclude<Sheet, null>) => set(sheet === 'add' ? { sheet, addAmt: '', addName: '', addPay: 'cash', addKind: 'gasto', addDate: '', addF: null } : { sheet }),
+    openSheet: (sheet: Exclude<Sheet, null>) => set(sheet === 'add' ? { sheet, addAmt: '', addName: '', addPay: 'cash', addKind: 'gasto', addDate: '', addF: null, addSub: null } : { sheet }),
     openFolderEdit: (id: FolderId | null) => set({ sheet: 'folder', editFolderId: id }),
     closeSheet: () => set({ sheet: null }),
     openRecat: (id: string) => set({ sheet: 'recat', rcId: id }),
     openCard: (id: string | null) => set({ sheet: 'card', cardId: id }),
+    // ─── Analítica ───
+    setAn: (p: Partial<AnView>) => set(x => ({ an: { ...x.an, ...p } })),
+    // ─── Suscripciones ───
+    /** null = suscripción nueva. */
+    openSub: (id: string | null) => set({ sheet: 'sub', subId: id }),
+    saveSub: (sub: Sub) => {
+      const st = ref.current, exists = st.subs.some(x => x.id === sub.id);
+      set(x => ({ subs: exists ? x.subs.map(y => (y.id === sub.id ? sub : y)) : [...x.subs, sub], sheet: null }));
+      flash(exists ? `${sub.name} actualizada` : `${sub.name} agregada · ${fmt(sub.amt)} al mes`);
+    },
+    deleteSub: (id: string) => { set(x => ({ subs: x.subs.filter(y => y.id !== id), sheet: null })); flash('Suscripción eliminada'); },
+    /** Registra el pago del mes de una suscripción (desde la carpeta Suscripciones). */
+    paySub: (id: string) => {
+      const sub = ref.current.subs.find(x => x.id === id);
+      if (!sub) return;
+      const t: Tx = { id: 'm' + Date.now().toString(36), name: sub.name, amt: sub.amt, f: 'suscripciones', pay: 'cash', date: new Date().toISOString(), why: 'Pago de tu suscripción.', source: 'manual', sub: id };
+      set(x => ({ txs: [t, ...x.txs].sort(byDateDesc) }));
+      flash(`${sub.name} pagada · ${fmt(sub.amt)}`);
+    },
+    /** Registrar: elegir una suscripción completa lugar y monto (si está vacío). */
+    pickAddSub: (id: string | null) => {
+      const sub = ref.current.subs.find(x => x.id === id);
+      set(x => (sub ? { addSub: id, addName: sub.name, addF: 'suscripciones', addAmt: x.addAmt || String(sub.amt) } : { addSub: null }));
+    },
     /** null = meta nueva. */
     openGoal: (id: GoalId | null) => set({ sheet: 'goal', goalId: id }),
     // ─── Carpetas ───
@@ -356,7 +386,8 @@ export function useFinanceStore(opts: StoreOptions) {
       }
       if (!amt || !name) { flash(!amt ? (st.addAmt ? 'La cuenta no da un monto válido' : 'Falta el monto') : 'Escribe dónde fue el gasto', 'ph ph-warning'); return; }
       const f = (st.addF && FM[st.addF] ? st.addF : null) || learnedFolder(name, st.txs) || guessFolder(name).id || 'libre';
-      const t: Tx = { id: 'm' + Date.now().toString(36), name, amt, f, pay: st.addPay, date, why: 'Registrado a mano. Puedes cambiar la carpeta.', source: 'manual' };
+      const sub = f === 'suscripciones' && st.addSub && st.subs.some(x => x.id === st.addSub) ? st.addSub : undefined;
+      const t: Tx = { id: 'm' + Date.now().toString(36), name, amt, f, pay: st.addPay, date, why: 'Registrado a mano. Puedes cambiar la carpeta.', source: 'manual', ...(sub ? { sub } : {}) };
       set(x => ({ txs: [t, ...x.txs].sort(byDateDesc), sheet: null }));
       flash(`${fmt(amt)} → ${folderName(f)}`);
     },

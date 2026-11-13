@@ -2,6 +2,9 @@ import { fmt, fmt0, pct } from '../domain/format';
 import { Icon, pressable } from '../components/common';
 import { syncLabel } from '../components/ConnectForm';
 import { Metrics } from './Metrics';
+import { MONTHS, shiftMonth } from '../components/MonthSummary';
+import { monthKey } from '../domain/dates';
+import { folderName } from '../domain/data';
 import type { Derived } from '../state/selectors';
 import type { Store } from '../state/store';
 
@@ -9,15 +12,33 @@ const cap = (x: string) => x[0].toUpperCase() + x.slice(1);
 
 export function Home({ store, d }: { store: Store; d: Derived }) {
   const { s } = store, m = d.m, mo = d.money;
+  // Cabecera estilo Incomes: periodo que miran las métricas (los cuadros de arriba siempre son de hoy).
+  const cur = monthKey(m.now), yearView = s.an.period === 'año';
+  const sel = s.an.month > cur ? cur : s.an.month;
+  const atNow = yearView ? sel.slice(0, 4) === cur.slice(0, 4) : sel === cur;
+  const periodL = yearView ? sel.slice(0, 4) : `${MONTHS[Number(sel.slice(5, 7)) - 1]} de ${sel.slice(0, 4)}`;
+  const filtered = !!s.an.folders;
   return (
     <div className="rise" style={{ padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 40 }}>
-          <span style={{ fontSize: 15, fontWeight: 600 }}>{m.name} de {m.now.getFullYear()}</span>
-          <button className="btn btn-icon btn-secondary" aria-label="Asesor" onClick={() => store.goTab('advisor')} style={{ width: 38, height: 38, borderRadius: 19, fontSize: 18, color: 'var(--color-accent-300)' }}><Icon name="ph-fill ph-sparkle" /></button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 40 }}>
+          <button type="button" className="an-arrow" aria-label={yearView ? 'Año anterior' : 'Mes anterior'} onClick={() => store.setAn({ month: shiftMonth(sel, yearView ? -12 : -1) })}><Icon name="ph ph-caret-left" /></button>
+          <button type="button" className="an-period" onClick={() => store.setAn({ month: cur })} aria-label={'Periodo: ' + periodL + (atNow ? '' : '. Toca para volver a hoy')}>{periodL}</button>
+          <button type="button" className="an-arrow" aria-label={yearView ? 'Año siguiente' : 'Mes siguiente'} disabled={atNow} onClick={() => { const n = shiftMonth(sel, yearView ? 12 : 1); store.setAn({ month: n > cur ? cur : n }); }}><Icon name="ph ph-caret-right" /></button>
+          <span style={{ flex: 1 }} />
+          <button className="btn btn-icon btn-secondary an-round" aria-label={'Filtrar' + (filtered ? ' (activo)' : '')} onClick={() => store.openSheet('filter')} style={{ color: filtered ? 'var(--color-accent)' : undefined }}>
+            <Icon name="ph ph-funnel-simple" />{filtered && <span className="an-dot" />}
+          </button>
+          <button className="btn btn-icon btn-secondary an-round" aria-label="Asesor" onClick={() => store.goTab('advisor')} style={{ color: 'var(--color-accent-300)' }}><Icon name="ph-fill ph-sparkle" /></button>
         </div>
         <div className="page-title" style={{ marginTop: 4 }}>Analítica</div>
         <div style={{ fontSize: 13, color: 'var(--color-neutral-500)', marginTop: 4 }}>Hola{s.profile.name ? ', ' + s.profile.name.split(' ')[0] : ''} · {m.todayL}</div>
+        {(filtered || !atNow) && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+            {filtered && <button type="button" className="chip on" onClick={() => store.setAn({ folders: null })} style={{ height: 28, fontSize: 12.5 }}>{s.an.folders!.length === 1 ? folderName(s.an.folders![0]) : `${s.an.folders!.length} carpetas`} · Quitar filtro</button>}
+            {!atNow && <button type="button" className="chip" onClick={() => store.setAn({ month: cur })} style={{ height: 28, fontSize: 12.5 }}>Métricas de {periodL} · Volver a hoy</button>}
+          </div>
+        )}
         <button type="button" className="link-btn" onClick={() => (s.conn ? void store.pull() : store.goTab('settings'))} style={{ fontSize: 12, color: 'var(--color-neutral-500)', display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}>
           <Icon name="ph-fill ph-circle" style={{ fontSize: 7, color: s.conn && s.sync !== 'error' ? (s.sync === 'offline' ? 'var(--color-over)' : 'var(--color-positive)') : 'var(--color-neutral-600)' }} />
           {syncLabel(s)}

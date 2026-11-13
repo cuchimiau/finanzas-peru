@@ -26,7 +26,7 @@ const ok = (c, m) => { if (!c) throw new Error('FALLÓ: ' + m); console.log('✓
   ok((await main()).includes('S/ 120'), 'presupuesto de la carpeta propia asignado');
 
   // Editar plan completo
-  await p.click('text=Carpetas'); await p.click('text=Editar plan'); await p.waitForTimeout(200);
+  await p.click('main >> button:has-text("Presupuestos")'); await p.click('text=Editar plan'); await p.waitForTimeout(200);
   await p.fill('[aria-label="Presupuesto de Alquiler"]', '700');
   ok((await sheet()).includes('Te pasas por S/ 50'), 'editor muestra cuánto te pasas');
   const cf = Number(await p.inputValue('[aria-label="Presupuesto de Comer fuera"]'));

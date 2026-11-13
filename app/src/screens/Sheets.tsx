@@ -11,8 +11,9 @@ import type { Store } from '../state/store';
 import type { Derived } from '../state/selectors';
 import { CloseSheet, FolderForm, OptimizeSheet, PaidSheet, PlanEditor } from './PlanSheets';
 import { AllTxSheet, PayDebtSheet } from './MoreSheets';
+import { FilterSheet, SubForm } from './AnalyticsSheets';
 
-const TITLES = { recat: 'Movimiento', connect: 'Cómo leemos tus gastos', add: 'Registrar', card: 'Deuda o tarjeta', goal: 'Meta', settings: 'Ajustes', folder: 'Carpeta', plan: 'Editar plan', optimize: 'Optimizar', close: 'Tu dinero del mes', paid: 'Ya me pagaron', paydebt: 'Pago de deudas', alltx: 'Todos los movimientos' };
+const TITLES = { recat: 'Movimiento', connect: 'Cómo leemos tus gastos', add: 'Registrar', card: 'Deuda o tarjeta', goal: 'Meta', settings: 'Ajustes', folder: 'Carpeta', plan: 'Editar plan', optimize: 'Optimizar', close: 'Tu dinero del mes', paid: 'Ya me pagaron', paydebt: 'Pago de deudas', alltx: 'Todos los movimientos', sub: 'Suscripción', filter: 'Filtrar' };
 
 export function SheetHost({ store, d }: { store: Store; d: Derived }) {
   const { s } = store;
@@ -43,6 +44,8 @@ export function SheetHost({ store, d }: { store: Store; d: Derived }) {
         {s.sheet === 'paid' && <PaidSheet store={store} />}
         {s.sheet === 'paydebt' && <PayDebtSheet store={store} d={d} />}
         {s.sheet === 'alltx' && <AllTxSheet store={store} d={d} />}
+        {s.sheet === 'sub' && <SubForm key={s.subId || 'new'} store={store} />}
+        {s.sheet === 'filter' && <FilterSheet store={store} />}
       </div>
     </>
   );
@@ -178,6 +181,16 @@ function AddExpense({ store }: { store: Store }) {
 
       <input type="text" className="input" placeholder={income ? '¿De dónde? Bono, venta, cachuelo…' : '¿Dónde? Tambo, InDrive, Inkafarma…'} aria-label="Lugar" value={s.addName} maxLength={80}
         onChange={e => store.setAddName(e.target.value)} style={{ ...inputStyle, height: 40, fontSize: 14, textAlign: 'center' }} />
+
+      {!income && id === 'suscripciones' && s.subs.length > 0 && (
+        <div className="add-subs" role="radiogroup" aria-label="Suscripción">
+          {s.subs.map(x => (
+            <button type="button" key={x.id} role="radio" aria-checked={s.addSub === x.id} className={'chip' + (s.addSub === x.id ? ' on' : '')} onClick={() => store.pickAddSub(s.addSub === x.id ? null : x.id)}>
+              {x.name} · {fmt(x.amt)}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="add-pad">
         <div className="seg" role="radiogroup" aria-label="Fecha" style={{ display: 'flex' }}>

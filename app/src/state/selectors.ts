@@ -55,7 +55,7 @@ export function derive(s: State, now = new Date()) {
   const lastApplePay = s.txs.find(t => t.source === 'applepay');
   const monthIncomes = s.incomes.filter(i => monthKeyOf(i.date) === m.key);
   const extraIncome = monthIncomes.reduce((a, i) => a + i.amt, 0);
-  const money = realMoney({ cash: s.cash, txs: s.txs, incomes: s.incomes, budgets: s.budgets, cards: s.cards, payday: s.profile.payday ?? null, flexLeft, now });
+  const money = realMoney({ cash: s.cash, txs: s.txs, incomes: s.incomes, budgets: s.budgets, cards: s.cards, payday: s.profile.payday ?? null, flexLeft, now, subs: s.subs });
 
   const txView = (t: Tx): TxView => {
     const f = t.f ? FM[t.f] : null, p = payInfo(t.pay, s.cards);
